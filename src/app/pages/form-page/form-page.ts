@@ -17,6 +17,8 @@ import { SelectButtonModule } from 'primeng/selectbutton';
   styleUrl: './form-page.scss',
 })
 export class FormPage {
+  openedAccordionPanel: number[] = [0, 1, 2];
+
   dates = [{ label: '31 de Octubre al 02 de Noviembre 2025' }];
 
   timeRanges = [{ label: '0 a 6 meses' }, { label: '6 a 12 meses' }, { label: '1 a 4 años' }, { label: '4 a 6 años' }, { label: '6 a 8 años' }, { label: '8 a 10 años' }, { label: 'mas de 10 años' }];
@@ -35,4 +37,19 @@ export class FormPage {
   liveWithCompanion: string = '';
   weddingDate: string = '';
   selectedCompanion: string = '';
+
+  changeAccordionPanelIndex(index: number, type: 'close' | 'open') {
+    console.log('event ', index);
+    console.log('type ', type);
+
+    if (type === 'close') {
+      this.openedAccordionPanel = this.openedAccordionPanel.filter(panel => panel !== index);
+    } else {
+      this.openedAccordionPanel.push(index);
+    }
+
+    this.openedAccordionPanel.sort((a, b) => a - b);
+
+    console.log('openedAccordionPanel ', this.openedAccordionPanel);
+  }
 }

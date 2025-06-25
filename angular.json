@@ -26,10 +26,7 @@
                 "input": "public"
               }
             ],
-            "styles": [
-              "node_modules/primeicons/primeicons.css",
-              "src/styles.scss"
-            ]
+            "styles": ["node_modules/primeicons/primeicons.css", "public/styles/main.scss", "src/styles.css"]
           },
           "configurations": {
             "production": {
@@ -81,7 +78,7 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.scss"]
+            "styles": ["src/styles.css", "public/styles/main.scss"]
           }
         }
       }
