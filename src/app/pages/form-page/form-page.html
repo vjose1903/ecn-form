@@ -1,0 +1,487 @@
+<div class="block m-auto w-1/2 py-10 flex flex-col gap-2">
+  <p>
+    Esta es la ficha de solicitud para vivir el retiro del
+    <span class="font-bold">Encuentro Católico Para Novios</span>
+    en la Diócesis de La Vega.
+  </p>
+  
+  <p>Una vez llenada, el Equipo la evaluará y le indicará si fue aprobada. Le indicarán el día de la información</p>
+  <p>Favor de llenar cada dato solicitado apegado a la verdad. Ante cualquier duda, póngase en contacto con la persona que le invitó a vivir esta maravillosa experiencia o la pareja encargada de Reclutamiento & Promoción.</p>
+  <p class="font-bold">El llenado del formulario no garantiza la aprobación del retiro.</p>
+
+  <span class="bg-red-500/10 text-red-800 p-2 mt-5 rounded-md"> Los campos marcados con * son <span class="font-bold">obligatorios</span> </span>
+
+  <p-accordion [value]="['0']" [multiple]="true">
+    <p-accordion-panel value="0">
+      <!-- INFORMACION GENERAL -->
+      <p-accordion-header>
+        <span class="text-lg font-bold text-red-900"> Informaciónes Generales </span>
+      </p-accordion-header>
+      <p-accordion-content>
+        <div class="flex flex-col gap-4">
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" class="font-bold" for="name"> Fecha de Retiro Deseada </label>
+              <span class="text-red-500">*</span>
+            </div>
+            <p-select [options]="dates" optionLabel="label" placeholder="Seleccione una fecha" class="w-full" appendTo="body" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="time-range">Tiempo de Noviazgo</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <p-select inputId="time-range" [options]="timeRanges" optionLabel="label" placeholder="Seleccione" class="w-full" appendTo="body" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-5">
+            <div class="flex flex-col gap-2">
+              <div class="flex gap-1">
+                <label class="font-bold" for="time-range">Tiene Fecha de Boda?</label>
+                <span class="text-red-500">*</span>
+              </div>
+              <p-selectbutton [options]="yesNoOptions" [(ngModel)]="weddingDate" optionLabel="label" optionValue="label" aria-labelledby="basic" />
+            </div>
+
+            @if (weddingDate === 'Si') {
+            <div class="flex flex-col gap-2">
+              <label class="font-bold" for="time-range">Fecha de Boda</label>
+              <p-datepicker class="w-full" appendTo="body" />
+            </div>
+            }
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="name">Como te enteraste del Retiro?</label>
+              <span class="text-red-500">*</span>
+            </div>
+
+            <p-select inputId="time-range" [options]="howToKnow" [(ngModel)]="selectedHowToKnow" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
+
+            @if (selectedHowToKnow === 'Otro') {
+            <textarea rows="5" cols="30" pTextarea class="w-full"></textarea>
+            }
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="name">Quien te invito al Retiro?</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <input type="text" pInputText />
+          </div>
+        </div>
+      </p-accordion-content>
+    </p-accordion-panel>
+
+    <p-accordion-panel value="1">
+      <!-- INFORMACION DE LA NOVIA -->
+      <p-accordion-header>
+        <span class="text-lg font-bold text-red-900"> Información de la Novia </span>
+      </p-accordion-header>
+      <p-accordion-content>
+        <div class="flex flex-col gap-4">
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="name">Nombre y Apellido</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <input type="text" pInputText class="w-full" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label class="font-bold" for="name">Apodo</label>
+            <input type="text" pInputText />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label class="font-bold text-lg">Documento de Identidad</label>
+
+            <div class="flex gap-2">
+              <div class="flex flex-col gap-2">
+                <div class="flex gap-1">
+                  <label class="font-bold" for="name">Tipo</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <p-select [options]="identityTypes" [(ngModel)]="selectedIdentityType" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
+              </div>
+              <div class="flex flex-col gap-2">
+                <div class="flex gap-1">
+                  <label class="font-bold" for="name">Número</label>
+                  <span class="text-red-500">*</span>
+                </div>
+
+                @if (selectedIdentityType === 'Cédula') {
+                <p-inputmask mask="999-9999999-9" placeholder="000-0000000-0" class="w-full" />
+                } @else {
+                <input type="text" pInputText placeholder="numero de pasaporte" />
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="time-range">Fecha de Nacimiento</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <p-datepicker class="w-full" appendTo="body" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="time-range">Ha Estado Alguna Vez Casada Por La Iglesia?</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <p-selectbutton [options]="yesNoOptions" [(ngModel)]="selectedYesNo" optionLabel="label" optionValue="label" aria-labelledby="basic" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="time-range">Tiene Hijos?</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <p-selectbutton [options]="yesNoOptions" [(ngModel)]="selectedYesNo" optionLabel="label" optionValue="label" aria-labelledby="basic" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="time-range">Ciudad</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <input type="text" pInputText class="w-full" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="time-range">Dirección actual</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <textarea rows="5" cols="30" pTextarea class="w-full"></textarea>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="time-range">Correo Electronico</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <input type="text" pInputText class="w-full" />
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div class="flex flex-col gap-2">
+              <div class="flex gap-1">
+                <label class="font-bold" for="time-range">Teléfono celular</label>
+                <span class="text-red-500">*</span>
+              </div>
+              <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" class="w-full" />
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <label class="font-bold" for="time-range">Teléfono casa</label>
+              <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" class="w-full" />
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <label class="font-bold" for="time-range">Teléfono trabajo</label>
+              <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" class="w-full" />
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="time-range">Vive acompañado?</label>
+              <span class="text-red-500">*</span>
+            </div>
+
+            <p-selectbutton [options]="yesNoOptions" [(ngModel)]="liveWithCompanion" optionLabel="label" optionValue="label" aria-labelledby="basic" />
+          </div>
+
+          @if(liveWithCompanion === 'Si') {
+          <div class="flex flex-col gap-2">
+            <div class="grid grid-cols-2 gap-5">
+              <div class="flex flex-col gap-2">
+                <div class="flex gap-1">
+                  <label class="font-bold" for="time-range">Nombre del acompañante</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <input type="text" pInputText class="w-full" />
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <div class="flex gap-1">
+                  <label class="font-bold" for="time-range">Teléfono </label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" class="w-full" />
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <div class="flex gap-1">
+                <label class="font-bold" for="time-range">Parentesco</label>
+                <span class="text-red-500">*</span>
+              </div>
+              <p-select [options]="companionOptions" [(ngModel)]="selectedCompanion" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
+            </div>
+          </div>
+          }
+
+          <div class="flex flex-col gap-2 mt-4">
+            <label class="font-bold text-lg" for="time-range">Contacto de Emergencia</label>
+
+            <div class="grid grid-cols-2 gap-5">
+              <div class="flex flex-col gap-2">
+                <div class="flex gap-1">
+                  <label class="font-bold" for="time-range">Nombre</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <input type="text" pInputText class="w-full" />
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <div class="flex gap-1">
+                  <label class="font-bold" for="time-range">Teléfono </label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" class="w-full" />
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <div class="flex gap-1">
+                <label class="font-bold" for="time-range">Parentesco</label>
+                <span class="text-red-500">*</span>
+              </div>
+              <p-select [options]="companionOptions" [(ngModel)]="selectedCompanion" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-5 mt-4">
+            <div class="flex flex-col gap-2">
+              <div class="flex gap-1">
+                <label class="font-bold" for="time-range">Religión</label>
+                <span class="text-red-500">*</span>
+              </div>
+              <input type="text" pInputText class="w-full" />
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <div class="flex gap-1">
+                <label class="font-bold" for="time-range">Parroquia A Que Pertenece</label>
+                <span class="text-red-500">*</span>
+              </div>
+              <input type="text" pInputText class="w-full" />
+            </div>
+          </div>
+        </div>
+      </p-accordion-content>
+    </p-accordion-panel>
+
+    <p-accordion-panel value="2">
+      <!-- INFORMACION DEL NOVIO -->
+      <p-accordion-header>
+        <span class="text-lg font-bold text-red-900"> Información del Novio </span>
+      </p-accordion-header>
+      <p-accordion-content>
+        <div class="flex flex-col gap-4">
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="name">Nombre y Apellido</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <input type="text" pInputText class="w-full" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label class="font-bold" for="name">Apodo</label>
+            <input type="text" pInputText />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label class="font-bold text-lg">Documento de Identidad</label>
+
+            <div class="flex gap-2">
+              <div class="flex flex-col gap-2">
+                <div class="flex gap-1">
+                  <label class="font-bold" for="name">Tipo</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <p-select [options]="identityTypes" [(ngModel)]="selectedIdentityType" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
+              </div>
+              <div class="flex flex-col gap-2">
+                <div class="flex gap-1">
+                  <label class="font-bold" for="name">Número</label>
+                  <span class="text-red-500">*</span>
+                </div>
+
+                @if (selectedIdentityType === 'Cédula') {
+                <p-inputmask mask="999-9999999-9" placeholder="000-0000000-0" class="w-full" />
+                } @else {
+                <input type="text" pInputText placeholder="numero de pasaporte" />
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="time-range">Fecha de Nacimiento</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <p-datepicker class="w-full" appendTo="body" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="time-range">Ha Estado Alguna Vez Casada Por La Iglesia?</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <p-selectbutton [options]="yesNoOptions" [(ngModel)]="selectedYesNo" optionLabel="label" optionValue="label" aria-labelledby="basic" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="time-range">Tiene Hijos?</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <p-selectbutton [options]="yesNoOptions" [(ngModel)]="selectedYesNo" optionLabel="label" optionValue="label" aria-labelledby="basic" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="time-range">Ciudad</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <input type="text" pInputText class="w-full" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="time-range">Dirección actual</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <textarea rows="5" cols="30" pTextarea class="w-full"></textarea>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="time-range">Correo Electronico</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <input type="text" pInputText class="w-full" />
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div class="flex flex-col gap-2">
+              <div class="flex gap-1">
+                <label class="font-bold" for="time-range">Teléfono celular</label>
+                <span class="text-red-500">*</span>
+              </div>
+              <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" class="w-full" />
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <label class="font-bold" for="time-range">Teléfono casa</label>
+              <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" class="w-full" />
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <label class="font-bold" for="time-range">Teléfono trabajo</label>
+              <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" class="w-full" />
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex gap-1">
+              <label class="font-bold" for="time-range">Vive acompañado?</label>
+              <span class="text-red-500">*</span>
+            </div>
+
+            <p-selectbutton [options]="yesNoOptions" [(ngModel)]="liveWithCompanion" optionLabel="label" optionValue="label" aria-labelledby="basic" />
+          </div>
+
+          @if(liveWithCompanion === 'Si') {
+          <div class="flex flex-col gap-2">
+            <div class="grid grid-cols-2 gap-5">
+              <div class="flex flex-col gap-2">
+                <div class="flex gap-1">
+                  <label class="font-bold" for="time-range">Nombre del acompañante</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <input type="text" pInputText class="w-full" />
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <div class="flex gap-1">
+                  <label class="font-bold" for="time-range">Teléfono </label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" class="w-full" />
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <div class="flex gap-1">
+                <label class="font-bold" for="time-range">Parentesco</label>
+                <span class="text-red-500">*</span>
+              </div>
+              <p-select [options]="companionOptions" [(ngModel)]="selectedCompanion" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
+            </div>
+          </div>
+          }
+
+          <div class="flex flex-col gap-2 mt-4">
+            <label class="font-bold text-lg" for="time-range">Contacto de Emergencia</label>
+
+            <div class="grid grid-cols-2 gap-5">
+              <div class="flex flex-col gap-2">
+                <div class="flex gap-1">
+                  <label class="font-bold" for="time-range">Nombre</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <input type="text" pInputText class="w-full" />
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <div class="flex gap-1">
+                  <label class="font-bold" for="time-range">Teléfono </label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" class="w-full" />
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <div class="flex gap-1">
+                <label class="font-bold" for="time-range">Parentesco</label>
+                <span class="text-red-500">*</span>
+              </div>
+              <p-select [options]="companionOptions" [(ngModel)]="selectedCompanion" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-5 mt-4">
+            <div class="flex flex-col gap-2">
+              <div class="flex gap-1">
+                <label class="font-bold" for="time-range">Religión</label>
+                <span class="text-red-500">*</span>
+              </div>
+              <input type="text" pInputText class="w-full" />
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <div class="flex gap-1">
+                <label class="font-bold" for="time-range">Parroquia A Que Pertenece</label>
+                <span class="text-red-500">*</span>
+              </div>
+              <input type="text" pInputText class="w-full" />
+            </div>
+          </div>
+        </div>
+      </p-accordion-content>
+    </p-accordion-panel>
+  </p-accordion>
+</div>
