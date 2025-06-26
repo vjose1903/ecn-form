@@ -1,2 +1,20 @@
-/* You can add global styles to this file, and also import other style files */
-@import "tailwindcss";
+/* Variables CSS personalizadas */
+:root {
+  --p-accordion-border-radius: 6px;
+}
+
+@import 'tailwindcss';
+
+@theme {
+  --color-ecn-primary: #1a365d;
+}
+
+@layer utilities {
+  .h-px {
+    height: 1px;
+  }
+
+  .w-px {
+    width: 1px;
+  }
+}

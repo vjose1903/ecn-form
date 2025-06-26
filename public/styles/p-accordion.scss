@@ -1,0 +1,8 @@
+p-accordion {
+  border-radius: var(--p-accordion-border-radius);
+  .p-accordionpanel {
+    &:last-child {
+      border-bottom: none !important;
+    }
+  }
+}

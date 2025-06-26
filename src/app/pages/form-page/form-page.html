@@ -14,8 +14,8 @@
   <p-accordion [value]="openedAccordionPanel" (onClose)="changeAccordionPanelIndex($event.index, 'close')" (onOpen)="changeAccordionPanelIndex($event.index, 'open')" [multiple]="true" class="shadow-lg">
     <p-accordion-panel [value]="0">
       <!-- INFORMACION GENERAL -->
-      <p-accordion-header class="!p-2 md:!p-4 !bg-red-200/40">
-        <span class="text-lg font-bold text-red-900"> Informaciónes Generales {{ openedAccordionPanel }} </span>
+      <p-accordion-header class="!p-2 md:!p-4 !bg-gray-200/60">
+        <span class="text-lg font-bold text-red-900"> Informaciónes Generales </span>
       </p-accordion-header>
       <p-accordion-content class="{{ openedAccordionPanel.includes(0) ? '!py-2 md:!py-4' : '' }}">
         <div class="flex flex-col gap-5">
@@ -47,7 +47,7 @@
             @if (weddingDate === 'Si') {
             <div class="flex flex-col gap-1">
               <label class="font-bold" for="time-range">Fecha de Boda</label>
-              <p-datepicker class="w-full" appendTo="body" />
+              <p-datepicker class="w-full" inputStyleClass="w-full" appendTo="body" placeholder="Ingrese fecha de boda" [touchUI]="!isDesktop" readonlyInput="true" />
             </div>
             }
           </div>
@@ -61,7 +61,7 @@
             <p-select inputId="time-range" [options]="howToKnow" [(ngModel)]="selectedHowToKnow" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
 
             @if (selectedHowToKnow === 'Otro') {
-            <textarea rows="5" cols="30" pTextarea class="w-full"></textarea>
+            <textarea rows="5" cols="30" pTextarea class="w-full" placeholder="Escribe aquí como te enteraste del Retiro"></textarea>
             }
           </div>
 
@@ -70,7 +70,7 @@
               <label class="font-bold" for="name">Quien te invito al Retiro?</label>
               <span class="text-red-500">*</span>
             </div>
-            <input type="text" pInputText />
+            <input type="text" pInputText placeholder="Nombre de la persona que te invito" />
           </div>
         </div>
       </p-accordion-content>
@@ -78,7 +78,7 @@
 
     <p-accordion-panel [value]="1">
       <!-- INFORMACION DE LA NOVIA -->
-      <p-accordion-header class="!p-2 md:!p-4 !bg-red-200/40">
+      <p-accordion-header class="!p-2 md:!p-4 !bg-gray-200/60">
         <span class="text-lg font-bold text-red-900"> Información de la Novia </span>
       </p-accordion-header>
       <p-accordion-content class="{{ openedAccordionPanel.includes(1) ? '!py-2 md:!py-4' : '' }}">
@@ -95,6 +95,16 @@
             <label class="font-bold" for="name">Apodo</label>
             <input type="text" pInputText />
           </div>
+
+          <div class="flex flex-col gap-1">
+            <div class="flex gap-1">
+              <label class="font-bold" for="time-range">Fecha de Nacimiento</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <p-datepicker class="w-full" inputStyleClass="w-full" appendTo="body" />
+          </div>
+
+          <divider-line />
 
           <div class="flex flex-col gap-1">
             <span class="font-bold text-lg">Documento de Identidad</span>
@@ -122,13 +132,7 @@
             </div>
           </div>
 
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="time-range">Fecha de Nacimiento</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <p-datepicker class="w-full" inputStyleClass="w-full" appendTo="body" />
-          </div>
+          <divider-line />
 
           <div class="flex flex-col gap-1">
             <div class="flex gap-1">
@@ -146,6 +150,8 @@
             <p-selectbutton [options]="yesNoOptions" [(ngModel)]="selectedYesNo" optionLabel="label" optionValue="label" aria-labelledby="basic" />
           </div>
 
+          <divider-line />
+
           <div class="flex flex-col gap-1">
             <div class="flex gap-1">
               <label class="font-bold" for="time-range">Ciudad</label>
@@ -161,6 +167,8 @@
             </div>
             <textarea rows="5" cols="30" pTextarea class="w-full"></textarea>
           </div>
+
+          <divider-line />
 
           <div class="flex flex-col gap-1">
             <div class="flex gap-1">
@@ -189,6 +197,8 @@
               <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" />
             </div>
           </div>
+
+          <divider-line />
 
           <div class="flex flex-col gap-1">
             <div class="flex gap-1">
@@ -231,6 +241,8 @@
           </div>
           }
 
+          <divider-line />
+
           <div class="flex flex-col gap-1">
             <span class="font-bold text-lg" for="time-range">Contacto de Emergencia</span>
 
@@ -261,6 +273,8 @@
             </div>
           </div>
 
+          <divider-line />
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div class="flex flex-col gap-1">
               <div class="flex gap-1">
@@ -284,7 +298,7 @@
 
     <p-accordion-panel [value]="2">
       <!-- INFORMACION DEL NOVIO -->
-      <p-accordion-header class="!p-2 md:!p-4 !bg-red-200/40">
+      <p-accordion-header class="!p-2 md:!p-4 !bg-gray-200/60">
         <span class="text-lg font-bold text-red-900"> Información del Novio </span>
       </p-accordion-header>
       <p-accordion-content class="{{ openedAccordionPanel.includes(2) ? '!py-2 md:!py-4' : '' }}">
@@ -333,7 +347,7 @@
               <label class="font-bold" for="time-range">Fecha de Nacimiento</label>
               <span class="text-red-500">*</span>
             </div>
-            <p-datepicker class="w-full" appendTo="body" />
+            <p-datepicker class="w-full" inputStyleClass="w-full" appendTo="body" />
           </div>
 
           <div class="flex flex-col gap-1">

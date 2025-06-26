@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Layout } from '../../layout/layout';
 import { AccordionModule } from 'primeng/accordion';
 import { InputTextModule } from 'primeng/inputtext';
@@ -9,14 +9,23 @@ import { TextareaModule } from 'primeng/textarea';
 import { InputMaskModule } from 'primeng/inputmask';
 
 import { SelectButtonModule } from 'primeng/selectbutton';
+import { DividerLine } from '../../core/components/divider-line/divider-line';
+import { DeviceDetectorService } from '../../core/services/device-detector.service';
+import { DeviceE } from '../../core/models/device-detector.model';
 
 @Component({
   selector: 'app-form-page',
-  imports: [AccordionModule, InputTextModule, FormsModule, SelectModule, DatePickerModule, TextareaModule, InputMaskModule, SelectButtonModule],
+  imports: [AccordionModule, InputTextModule, FormsModule, SelectModule, DatePickerModule, TextareaModule, InputMaskModule, SelectButtonModule, DividerLine],
   templateUrl: './form-page.html',
   styleUrl: './form-page.scss',
 })
 export class FormPage {
+  deviceDetectorService = inject(DeviceDetectorService);
+
+  get isDesktop() {
+    return this.deviceDetectorService.getDeviceInfo().device === DeviceE.desktop;
+  }
+
   openedAccordionPanel: number[] = [0, 1, 2];
 
   dates = [{ label: '31 de Octubre al 02 de Noviembre 2025' }];
