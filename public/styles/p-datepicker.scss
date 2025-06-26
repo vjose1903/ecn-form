@@ -4,10 +4,11 @@ p-datepicker {
   }
 }
 
-
 .p-datepicker-panel {
-  position: fixed !important;
-  top: 50% !important;
-  left: 50% !important;
-  translate: -50% -50% !important;
+  &.touch-ui {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    translate: -50% -50% !important;
+  }
 }

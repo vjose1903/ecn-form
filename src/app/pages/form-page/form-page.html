@@ -8,6 +8,7 @@
   <p>Una vez llenada, el Equipo la evaluará y le indicará si fue aprobada y le indicarán el día de la información.</p>
   <p>Favor de llenar cada dato solicitado apegado a la verdad. Ante cualquier duda, póngase en contacto con la persona que le invitó a vivir esta maravillosa experiencia o la pareja encargada de Reclutamiento & Promoción.</p>
   <p class="font-bold">El llenado del formulario no garantiza la aprobación del retiro.</p>
+  <p class="font-bold">Debe de completar el formulario para enviarlo, no se guardan los datos hasta que se envíe.</p>
 
   <span class="bg-red-500/10 text-red-800 p-2 my-5 rounded-md shadow-md"> Los campos marcados con * son <span class="font-bold">obligatorios</span> </span>
 
@@ -47,7 +48,7 @@
             @if (weddingDate === 'Si') {
             <div class="flex flex-col gap-1">
               <label class="font-bold" for="time-range">Fecha de Boda</label>
-              <p-datepicker class="w-full" inputStyleClass="w-full" appendTo="body" placeholder="Ingrese fecha de boda" [touchUI]="!isDesktop" readonlyInput="true" />
+              <p-datepicker class="w-full" inputStyleClass="w-full" panelStyleClass="{{ isDesktop ? '' : 'touch-ui' }}" appendTo="body" placeholder="Seleccione fecha de boda" [touchUI]="!isDesktop" readonlyInput="true" />
             </div>
             }
           </div>
@@ -101,7 +102,7 @@
               <label class="font-bold" for="time-range">Fecha de Nacimiento</label>
               <span class="text-red-500">*</span>
             </div>
-            <p-datepicker class="w-full" inputStyleClass="w-full" appendTo="body" />
+            <p-datepicker class="w-full" inputStyleClass="w-full" panelStyleClass="{{ isDesktop ? '' : 'touch-ui' }}" appendTo="body" placeholder="Seleccione fecha de nacimiento" [touchUI]="!isDesktop" readonlyInput="true" />
           </div>
 
           <divider-line />
@@ -184,17 +185,17 @@
                 <label class="font-bold" for="time-range">Teléfono celular</label>
                 <span class="text-red-500">*</span>
               </div>
-              <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" />
+              <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" />
             </div>
 
             <div class="flex flex-col gap-1">
               <label class="font-bold" for="time-range">Teléfono casa</label>
-              <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" />
+              <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" />
             </div>
 
             <div class="flex flex-col gap-1">
               <label class="font-bold" for="time-range">Teléfono trabajo</label>
-              <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" />
+              <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" />
             </div>
           </div>
 
@@ -216,7 +217,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-4">
               <div class="flex flex-col gap-1">
                 <div class="flex gap-1">
-                  <label class="font-bold" for="time-range">Nombre y apellido</label>
+                  <label class="font-medium" for="time-range">Nombre y apellido</label>
                   <span class="text-red-500">*</span>
                 </div>
                 <input type="text" pInputText class="w-full" />
@@ -224,16 +225,16 @@
 
               <div class="flex flex-col gap-1">
                 <div class="flex gap-1">
-                  <label class="font-bold" for="time-range">Teléfono </label>
+                  <label class="font-medium" for="time-range">Teléfono </label>
                   <span class="text-red-500">*</span>
                 </div>
-                <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" class="w-full" />
+                <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" />
               </div>
             </div>
 
             <div class="flex flex-col gap-1">
               <div class="flex gap-1">
-                <label class="font-bold" for="time-range">Parentesco</label>
+                <label class="font-medium" for="time-range">Parentesco</label>
                 <span class="text-red-500">*</span>
               </div>
               <p-select [options]="companionOptions" [(ngModel)]="selectedCompanion" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
@@ -249,7 +250,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-4">
               <div class="flex flex-col gap-1">
                 <div class="flex gap-1">
-                  <label class="font-bold" for="time-range">Nombre</label>
+                  <label class="font-medium" for="time-range">Nombre y Apellido</label>
                   <span class="text-red-500">*</span>
                 </div>
                 <input type="text" pInputText class="w-full" />
@@ -257,16 +258,16 @@
 
               <div class="flex flex-col gap-1">
                 <div class="flex gap-1">
-                  <label class="font-bold" for="time-range">Teléfono </label>
+                  <label class="font-medium" for="time-range">Teléfono </label>
                   <span class="text-red-500">*</span>
                 </div>
-                <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" class="w-full" />
+                <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" />
               </div>
             </div>
 
             <div class="flex flex-col gap-1">
               <div class="flex gap-1">
-                <label class="font-bold" for="time-range">Parentesco</label>
+                <label class="font-medium" for="time-range">Parentesco</label>
                 <span class="text-red-500">*</span>
               </div>
               <p-select [options]="companionOptions" [(ngModel)]="selectedCompanion" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
@@ -317,38 +318,42 @@
           </div>
 
           <div class="flex flex-col gap-1">
+            <div class="flex gap-1">
+              <label class="font-bold" for="time-range">Fecha de Nacimiento</label>
+              <span class="text-red-500">*</span>
+            </div>
+            <p-datepicker class="w-full" inputStyleClass="w-full" panelStyleClass="{{ isDesktop ? '' : 'touch-ui' }}" appendTo="body" placeholder="Seleccione fecha de nacimiento" [touchUI]="!isDesktop" readonlyInput="true" />
+          </div>
+
+          <divider-line />
+
+          <div class="flex flex-col gap-1">
             <span class="font-bold text-lg">Documento de Identidad</span>
 
-            <div class="flex gap-2">
+            <div class="flex gap-3 md:gap-7">
               <div class="flex flex-col gap-1">
                 <div class="flex gap-1">
-                  <label class="font-bold" for="name">Tipo</label>
+                  <label class="font-medium" for="name">Tipo</label>
                   <span class="text-red-500">*</span>
                 </div>
-                <p-select [options]="identityTypes" [(ngModel)]="selectedIdentityType" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
+                <p-select [options]="identityTypes" [(ngModel)]="selectedIdentityType" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full min-w-35" appendTo="body" />
               </div>
               <div class="flex flex-col gap-1 flex-grow">
                 <div class="flex gap-1">
-                  <label class="font-bold" for="name">Número</label>
+                  <label class="font-medium" for="name">Número</label>
                   <span class="text-red-500">*</span>
                 </div>
 
                 @if (selectedIdentityType === 'Cédula') {
                 <p-inputmask mask="999-9999999-9" placeholder="000-0000000-0" class="w-full" />
                 } @else {
-                <input type="text" pInputText placeholder="" />
+                <input type="text" pInputText placeholder="numero de pasaporte" class="w-full" />
                 }
               </div>
             </div>
           </div>
 
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="time-range">Fecha de Nacimiento</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <p-datepicker class="w-full" inputStyleClass="w-full" appendTo="body" />
-          </div>
+          <divider-line />
 
           <div class="flex flex-col gap-1">
             <div class="flex gap-1">
@@ -366,6 +371,8 @@
             <p-selectbutton [options]="yesNoOptions" [(ngModel)]="selectedYesNo" optionLabel="label" optionValue="label" aria-labelledby="basic" />
           </div>
 
+          <divider-line />
+
           <div class="flex flex-col gap-1">
             <div class="flex gap-1">
               <label class="font-bold" for="time-range">Ciudad</label>
@@ -382,6 +389,8 @@
             <textarea rows="5" cols="30" pTextarea class="w-full"></textarea>
           </div>
 
+          <divider-line />
+
           <div class="flex flex-col gap-1">
             <div class="flex gap-1">
               <label class="font-bold" for="time-range">Correo Electronico</label>
@@ -390,25 +399,27 @@
             <input type="text" pInputText class="w-full" />
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-7">
             <div class="flex flex-col gap-1">
               <div class="flex gap-1">
                 <label class="font-bold" for="time-range">Teléfono celular</label>
                 <span class="text-red-500">*</span>
               </div>
-              <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" class="w-full" />
+              <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" />
             </div>
 
             <div class="flex flex-col gap-1">
               <label class="font-bold" for="time-range">Teléfono casa</label>
-              <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" class="w-full" />
+              <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" />
             </div>
 
             <div class="flex flex-col gap-1">
               <label class="font-bold" for="time-range">Teléfono trabajo</label>
-              <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" class="w-full" />
+              <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" />
             </div>
           </div>
+
+          <divider-line />
 
           <div class="flex flex-col gap-1">
             <div class="flex gap-1">
@@ -421,10 +432,12 @@
 
           @if(liveWithCompanion === 'Si') {
           <div class="flex flex-col gap-1">
-            <div class="grid grid-cols-2 gap-5">
+            <span class="font-bold text-lg" for="time-range">Acompañante</span>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-4">
               <div class="flex flex-col gap-1">
                 <div class="flex gap-1">
-                  <label class="font-bold" for="time-range">Nombre del acompañante</label>
+                  <label class="font-medium" for="time-range">Nombre y apellido</label>
                   <span class="text-red-500">*</span>
                 </div>
                 <input type="text" pInputText class="w-full" />
@@ -432,16 +445,16 @@
 
               <div class="flex flex-col gap-1">
                 <div class="flex gap-1">
-                  <label class="font-bold" for="time-range">Teléfono </label>
+                  <label class="font-medium" for="time-range">Teléfono </label>
                   <span class="text-red-500">*</span>
                 </div>
-                <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" class="w-full" />
+                <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" />
               </div>
             </div>
 
             <div class="flex flex-col gap-1">
               <div class="flex gap-1">
-                <label class="font-bold" for="time-range">Parentesco</label>
+                <label class="font-medium" for="time-range">Parentesco</label>
                 <span class="text-red-500">*</span>
               </div>
               <p-select [options]="companionOptions" [(ngModel)]="selectedCompanion" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
@@ -449,13 +462,15 @@
           </div>
           }
 
-          <div class="flex flex-col gap-1 mt-4">
-            <label class="font-bold text-lg" for="time-range">Contacto de Emergencia</label>
+          <divider-line />
 
-            <div class="grid grid-cols-2 gap-5">
+          <div class="flex flex-col gap-1">
+            <span class="font-bold text-lg" for="time-range">Contacto de Emergencia</span>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-4">
               <div class="flex flex-col gap-1">
                 <div class="flex gap-1">
-                  <label class="font-bold" for="time-range">Nombre</label>
+                  <label class="font-medium" for="time-range">Nombre y Apellido</label>
                   <span class="text-red-500">*</span>
                 </div>
                 <input type="text" pInputText class="w-full" />
@@ -463,23 +478,25 @@
 
               <div class="flex flex-col gap-1">
                 <div class="flex gap-1">
-                  <label class="font-bold" for="time-range">Teléfono </label>
+                  <label class="font-medium" for="time-range">Teléfono </label>
                   <span class="text-red-500">*</span>
                 </div>
-                <p-inputmask mask="(999)999-9999" placeholder="(000)000-0000" class="w-full" />
+                <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" />
               </div>
             </div>
 
             <div class="flex flex-col gap-1">
               <div class="flex gap-1">
-                <label class="font-bold" for="time-range">Parentesco</label>
+                <label class="font-medium" for="time-range">Parentesco</label>
                 <span class="text-red-500">*</span>
               </div>
               <p-select [options]="companionOptions" [(ngModel)]="selectedCompanion" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-5 mt-4">
+          <divider-line />
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div class="flex flex-col gap-1">
               <div class="flex gap-1">
                 <label class="font-bold" for="time-range">Religión</label>
