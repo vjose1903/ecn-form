@@ -11,510 +11,787 @@
   <p class="font-bold">Debe de completar el formulario para enviarlo, no se guardan los datos hasta que se envíe.</p>
 
   <span class="bg-red-500/10 text-red-800 p-2 my-5 rounded-md shadow-md"> Los campos marcados con * son <span class="font-bold">obligatorios</span> </span>
-
-  <p-accordion [value]="openedAccordionPanel" (onClose)="changeAccordionPanelIndex($event.index, 'close')" (onOpen)="changeAccordionPanelIndex($event.index, 'open')" [multiple]="true" class="shadow-lg">
-    <p-accordion-panel [value]="0">
-      <!-- INFORMACION GENERAL -->
-      <p-accordion-header class="!p-2 md:!p-4 !bg-gray-200/60">
-        <span class="text-lg font-bold text-red-900"> Informaciónes Generales </span>
-      </p-accordion-header>
-      <p-accordion-content class="{{ openedAccordionPanel.includes(0) ? '!py-2 md:!py-4' : '' }}">
-        <div class="flex flex-col gap-5">
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" class="font-bold" for="name"> Fecha de Retiro Deseada </label>
-              <span class="text-red-500">*</span>
-            </div>
-            <p-select [options]="dates" optionLabel="label" placeholder="Seleccione una fecha" class="w-full" appendTo="body" />
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="time-range">Tiempo de Noviazgo</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <p-select inputId="time-range" [options]="timeRanges" optionLabel="label" placeholder="Seleccione" class="w-full" appendTo="body" />
-          </div>
-
-          <div class="grid grid-cols-0 md:grid-cols-[min-content_1fr] gap-2 md:gap-7">
-            <div class="flex flex-col gap-1">
-              <div class="flex gap-1">
-                <label class="font-bold whitespace-nowrap" for="time-range">Tiene Fecha de Boda?</label>
-                <span class="text-red-500">*</span>
-              </div>
-              <p-selectbutton [options]="yesNoOptions" [(ngModel)]="weddingDate" optionLabel="label" optionValue="label" aria-labelledby="basic" />
-            </div>
-
-            @if (weddingDate === 'Si') {
-            <div class="flex flex-col gap-1">
-              <label class="font-bold" for="time-range">Fecha de Boda</label>
-              <p-datepicker class="w-full" inputStyleClass="w-full" panelStyleClass="{{ isDesktop ? '' : 'touch-ui' }}" appendTo="body" placeholder="Seleccione fecha de boda" [touchUI]="!isDesktop" readonlyInput="true" />
-            </div>
-            }
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="name">Como te enteraste del Retiro?</label>
-              <span class="text-red-500">*</span>
-            </div>
-
-            <p-select inputId="time-range" [options]="howToKnow" [(ngModel)]="selectedHowToKnow" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
-
-            @if (selectedHowToKnow === 'Otro') {
-            <textarea rows="5" cols="30" pTextarea class="w-full" placeholder="Escribe aquí como te enteraste del Retiro"></textarea>
-            }
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="name">Quien te invito al Retiro?</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <input type="text" pInputText placeholder="Nombre de la persona que te invito" />
-          </div>
-        </div>
-      </p-accordion-content>
-    </p-accordion-panel>
-
-    <p-accordion-panel [value]="1">
-      <!-- INFORMACION DE LA NOVIA -->
-      <p-accordion-header class="!p-2 md:!p-4 !bg-gray-200/60">
-        <span class="text-lg font-bold text-red-900"> Información de la Novia </span>
-      </p-accordion-header>
-      <p-accordion-content class="{{ openedAccordionPanel.includes(1) ? '!py-2 md:!py-4' : '' }}">
-        <div class="flex flex-col gap-5">
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="name">Nombre y Apellido</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <input type="text" pInputText class="w-full" />
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <label class="font-bold" for="name">Apodo</label>
-            <input type="text" pInputText />
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="time-range">Fecha de Nacimiento</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <p-datepicker class="w-full" inputStyleClass="w-full" panelStyleClass="{{ isDesktop ? '' : 'touch-ui' }}" appendTo="body" placeholder="Seleccione fecha de nacimiento" [touchUI]="!isDesktop" readonlyInput="true" />
-          </div>
-
-          <divider-line />
-
-          <div class="flex flex-col gap-1">
-            <span class="font-bold text-lg">Documento de Identidad</span>
-
-            <div class="flex gap-3 md:gap-7">
-              <div class="flex flex-col gap-1">
+  <div [formGroup]="formGroup" class="w-full">
+    <div class="shadow-lg rounded-[6px]">
+      <p-accordion [value]="openedAccordionPanel" (onClose)="changeAccordionPanelIndex($event.index, 'close')" (onOpen)="changeAccordionPanelIndex($event.index, 'open')" [multiple]="true">
+        <p-accordion-panel [value]="0">
+          <!-- INFORMACION GENERAL -->
+          <p-accordion-header class="!p-2 md:!p-4 !bg-gray-200/60">
+            <ng-container *ngTemplateOutlet="accordionHeader; context: { title: 'Informaciónes Generales', isCompleted: areRequiredFieldsComplete(FormGroupFields.general) }"></ng-container>
+          </p-accordion-header>
+          <p-accordion-content class="{{ openedAccordionPanel.includes(0) ? '!py-2 md:!py-4' : '' }}">
+            <div class="flex flex-col gap-5">
+              <div class="flex flex-col gap-1" [id]="FormFieldId.date_request">
                 <div class="flex gap-1">
-                  <label class="font-medium" for="name">Tipo</label>
+                  <label class="font-bold" class="font-bold" [for]="FormFieldId.date_request + '_control'"> Fecha de Retiro Deseada </label>
                   <span class="text-red-500">*</span>
                 </div>
-                <p-select [options]="identityTypes" [(ngModel)]="selectedIdentityType" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full min-w-35" appendTo="body" />
+                <div class="flex flex-col">
+                  <p-select
+                    [inputId]="FormFieldId.date_request + '_control'"
+                    [options]="dates"
+                    optionLabel="label"
+                    optionValue="label"
+                    placeholder="Seleccione una fecha"
+                    class="w-full"
+                    appendTo="body"
+                    [formControlName]="FormControlName.date_request" />
+                  <form-error-msg [control]="formGroup.get(FormControlName.date_request)" />
+                </div>
               </div>
-              <div class="flex flex-col gap-1 flex-grow">
+
+              <div class="flex flex-col gap-1" [id]="FormFieldId.dating_period">
                 <div class="flex gap-1">
-                  <label class="font-medium" for="name">Número</label>
+                  <label class="font-bold" [for]="FormFieldId.dating_period + '_control'">Tiempo de Noviazgo</label>
                   <span class="text-red-500">*</span>
                 </div>
 
-                @if (selectedIdentityType === 'Cédula') {
-                <p-inputmask mask="999-9999999-9" placeholder="000-0000000-0" class="w-full" />
-                } @else {
-                <input type="text" pInputText placeholder="numero de pasaporte" class="w-full" />
+                <div class="flex flex-col">
+                  <p-select [inputId]="FormFieldId.dating_period + '_control'" [options]="timeRanges" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" [formControlName]="FormControlName.dating_period" />
+                  <form-error-msg [control]="formGroup.get(FormControlName.dating_period)" />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-0 md:grid-cols-[min-content_1fr] gap-2 md:gap-7">
+                <div class="flex flex-col gap-1" [id]="FormFieldId.have_wedding_date">
+                  <div class="flex gap-1">
+                    <label class="font-bold whitespace-nowrap" [for]="FormFieldId.have_wedding_date + '_control'">Tiene Fecha de Boda?</label>
+                    <span class="text-red-500">*</span>
+                  </div>
+
+                  <div class="flex flex-col">
+                    <p-selectbutton [id]="FormFieldId.have_wedding_date + '_control'" class="w-fit" [options]="yesNoOptions" optionLabel="label" optionValue="value" aria-labelledby="basic" [formControlName]="FormControlName.have_wedding_date" />
+                    <form-error-msg [control]="formGroup.get(FormControlName.have_wedding_date)" />
+                  </div>
+                </div>
+
+                @if (formGroup.get(FormControlName.have_wedding_date)?.value) {
+                <div class="flex flex-col gap-1" [id]="FormFieldId.wedding_date">
+                  <div class="flex gap-1">
+                    <label class="font-bold" [for]="FormFieldId.wedding_date + '_control'">Fecha de Boda</label>
+                    <span class="text-red-500">*</span>
+                  </div>
+
+                  <div class="flex flex-col">
+                    <p-datepicker
+                      [inputId]="FormFieldId.wedding_date + '_control'"
+                      class="w-full"
+                      inputStyleClass="w-full"
+                      panelStyleClass="{{ isDesktop ? '' : 'touch-ui' }}"
+                      appendTo="body"
+                      placeholder="Seleccione fecha de boda"
+                      [touchUI]="!isDesktop"
+                      readonlyInput="true"
+                      dateFormat="dd/mm/yy"
+                      [formControlName]="FormControlName.wedding_date" />
+                    <form-error-msg [control]="formGroup.get(FormControlName.wedding_date)" />
+                  </div>
+                </div>
                 }
               </div>
-            </div>
-          </div>
 
-          <divider-line />
-
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="time-range">Ha Estado Alguna Vez Casada Por La Iglesia?</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <p-selectbutton [options]="yesNoOptions" [(ngModel)]="selectedYesNo" optionLabel="label" optionValue="label" aria-labelledby="basic" />
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="time-range">Tiene Hijos?</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <p-selectbutton [options]="yesNoOptions" [(ngModel)]="selectedYesNo" optionLabel="label" optionValue="label" aria-labelledby="basic" />
-          </div>
-
-          <divider-line />
-
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="time-range">Ciudad</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <input type="text" pInputText class="w-full" />
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="time-range">Dirección actual</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <textarea rows="5" cols="30" pTextarea class="w-full"></textarea>
-          </div>
-
-          <divider-line />
-
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="time-range">Correo Electronico</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <input type="text" pInputText class="w-full" />
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-7">
-            <div class="flex flex-col gap-1">
-              <div class="flex gap-1">
-                <label class="font-bold" for="time-range">Teléfono celular</label>
-                <span class="text-red-500">*</span>
-              </div>
-              <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" />
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <label class="font-bold" for="time-range">Teléfono casa</label>
-              <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" />
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <label class="font-bold" for="time-range">Teléfono trabajo</label>
-              <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" />
-            </div>
-          </div>
-
-          <divider-line />
-
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="time-range">Vive acompañado?</label>
-              <span class="text-red-500">*</span>
-            </div>
-
-            <p-selectbutton [options]="yesNoOptions" [(ngModel)]="liveWithCompanion" optionLabel="label" optionValue="label" aria-labelledby="basic" />
-          </div>
-
-          @if(liveWithCompanion === 'Si') {
-          <div class="flex flex-col gap-1">
-            <span class="font-bold text-lg" for="time-range">Acompañante</span>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-4">
-              <div class="flex flex-col gap-1">
+              <div class="flex flex-col gap-1" [id]="FormFieldId.how_find_us">
                 <div class="flex gap-1">
-                  <label class="font-medium" for="time-range">Nombre y apellido</label>
-                  <span class="text-red-500">*</span>
-                </div>
-                <input type="text" pInputText class="w-full" />
-              </div>
-
-              <div class="flex flex-col gap-1">
-                <div class="flex gap-1">
-                  <label class="font-medium" for="time-range">Teléfono </label>
-                  <span class="text-red-500">*</span>
-                </div>
-                <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" />
-              </div>
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <div class="flex gap-1">
-                <label class="font-medium" for="time-range">Parentesco</label>
-                <span class="text-red-500">*</span>
-              </div>
-              <p-select [options]="companionOptions" [(ngModel)]="selectedCompanion" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
-            </div>
-          </div>
-          }
-
-          <divider-line />
-
-          <div class="flex flex-col gap-1">
-            <span class="font-bold text-lg" for="time-range">Contacto de Emergencia</span>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-4">
-              <div class="flex flex-col gap-1">
-                <div class="flex gap-1">
-                  <label class="font-medium" for="time-range">Nombre y Apellido</label>
-                  <span class="text-red-500">*</span>
-                </div>
-                <input type="text" pInputText class="w-full" />
-              </div>
-
-              <div class="flex flex-col gap-1">
-                <div class="flex gap-1">
-                  <label class="font-medium" for="time-range">Teléfono </label>
-                  <span class="text-red-500">*</span>
-                </div>
-                <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" />
-              </div>
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <div class="flex gap-1">
-                <label class="font-medium" for="time-range">Parentesco</label>
-                <span class="text-red-500">*</span>
-              </div>
-              <p-select [options]="companionOptions" [(ngModel)]="selectedCompanion" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
-            </div>
-          </div>
-
-          <divider-line />
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div class="flex flex-col gap-1">
-              <div class="flex gap-1">
-                <label class="font-bold" for="time-range">Religión</label>
-                <span class="text-red-500">*</span>
-              </div>
-              <input type="text" pInputText class="w-full" />
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <div class="flex gap-1">
-                <label class="font-bold" for="time-range">Parroquia A Que Pertenece</label>
-                <span class="text-red-500">*</span>
-              </div>
-              <input type="text" pInputText class="w-full" />
-            </div>
-          </div>
-        </div>
-      </p-accordion-content>
-    </p-accordion-panel>
-
-    <p-accordion-panel [value]="2">
-      <!-- INFORMACION DEL NOVIO -->
-      <p-accordion-header class="!p-2 md:!p-4 !bg-gray-200/60">
-        <span class="text-lg font-bold text-red-900"> Información del Novio </span>
-      </p-accordion-header>
-      <p-accordion-content class="{{ openedAccordionPanel.includes(2) ? '!py-2 md:!py-4' : '' }}">
-        <div class="flex flex-col gap-5">
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="name">Nombre y Apellido</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <input type="text" pInputText class="w-full" />
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <label class="font-bold" for="name">Apodo</label>
-            <input type="text" pInputText />
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="time-range">Fecha de Nacimiento</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <p-datepicker class="w-full" inputStyleClass="w-full" panelStyleClass="{{ isDesktop ? '' : 'touch-ui' }}" appendTo="body" placeholder="Seleccione fecha de nacimiento" [touchUI]="!isDesktop" readonlyInput="true" />
-          </div>
-
-          <divider-line />
-
-          <div class="flex flex-col gap-1">
-            <span class="font-bold text-lg">Documento de Identidad</span>
-
-            <div class="flex gap-3 md:gap-7">
-              <div class="flex flex-col gap-1">
-                <div class="flex gap-1">
-                  <label class="font-medium" for="name">Tipo</label>
-                  <span class="text-red-500">*</span>
-                </div>
-                <p-select [options]="identityTypes" [(ngModel)]="selectedIdentityType" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full min-w-35" appendTo="body" />
-              </div>
-              <div class="flex flex-col gap-1 flex-grow">
-                <div class="flex gap-1">
-                  <label class="font-medium" for="name">Número</label>
+                  <label class="font-bold" [for]="FormFieldId.how_find_us + '_control'">Como te enteraste del Retiro?</label>
                   <span class="text-red-500">*</span>
                 </div>
 
-                @if (selectedIdentityType === 'Cédula') {
-                <p-inputmask mask="999-9999999-9" placeholder="000-0000000-0" class="w-full" />
-                } @else {
-                <input type="text" pInputText placeholder="numero de pasaporte" class="w-full" />
+                <div class="flex flex-col">
+                  <p-select [inputId]="FormFieldId.how_find_us + '_control'" [options]="howToKnow" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" [formControlName]="FormControlName.how_find_us" />
+                  <form-error-msg [control]="formGroup.get(FormControlName.how_find_us)" />
+                </div>
+
+                @if (formGroup.get(FormControlName.how_find_us)?.value === 'Otro') {
+                <div class="flex flex-col">
+                  <textarea rows="5" cols="30" pTextarea class="w-full" placeholder="Escribe aquí como te enteraste del Retiro" [formControlName]="FormControlName.how_find_us_other"></textarea>
+                  <form-error-msg [control]="formGroup.get(FormControlName.how_find_us_other)" />
+                </div>
                 }
               </div>
-            </div>
-          </div>
 
-          <divider-line />
-
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="time-range">Ha Estado Alguna Vez Casada Por La Iglesia?</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <p-selectbutton [options]="yesNoOptions" [(ngModel)]="selectedYesNo" optionLabel="label" optionValue="label" aria-labelledby="basic" />
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="time-range">Tiene Hijos?</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <p-selectbutton [options]="yesNoOptions" [(ngModel)]="selectedYesNo" optionLabel="label" optionValue="label" aria-labelledby="basic" />
-          </div>
-
-          <divider-line />
-
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="time-range">Ciudad</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <input type="text" pInputText class="w-full" />
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="time-range">Dirección actual</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <textarea rows="5" cols="30" pTextarea class="w-full"></textarea>
-          </div>
-
-          <divider-line />
-
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="time-range">Correo Electronico</label>
-              <span class="text-red-500">*</span>
-            </div>
-            <input type="text" pInputText class="w-full" />
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-7">
-            <div class="flex flex-col gap-1">
-              <div class="flex gap-1">
-                <label class="font-bold" for="time-range">Teléfono celular</label>
-                <span class="text-red-500">*</span>
-              </div>
-              <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" />
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <label class="font-bold" for="time-range">Teléfono casa</label>
-              <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" />
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <label class="font-bold" for="time-range">Teléfono trabajo</label>
-              <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" />
-            </div>
-          </div>
-
-          <divider-line />
-
-          <div class="flex flex-col gap-1">
-            <div class="flex gap-1">
-              <label class="font-bold" for="time-range">Vive acompañado?</label>
-              <span class="text-red-500">*</span>
-            </div>
-
-            <p-selectbutton [options]="yesNoOptions" [(ngModel)]="liveWithCompanion" optionLabel="label" optionValue="label" aria-labelledby="basic" />
-          </div>
-
-          @if(liveWithCompanion === 'Si') {
-          <div class="flex flex-col gap-1">
-            <span class="font-bold text-lg" for="time-range">Acompañante</span>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-4">
-              <div class="flex flex-col gap-1">
+              <div class="flex flex-col gap-1" [id]="FormFieldId.who_invited_you">
                 <div class="flex gap-1">
-                  <label class="font-medium" for="time-range">Nombre y apellido</label>
+                  <label class="font-bold" [for]="FormFieldId.who_invited_you + '_control'">Quien te invito al Retiro?</label>
                   <span class="text-red-500">*</span>
                 </div>
-                <input type="text" pInputText class="w-full" />
+                <div class="flex flex-col">
+                  <input type="text" pInputText placeholder="Nombre de la persona que te invito" [formControlName]="FormControlName.who_invited_you" />
+                  <form-error-msg [control]="formGroup.get(FormControlName.who_invited_you)" />
+                </div>
               </div>
+            </div>
+          </p-accordion-content>
+        </p-accordion-panel>
 
-              <div class="flex flex-col gap-1">
+        <p-accordion-panel [value]="1">
+          <!-- INFORMACION DE LA NOVIA -->
+          <p-accordion-header class="!p-2 md:!p-4 !bg-gray-200/60">
+            <ng-container *ngTemplateOutlet="accordionHeader; context: { title: 'Información de la Novia', isCompleted: areRequiredFieldsComplete(FormGroupFields.she) }"></ng-container>
+          </p-accordion-header>
+          <p-accordion-content class="{{ openedAccordionPanel.includes(1) ? '!py-2 md:!py-4' : '' }}">
+            <div class="flex flex-col gap-5" [formGroupName]="FormGroupFields.she">
+              <div class="flex flex-col gap-1" [id]="FormFieldId.she_full_name">
                 <div class="flex gap-1">
-                  <label class="font-medium" for="time-range">Teléfono </label>
+                  <label class="font-bold" [for]="FormFieldId.she_full_name + '_control'">Nombre y Apellido</label>
                   <span class="text-red-500">*</span>
                 </div>
-                <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" />
+                <div class="flex flex-col">
+                  <input type="text" pInputText class="w-full" [formControlName]="FormControlName.full_name" />
+                  <form-error-msg [control]="sheGroup.get(FormControlName.full_name)" />
+                </div>
               </div>
-            </div>
 
-            <div class="flex flex-col gap-1">
-              <div class="flex gap-1">
-                <label class="font-medium" for="time-range">Parentesco</label>
-                <span class="text-red-500">*</span>
+              <div class="flex flex-col gap-1" [id]="FormFieldId.she_nickname">
+                <label class="font-bold" [for]="FormFieldId.she_nickname + '_control'">Apodo</label>
+                <div class="flex flex-col">
+                  <input type="text" pInputText [formControlName]="FormControlName.nickname" />
+                  <form-error-msg [control]="sheGroup.get(FormControlName.nickname)" />
+                </div>
               </div>
-              <p-select [options]="companionOptions" [(ngModel)]="selectedCompanion" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
-            </div>
-          </div>
-          }
 
-          <divider-line />
-
-          <div class="flex flex-col gap-1">
-            <span class="font-bold text-lg" for="time-range">Contacto de Emergencia</span>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-4">
-              <div class="flex flex-col gap-1">
+              <div class="flex flex-col gap-1" [id]="FormFieldId.she_birth_date">
                 <div class="flex gap-1">
-                  <label class="font-medium" for="time-range">Nombre y Apellido</label>
+                  <label class="font-bold" [for]="FormFieldId.she_birth_date + '_control'">Fecha de Nacimiento</label>
                   <span class="text-red-500">*</span>
                 </div>
-                <input type="text" pInputText class="w-full" />
+
+                <div class="flex flex-col">
+                  <p-datepicker
+                    [inputId]="FormFieldId.she_birth_date + '_control'"
+                    class="w-full"
+                    inputStyleClass="w-full"
+                    panelStyleClass="{{ isDesktop ? '' : 'touch-ui' }}"
+                    appendTo="body"
+                    placeholder="Seleccione fecha de nacimiento"
+                    [touchUI]="!isDesktop"
+                    readonlyInput="true"
+                    [formControlName]="FormControlName.birth_date" />
+                  <form-error-msg [control]="sheGroup.get(FormControlName.birth_date)" />
+                </div>
               </div>
+
+              <divider-line />
 
               <div class="flex flex-col gap-1">
+                <span class="font-bold text-lg">Documento de Identidad</span>
+
+                <div class="flex gap-3 md:gap-7">
+                  <div class="flex flex-col gap-1" [id]="FormFieldId.she_identity_type">
+                    <div class="flex gap-1">
+                      <label class="font-medium" [for]="FormFieldId.she_identity_type + '_control'">Tipo</label>
+                      <span class="text-red-500">*</span>
+                    </div>
+
+                    <div class="flex flex-col">
+                      <p-select
+                        [inputId]="FormFieldId.she_identity_type + '_control'"
+                        [options]="identityTypes"
+                        optionLabel="label"
+                        optionValue="label"
+                        placeholder="Seleccione"
+                        class="w-full min-w-35"
+                        appendTo="body"
+                        [formControlName]="FormControlName.identity_type" />
+                      <form-error-msg [control]="sheGroup.get(FormControlName.identity_type)" />
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col gap-1 flex-grow" [id]="FormFieldId.she_identity_number">
+                    <div class="flex gap-1">
+                      <label class="font-medium" [for]="FormFieldId.she_identity_number + '_control'">Número</label>
+                      <span class="text-red-500">*</span>
+                    </div>
+
+                    <div class="flex flex-col">
+                      @if (sheGroup.get(FormControlName.identity_type)?.value === IdentityType.cedula) {
+                      <p-inputmask [inputId]="FormFieldId.she_identity_number + '_control'" mask="999-9999999-9" placeholder="000-0000000-0" class="w-full" [formControlName]="FormControlName.identity_number" />
+                      } @else if (sheGroup.get(FormControlName.identity_type)?.value === IdentityType.pasaporte) {
+                      <input [id]="FormFieldId.she_identity_number + '_control'" type="text" pInputText placeholder="Número de pasaporte" class="w-full" [formControlName]="FormControlName.identity_number" />
+                      }
+                      <form-error-msg [control]="sheGroup.get(FormControlName.identity_number)" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <divider-line />
+
+              <div class="flex flex-col gap-1" [id]="FormFieldId.she_are_you_married">
                 <div class="flex gap-1">
-                  <label class="font-medium" for="time-range">Teléfono </label>
+                  <label class="font-bold" [for]="FormFieldId.she_are_you_married + '_control'">Ha Estado Alguna Vez Casada Por La Iglesia?</label>
                   <span class="text-red-500">*</span>
                 </div>
-                <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" />
+                <div class="flex flex-col">
+                  <p-selectbutton [id]="FormFieldId.she_are_you_married + '_control'" class="w-fit" [options]="yesNoOptions" optionLabel="label" optionValue="value" aria-labelledby="basic" [formControlName]="FormControlName.are_you_married" />
+                  <form-error-msg [control]="sheGroup.get(FormControlName.are_you_married)" />
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-1" [id]="FormFieldId.she_have_children">
+                <div class="flex gap-1">
+                  <label class="font-bold" [for]="FormFieldId.she_have_children + '_control'">Tiene Hijos?</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <div class="flex flex-col">
+                  <p-selectbutton [id]="FormFieldId.she_have_children + '_control'" class="w-fit" [options]="yesNoOptions" optionLabel="label" optionValue="value" aria-labelledby="basic" [formControlName]="FormControlName.have_children" />
+                  <form-error-msg [control]="sheGroup.get(FormControlName.have_children)" />
+                </div>
+              </div>
+
+              <divider-line />
+
+              <div class="flex flex-col gap-1" [id]="FormFieldId.she_city_of_residence">
+                <div class="flex gap-1">
+                  <label class="font-bold" [for]="FormFieldId.she_city_of_residence + '_control'">Ciudad</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <div class="flex flex-col">
+                  <input [id]="FormFieldId.she_city_of_residence + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.city_of_residence" />
+                  <form-error-msg [control]="sheGroup.get(FormControlName.city_of_residence)" />
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-1" [id]="FormFieldId.she_address">
+                <div class="flex gap-1">
+                  <label class="font-bold" [for]="FormFieldId.she_address + '_control'">Dirección actual</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <div class="flex flex-col">
+                  <textarea [id]="FormFieldId.she_address + '_control'" rows="5" cols="30" pTextarea class="w-full" [formControlName]="FormControlName.address"></textarea>
+                  <form-error-msg [control]="sheGroup.get(FormControlName.address)" />
+                </div>
+              </div>
+
+              <divider-line />
+
+              <div class="flex flex-col gap-1" [id]="FormFieldId.she_email">
+                <div class="flex gap-1">
+                  <label class="font-bold" [for]="FormFieldId.she_email + '_control'">Correo Electronico</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <div class="flex flex-col">
+                  <input [id]="FormFieldId.she_email + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.email" />
+                  <form-error-msg [control]="sheGroup.get(FormControlName.email)" />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-7">
+                <div class="flex flex-col gap-1" [id]="FormFieldId.she_cell_phone">
+                  <div class="flex gap-1">
+                    <label class="font-bold" [for]="FormFieldId.she_cell_phone + '_control'">Teléfono celular</label>
+                    <span class="text-red-500">*</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <p-inputmask [inputId]="FormFieldId.she_cell_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" [formControlName]="FormControlName.cell_phone" />
+                    <form-error-msg [control]="sheGroup.get(FormControlName.cell_phone)" />
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-1" [id]="FormFieldId.she_home_phone">
+                  <div class="flex gap-1">
+                    <label class="font-bold" [for]="FormFieldId.she_home_phone + '_control'">Teléfono casa</label>
+                  </div>
+                  <div class="flex flex-col">
+                    <p-inputmask [inputId]="FormFieldId.she_home_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" [formControlName]="FormControlName.home_phone" />
+                    <form-error-msg [control]="sheGroup.get(FormControlName.home_phone)" />
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-1" [id]="FormFieldId.she_work_phone">
+                  <div class="flex gap-1">
+                    <label class="font-bold" [for]="FormFieldId.she_work_phone + '_control'">Teléfono trabajo</label>
+                  </div>
+                  <div class="flex flex-col">
+                    <p-inputmask [inputId]="FormFieldId.she_work_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" [formControlName]="FormControlName.work_phone" />
+                    <form-error-msg [control]="sheGroup.get(FormControlName.work_phone)" />
+                  </div>
+                </div>
+              </div>
+
+              <divider-line />
+
+              <div class="flex flex-col gap-1" [id]="FormFieldId.she_live_accompanied">
+                <div class="flex gap-1">
+                  <label class="font-bold" [for]="FormFieldId.she_live_accompanied + '_control'">Vive acompañado?</label>
+                  <span class="text-red-500">*</span>
+                </div>
+
+                <div class="flex flex-col">
+                  <p-selectbutton [id]="FormFieldId.she_live_accompanied + '_control'" class="w-fit" [options]="yesNoOptions" optionLabel="label" optionValue="value" aria-labelledby="basic" [formControlName]="FormControlName.live_accompanied" />
+                  <form-error-msg [control]="sheGroup.get(FormControlName.live_accompanied)" />
+                </div>
+              </div>
+
+              @if(sheGroup.get(FormControlName.live_accompanied)?.value) {
+              <div class="flex flex-col gap-1">
+                <span class="font-bold text-lg" for="time-range">Acompañante</span>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-4">
+                  <div class="flex flex-col gap-1" [id]="FormFieldId.she_companion_full_name">
+                    <div class="flex gap-1">
+                      <label class="font-medium" [for]="FormFieldId.she_companion_full_name + '_control'">Nombre y apellido</label>
+                      <span class="text-red-500">*</span>
+                    </div>
+                    <div class="flex flex-col">
+                      <input [id]="FormFieldId.she_companion_full_name + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.companion_full_name" />
+                      <form-error-msg [control]="sheGroup.get(FormControlName.companion_full_name)" />
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col gap-1" [id]="FormFieldId.she_companion_phone">
+                    <div class="flex gap-1">
+                      <label class="font-medium" [for]="FormFieldId.she_companion_phone + '_control'">Teléfono </label>
+                      <span class="text-red-500">*</span>
+                    </div>
+                    <div class="flex flex-col">
+                      <p-inputmask [inputId]="FormFieldId.she_companion_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" [formControlName]="FormControlName.companion_phone" />
+                      <form-error-msg [control]="sheGroup.get(FormControlName.companion_phone)" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-1" [id]="FormFieldId.she_companion_relationship">
+                  <div class="flex gap-1">
+                    <label class="font-medium" [for]="FormFieldId.she_companion_relationship + '_control'">Parentesco</label>
+                    <span class="text-red-500">*</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <p-select
+                      [inputId]="FormFieldId.she_companion_relationship + '_control'"
+                      [options]="companionOptions"
+                      optionLabel="label"
+                      optionValue="label"
+                      placeholder="Seleccione"
+                      class="w-full"
+                      appendTo="body"
+                      [formControlName]="FormControlName.companion_relationship" />
+                    <form-error-msg [control]="sheGroup.get(FormControlName.companion_relationship)" />
+                  </div>
+                </div>
+              </div>
+              }
+
+              <divider-line />
+
+              <div class="flex flex-col gap-1">
+                <span class="font-bold text-lg" for="time-range">Contacto de Emergencia</span>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-4" [id]="FormFieldId.she_emergency_full_name">
+                  <div class="flex flex-col gap-1">
+                    <div class="flex gap-1">
+                      <label class="font-medium" [for]="FormFieldId.she_emergency_full_name + '_control'">Nombre y Apellido</label>
+                      <span class="text-red-500">*</span>
+                    </div>
+                    <div class="flex flex-col">
+                      <input [id]="FormFieldId.she_emergency_full_name + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.emergency_full_name" />
+                      <form-error-msg [control]="sheGroup.get(FormControlName.emergency_full_name)" />
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col gap-1" [id]="FormFieldId.she_emergency_phone">
+                    <div class="flex gap-1">
+                      <label class="font-medium" [for]="FormFieldId.she_emergency_phone + '_control'">Teléfono </label>
+                      <span class="text-red-500">*</span>
+                    </div>
+                    <div class="flex flex-col">
+                      <p-inputmask [inputId]="FormFieldId.she_emergency_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" [formControlName]="FormControlName.emergency_phone" />
+                      <form-error-msg [control]="sheGroup.get(FormControlName.emergency_phone)" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-1" [id]="FormFieldId.she_emergency_relationship">
+                  <div class="flex gap-1">
+                    <label class="font-medium" [for]="FormFieldId.she_emergency_relationship + '_control'">Parentesco</label>
+                    <span class="text-red-500">*</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <p-select
+                      [inputId]="FormFieldId.she_emergency_relationship + '_control'"
+                      [options]="companionOptions"
+                      optionLabel="label"
+                      optionValue="label"
+                      placeholder="Seleccione"
+                      class="w-full"
+                      appendTo="body"
+                      [formControlName]="FormControlName.emergency_relationship" />
+                    <form-error-msg [control]="sheGroup.get(FormControlName.emergency_relationship)" />
+                  </div>
+                </div>
+              </div>
+
+              <divider-line />
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="flex flex-col gap-1" [id]="FormFieldId.she_religion">
+                  <div class="flex gap-1">
+                    <label class="font-bold" [for]="FormFieldId.she_religion + '_control'">Religión</label>
+                    <span class="text-red-500">*</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <input [id]="FormFieldId.she_religion + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.religion" />
+                    <form-error-msg [control]="sheGroup.get(FormControlName.religion)" />
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-1" [id]="FormFieldId.she_church_name">
+                  <div class="flex gap-1">
+                    <label class="font-bold" [for]="FormFieldId.she_church_name + '_control'">Parroquia A Que Pertenece</label>
+                    <span class="text-red-500">*</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <input [id]="FormFieldId.she_church_name + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.church_name" />
+                    <form-error-msg [control]="sheGroup.get(FormControlName.church_name)" />
+                  </div>
+                </div>
               </div>
             </div>
+          </p-accordion-content>
+        </p-accordion-panel>
 
-            <div class="flex flex-col gap-1">
-              <div class="flex gap-1">
-                <label class="font-medium" for="time-range">Parentesco</label>
-                <span class="text-red-500">*</span>
+        <p-accordion-panel [value]="2">
+          <!-- INFORMACION DEL NOVIO -->
+          <p-accordion-header class="!p-2 md:!p-4 !bg-gray-200/60">
+            <ng-container *ngTemplateOutlet="accordionHeader; context: { title: 'Información del Novio', isCompleted: areRequiredFieldsComplete(FormGroupFields.he) }"></ng-container>
+          </p-accordion-header>
+          <p-accordion-content class="{{ openedAccordionPanel.includes(2) ? '!py-2 md:!py-4' : '' }}">
+            <div class="flex flex-col gap-5" [formGroupName]="FormGroupFields.he">
+              <div class="flex flex-col gap-1" [id]="FormFieldId.he_full_name">
+                <div class="flex gap-1">
+                  <label class="font-bold" [for]="FormFieldId.he_full_name + '_control'">Nombre y Apellido</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <div class="flex flex-col">
+                  <input type="text" pInputText class="w-full" [formControlName]="FormControlName.full_name" />
+                  <form-error-msg [control]="heGroup.get(FormControlName.full_name)" />
+                </div>
               </div>
-              <p-select [options]="companionOptions" [(ngModel)]="selectedCompanion" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" />
-            </div>
-          </div>
 
-          <divider-line />
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div class="flex flex-col gap-1">
-              <div class="flex gap-1">
-                <label class="font-bold" for="time-range">Religión</label>
-                <span class="text-red-500">*</span>
+              <div class="flex flex-col gap-1" [id]="FormFieldId.he_nickname">
+                <label class="font-bold" [for]="FormFieldId.he_nickname + '_control'">Apodo</label>
+                <div class="flex flex-col">
+                  <input type="text" pInputText [formControlName]="FormControlName.nickname" />
+                  <form-error-msg [control]="heGroup.get(FormControlName.nickname)" />
+                </div>
               </div>
-              <input type="text" pInputText class="w-full" />
-            </div>
 
-            <div class="flex flex-col gap-1">
-              <div class="flex gap-1">
-                <label class="font-bold" for="time-range">Parroquia A Que Pertenece</label>
-                <span class="text-red-500">*</span>
+              <div class="flex flex-col gap-1" [id]="FormFieldId.he_birth_date">
+                <div class="flex gap-1">
+                  <label class="font-bold" [for]="FormFieldId.he_birth_date + '_control'">Fecha de Nacimiento</label>
+                  <span class="text-red-500">*</span>
+                </div>
+
+                <div class="flex flex-col">
+                  <p-datepicker
+                    [inputId]="FormFieldId.he_birth_date + '_control'"
+                    class="w-full"
+                    inputStyleClass="w-full"
+                    panelStyleClass="{{ isDesktop ? '' : 'touch-ui' }}"
+                    appendTo="body"
+                    placeholder="Seleccione fecha de nacimiento"
+                    [touchUI]="!isDesktop"
+                    readonlyInput="true"
+                    [formControlName]="FormControlName.birth_date" />
+                  <form-error-msg [control]="heGroup.get(FormControlName.birth_date)" />
+                </div>
               </div>
-              <input type="text" pInputText class="w-full" />
+
+              <divider-line />
+
+              <div class="flex flex-col gap-1">
+                <span class="font-bold text-lg">Documento de Identidad</span>
+
+                <div class="flex gap-3 md:gap-7">
+                  <div class="flex flex-col gap-1" [id]="FormFieldId.he_identity_type">
+                    <div class="flex gap-1">
+                      <label class="font-medium" [for]="FormFieldId.he_identity_type + '_control'">Tipo</label>
+                      <span class="text-red-500">*</span>
+                    </div>
+
+                    <div class="flex flex-col">
+                      <p-select
+                        [inputId]="FormFieldId.he_identity_type + '_control'"
+                        [options]="identityTypes"
+                        optionLabel="label"
+                        optionValue="label"
+                        placeholder="Seleccione"
+                        class="w-full min-w-35"
+                        appendTo="body"
+                        [formControlName]="FormControlName.identity_type" />
+                      <form-error-msg [control]="heGroup.get(FormControlName.identity_type)" />
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col gap-1 flex-grow" [id]="FormFieldId.he_identity_number">
+                    <div class="flex gap-1">
+                      <label class="font-medium" [for]="FormFieldId.he_identity_number + '_control'">Número</label>
+                      <span class="text-red-500">*</span>
+                    </div>
+
+                    <div class="flex flex-col">
+                      @if (heGroup.get(FormControlName.identity_type)?.value === IdentityType.cedula) {
+                      <p-inputmask [inputId]="FormFieldId.he_identity_number + '_control'" mask="999-9999999-9" placeholder="000-0000000-0" class="w-full" [formControlName]="FormControlName.identity_number" />
+                      } @else if (heGroup.get(FormControlName.identity_type)?.value === IdentityType.pasaporte) {
+                      <input [id]="FormFieldId.he_identity_number + '_control'" type="text" pInputText placeholder="Número de pasaporte" class="w-full" [formControlName]="FormControlName.identity_number" />
+                      }
+                      <form-error-msg [control]="heGroup.get(FormControlName.identity_number)" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <divider-line />
+
+              <div class="flex flex-col gap-1" [id]="FormFieldId.he_are_you_married">
+                <div class="flex gap-1">
+                  <label class="font-bold" [for]="FormFieldId.he_are_you_married + '_control'">Ha Estado Alguna Vez Casada Por La Iglesia?</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <div class="flex flex-col">
+                  <p-selectbutton [id]="FormFieldId.he_are_you_married + '_control'" class="w-fit" [options]="yesNoOptions" optionLabel="label" optionValue="value" aria-labelledby="basic" [formControlName]="FormControlName.are_you_married" />
+                  <form-error-msg [control]="heGroup.get(FormControlName.are_you_married)" />
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-1" [id]="FormFieldId.he_have_children">
+                <div class="flex gap-1">
+                  <label class="font-bold" [for]="FormFieldId.he_have_children + '_control'">Tiene Hijos?</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <div class="flex flex-col">
+                  <p-selectbutton [id]="FormFieldId.he_have_children + '_control'" class="w-fit" [options]="yesNoOptions" optionLabel="label" optionValue="value" aria-labelledby="basic" [formControlName]="FormControlName.have_children" />
+                  <form-error-msg [control]="heGroup.get(FormControlName.have_children)" />
+                </div>
+              </div>
+
+              <divider-line />
+
+              <div class="flex flex-col gap-1" [id]="FormFieldId.he_city_of_residence">
+                <div class="flex gap-1">
+                  <label class="font-bold" [for]="FormFieldId.he_city_of_residence + '_control'">Ciudad</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <div class="flex flex-col">
+                  <input [id]="FormFieldId.he_city_of_residence + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.city_of_residence" />
+                  <form-error-msg [control]="heGroup.get(FormControlName.city_of_residence)" />
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-1" [id]="FormFieldId.he_address">
+                <div class="flex gap-1">
+                  <label class="font-bold" [for]="FormFieldId.he_address + '_control'">Dirección actual</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <div class="flex flex-col">
+                  <textarea [id]="FormFieldId.he_address + '_control'" rows="5" cols="30" pTextarea class="w-full" [formControlName]="FormControlName.address"></textarea>
+                  <form-error-msg [control]="heGroup.get(FormControlName.address)" />
+                </div>
+              </div>
+
+              <divider-line />
+
+              <div class="flex flex-col gap-1" [id]="FormFieldId.he_email">
+                <div class="flex gap-1">
+                  <label class="font-bold" [for]="FormFieldId.he_email + '_control'">Correo Electronico</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <div class="flex flex-col">
+                  <input [id]="FormFieldId.he_email + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.email" />
+                  <form-error-msg [control]="heGroup.get(FormControlName.email)" />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-7">
+                <div class="flex flex-col gap-1" [id]="FormFieldId.he_cell_phone">
+                  <div class="flex gap-1">
+                    <label class="font-bold" [for]="FormFieldId.he_cell_phone + '_control'">Teléfono celular</label>
+                    <span class="text-red-500">*</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <p-inputmask [inputId]="FormFieldId.he_cell_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" [formControlName]="FormControlName.cell_phone" />
+                    <form-error-msg [control]="heGroup.get(FormControlName.cell_phone)" />
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-1" [id]="FormFieldId.he_home_phone">
+                  <div class="flex gap-1">
+                    <label class="font-bold" [for]="FormFieldId.he_home_phone + '_control'">Teléfono casa</label>
+                  </div>
+                  <div class="flex flex-col">
+                    <p-inputmask [inputId]="FormFieldId.he_home_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" [formControlName]="FormControlName.home_phone" />
+                    <form-error-msg [control]="heGroup.get(FormControlName.home_phone)" />
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-1" [id]="FormFieldId.he_work_phone">
+                  <div class="flex gap-1">
+                    <label class="font-bold" [for]="FormFieldId.he_work_phone + '_control'">Teléfono trabajo</label>
+                  </div>
+                  <div class="flex flex-col">
+                    <p-inputmask [inputId]="FormFieldId.he_work_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" [formControlName]="FormControlName.work_phone" />
+                    <form-error-msg [control]="heGroup.get(FormControlName.work_phone)" />
+                  </div>
+                </div>
+              </div>
+
+              <divider-line />
+
+              <div class="flex flex-col gap-1" [id]="FormFieldId.he_live_accompanied">
+                <div class="flex gap-1">
+                  <label class="font-bold" [for]="FormFieldId.he_live_accompanied + '_control'">Vive acompañado?</label>
+                  <span class="text-red-500">*</span>
+                </div>
+
+                <div class="flex flex-col">
+                  <p-selectbutton [id]="FormFieldId.he_live_accompanied + '_control'" class="w-fit" [options]="yesNoOptions" optionLabel="label" optionValue="value" aria-labelledby="basic" [formControlName]="FormControlName.live_accompanied" />
+                  <form-error-msg [control]="heGroup.get(FormControlName.live_accompanied)" />
+                </div>
+              </div>
+
+              @if(heGroup.get(FormControlName.live_accompanied)?.value) {
+              <div class="flex flex-col gap-1">
+                <span class="font-bold text-lg" for="time-range">Acompañante</span>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-4">
+                  <div class="flex flex-col gap-1" [id]="FormFieldId.he_companion_full_name">
+                    <div class="flex gap-1">
+                      <label class="font-medium" [for]="FormFieldId.he_companion_full_name + '_control'">Nombre y apellido</label>
+                      <span class="text-red-500">*</span>
+                    </div>
+                    <div class="flex flex-col">
+                      <input [id]="FormFieldId.he_companion_full_name + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.companion_full_name" />
+                      <form-error-msg [control]="heGroup.get(FormControlName.companion_full_name)" />
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col gap-1" [id]="FormFieldId.he_companion_phone">
+                    <div class="flex gap-1">
+                      <label class="font-medium" [for]="FormFieldId.he_companion_phone + '_control'">Teléfono </label>
+                      <span class="text-red-500">*</span>
+                    </div>
+                    <div class="flex flex-col">
+                      <p-inputmask [inputId]="FormFieldId.he_companion_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" [formControlName]="FormControlName.companion_phone" />
+                      <form-error-msg [control]="heGroup.get(FormControlName.companion_phone)" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-1" [id]="FormFieldId.he_companion_relationship">
+                  <div class="flex gap-1">
+                    <label class="font-medium" [for]="FormFieldId.he_companion_relationship + '_control'">Parentesco</label>
+                    <span class="text-red-500">*</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <p-select
+                      [inputId]="FormFieldId.he_companion_relationship + '_control'"
+                      [options]="companionOptions"
+                      optionLabel="label"
+                      optionValue="label"
+                      placeholder="Seleccione"
+                      class="w-full"
+                      appendTo="body"
+                      [formControlName]="FormControlName.companion_relationship" />
+                    <form-error-msg [control]="heGroup.get(FormControlName.companion_relationship)" />
+                  </div>
+                </div>
+              </div>
+              }
+
+              <divider-line />
+
+              <div class="flex flex-col gap-1">
+                <span class="font-bold text-lg" for="time-range">Contacto de Emergencia</span>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-4" [id]="FormFieldId.he_emergency_full_name">
+                  <div class="flex flex-col gap-1">
+                    <div class="flex gap-1">
+                      <label class="font-medium" [for]="FormFieldId.he_emergency_full_name + '_control'">Nombre y Apellido</label>
+                      <span class="text-red-500">*</span>
+                    </div>
+                    <div class="flex flex-col">
+                      <input [id]="FormFieldId.he_emergency_full_name + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.emergency_full_name" />
+                      <form-error-msg [control]="heGroup.get(FormControlName.emergency_full_name)" />
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col gap-1" [id]="FormFieldId.he_emergency_phone">
+                    <div class="flex gap-1">
+                      <label class="font-medium" [for]="FormFieldId.he_emergency_phone + '_control'">Teléfono </label>
+                      <span class="text-red-500">*</span>
+                    </div>
+                    <div class="flex flex-col">
+                      <p-inputmask [inputId]="FormFieldId.he_emergency_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" [formControlName]="FormControlName.emergency_phone" />
+                      <form-error-msg [control]="heGroup.get(FormControlName.emergency_phone)" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-1" [id]="FormFieldId.he_emergency_relationship">
+                  <div class="flex gap-1">
+                    <label class="font-medium" [for]="FormFieldId.he_emergency_relationship + '_control'">Parentesco</label>
+                    <span class="text-red-500">*</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <p-select
+                      [inputId]="FormFieldId.he_emergency_relationship + '_control'"
+                      [options]="companionOptions"
+                      optionLabel="label"
+                      optionValue="label"
+                      placeholder="Seleccione"
+                      class="w-full"
+                      appendTo="body"
+                      [formControlName]="FormControlName.emergency_relationship" />
+                    <form-error-msg [control]="heGroup.get(FormControlName.emergency_relationship)" />
+                  </div>
+                </div>
+              </div>
+
+              <divider-line />
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="flex flex-col gap-1" [id]="FormFieldId.he_religion">
+                  <div class="flex gap-1">
+                    <label class="font-bold" [for]="FormFieldId.he_religion + '_control'">Religión</label>
+                    <span class="text-red-500">*</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <input [id]="FormFieldId.he_religion + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.religion" />
+                    <form-error-msg [control]="heGroup.get(FormControlName.religion)" />
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-1" [id]="FormFieldId.he_church_name">
+                  <div class="flex gap-1">
+                    <label class="font-bold" [for]="FormFieldId.he_church_name + '_control'">Parroquia A Que Pertenece</label>
+                    <span class="text-red-500">*</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <input [id]="FormFieldId.he_church_name + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.church_name" />
+                    <form-error-msg [control]="heGroup.get(FormControlName.church_name)" />
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </p-accordion-content>
-    </p-accordion-panel>
-  </p-accordion>
+          </p-accordion-content>
+        </p-accordion-panel>
+      </p-accordion>
+    </div>
+
+    <div class="flex justify-end my-10">
+      <p-button label="Enviar" />
+    </div>
+  </div>
 </div>
+
+<ng-template #accordionHeader let-title="title" let-isCompleted="isCompleted">
+  <span class="flex justify-between items-center gap-2 w-full pr-4">
+    <span class="text-lg font-bold text-red-900"> {{ title }} </span>
+
+    @if(!isCompleted) {
+    <span class="flex items-center gap-2 bg-yellow-300/60 p-2px !px-1 rounded-lg animate-pulse">
+      <span class="text-sm font-bold text-yellow-700"> Incompleto </span>
+      <i class="pi pi-exclamation-circle text-yellow-700"></i>
+    </span>
+    }
+  </span>
+</ng-template>

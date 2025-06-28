@@ -17,4 +17,65 @@
   .w-px {
     width: 1px;
   }
+
+  .p-2px {
+    padding: 2px;
+  }
+}
+
+@layer components {
+  @keyframes grow-shrink {
+    0% {
+      transform: scale(0.9);
+    }
+    10% {
+      transform: scale(1.0);
+    }
+    20% {
+      transform: scale(1.1);
+    }
+    30% {
+      transform: scale(1.13);
+    }
+    40% {
+      transform: scale(1.15);
+    }
+    50% {
+      transform: scale(1.13);
+    }
+    60% {
+      transform: scale(1.1);
+    }
+    70% {
+      transform: scale(1.0);
+    }
+    80% {
+      transform: scale(0.95);
+    }
+    90% {
+      transform: scale(0.92);
+    }
+    100% {
+      transform: scale(0.9);
+    }
+  }
+
+  .animate-grow-shrink {
+    animation: grow-shrink 2s linear infinite;
+  }
+
+  .animate-grow-shrink-slow {
+    animation: grow-shrink 4s linear infinite;
+  }
+
+  .animate-grow-shrink-fast {
+    animation: grow-shrink 1.2s linear infinite;
+  }
+}
+
+
+html,
+body {
+  height: 100%;
+  width: 100%;
 }

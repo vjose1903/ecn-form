@@ -7,9 +7,8 @@ export const layoutRoutes: Routes = [
     pathMatch: 'full',
   },
   {
-    path: 'formulario',
-    loadComponent: () =>
-      import('../pages/form-page/form-page').then((m) => m.FormPage),
+    path: 'formulario/:city',
+    loadComponent: () => import('../pages/form-page/form-page').then(m => m.FormPage),
   },
   // Aquí puedes agregar más rutas hijas del layout
   // {

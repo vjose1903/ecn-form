@@ -1,1 +1,7 @@
+@if(!isReady){
+<div class="w-full h-full flex justify-center items-center">
+  <loading-component />
+</div>
+} @else {
 <router-outlet />
+}
