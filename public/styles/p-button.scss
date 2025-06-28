@@ -1,0 +1,7 @@
+p-button {
+  .p-button {
+    &:disabled {
+      cursor: not-allowed !important;
+    }
+  }
+}

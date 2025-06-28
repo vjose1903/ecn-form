@@ -1,4 +1,6 @@
 import { Routes } from '@angular/router';
+import { authGuard } from '../core/guards/auth.guard';
+import { loginGuard } from '@core/guards/login.guard';
 
 export const layoutRoutes: Routes = [
   {
@@ -11,14 +13,21 @@ export const layoutRoutes: Routes = [
     loadComponent: () => import('../pages/form-page/form-page').then(m => m.FormPage),
   },
   {
+    path: 'listado/retiros',
+    loadComponent: () => import('../pages/retreat-list/retreat-list').then(m => m.RetreatList),
+    canActivate: [authGuard],
+  },
+  {
     path: 'auth/login',
     loadComponent: () => import('../pages/login/login').then(m => m.Login),
+    canActivate: [loginGuard],
   },
-  
+
   // Aquí puedes agregar más rutas hijas del layout
   // {
   //   path: 'otra-pagina',
   //   loadComponent: () =>
   //     import('../pages/otra-pagina/otra-pagina').then((m) => m.OtraPagina),
+  //   canActivate: [authGuard],
   // },
 ];

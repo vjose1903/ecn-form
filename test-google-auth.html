@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Google Auth</title>
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: 'AIzaSyChCaLlE1a4VbuM6fLR9xcopZmJnznJTRI',
+            authDomain: 'ecn-platform.firebaseapp.com',
+            projectId: 'ecn-platform',
+            storageBucket: 'ecn-platform.firebasestorage.app',
+            messagingSenderId: '903289469777',
+            appId: '1:903289469777:web:77a394522ef34ba9e33170',
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Check for redirect result
+        getRedirectResult(auth).then((result) => {
+            if (result) {
+                console.log('✅ Redirect result:', result.user.email);
+                document.getElementById('status').textContent = `Usuario autenticado: ${result.user.email}`;
+            } else {
+                console.log('ℹ️ No redirect result');
+                document.getElementById('status').textContent = 'No hay redirect pendiente';
+            }
+        }).catch((error) => {
+            console.error('❌ Error:', error);
+            document.getElementById('status').textContent = `Error: ${error.message}`;
+        });
+
+        // Google sign in function
+        window.signInWithGoogle = function() {
+            const provider = new GoogleAuthProvider();
+            signInWithRedirect(auth, provider);
+        };
+    </script>
+</head>
+<body>
+    <h1>Test Google Auth</h1>
+    <button onclick="signInWithGoogle()">Iniciar sesión con Google</button>
+    <div id="status">Estado: Esperando...</div>
+    
+    <script>
+        console.log('🚀 Test page loaded');
+    </script>
+</body>
+</html> 
