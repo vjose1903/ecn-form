@@ -1,0 +1,16 @@
+// Estilos adicionales específicos del login si los necesitas
+// Los estilos principales están en el HTML con Tailwind
+
+.form-input:focus {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+// Animación suave para el botón
+.btn-login {
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-login:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}

@@ -17,7 +17,7 @@
         <p-accordion-panel [value]="0">
           <!-- INFORMACION GENERAL -->
           <p-accordion-header class="!p-2 md:!p-4 !bg-gray-200/60">
-            <ng-container *ngTemplateOutlet="accordionHeader; context: { title: 'Informaciónes Generales', isCompleted: areRequiredFieldsComplete(FormGroupFields.general) }"></ng-container>
+            <ng-container *ngTemplateOutlet="accordionHeader; context: { title: 'Informaciónes Generales', isCompleted: areRequiredFieldsComplete(FormGroupFields.general), invalid: areInvalidFields(FormGroupFields.general) }"></ng-container>
           </p-accordion-header>
           <p-accordion-content class="{{ openedAccordionPanel.includes(0) ? '!py-2 md:!py-4' : '' }}">
             <div class="flex flex-col gap-5">
@@ -126,7 +126,7 @@
         <p-accordion-panel [value]="1">
           <!-- INFORMACION DE LA NOVIA -->
           <p-accordion-header class="!p-2 md:!p-4 !bg-gray-200/60">
-            <ng-container *ngTemplateOutlet="accordionHeader; context: { title: 'Información de la Novia', isCompleted: areRequiredFieldsComplete(FormGroupFields.she) }"></ng-container>
+            <ng-container *ngTemplateOutlet="accordionHeader; context: { title: 'Información de la Novia', isCompleted: areRequiredFieldsComplete(FormGroupFields.she), invalid: areInvalidFields(FormGroupFields.she) }"></ng-container>
           </p-accordion-header>
           <p-accordion-content class="{{ openedAccordionPanel.includes(1) ? '!py-2 md:!py-4' : '' }}">
             <div class="flex flex-col gap-5" [formGroupName]="FormGroupFields.she">
@@ -452,7 +452,7 @@
         <p-accordion-panel [value]="2">
           <!-- INFORMACION DEL NOVIO -->
           <p-accordion-header class="!p-2 md:!p-4 !bg-gray-200/60">
-            <ng-container *ngTemplateOutlet="accordionHeader; context: { title: 'Información del Novio', isCompleted: areRequiredFieldsComplete(FormGroupFields.he) }"></ng-container>
+            <ng-container *ngTemplateOutlet="accordionHeader; context: { title: 'Información del Novio', isCompleted: areRequiredFieldsComplete(FormGroupFields.he), invalid: areInvalidFields(FormGroupFields.he) }"></ng-container>
           </p-accordion-header>
           <p-accordion-content class="{{ openedAccordionPanel.includes(2) ? '!py-2 md:!py-4' : '' }}">
             <div class="flex flex-col gap-5" [formGroupName]="FormGroupFields.he">
@@ -783,15 +783,22 @@
   </div>
 </div>
 
-<ng-template #accordionHeader let-title="title" let-isCompleted="isCompleted">
-  <span class="flex justify-between items-center gap-2 w-full pr-4">
+<ng-template #accordionHeader let-title="title" let-isCompleted="isCompleted" let-invalid="invalid">
+  <span class="flex flex-wrap justify-between items-center gap-2 w-full pr-4">
     <span class="text-lg font-bold text-red-900"> {{ title }} </span>
 
-    @if(!isCompleted) {
-    <span class="flex items-center gap-2 bg-yellow-300/60 p-2px !px-1 rounded-lg animate-pulse">
-      <span class="text-sm font-bold text-yellow-700"> Incompleto </span>
-      <i class="pi pi-exclamation-circle text-yellow-700"></i>
-    </span>
-    }
+    <div class="flex items-center gap-3">
+      @if(!isCompleted) {
+      <span class="flex items-center gap-2 bg-yellow-300/60 p-2px !px-2 rounded-lg animate-pulse">
+        <span class="text-sm font-bold text-yellow-700"> Incompleto </span>
+        <i class="pi pi-exclamation-circle text-yellow-700"></i>
+      </span>
+      } @if(invalid) {
+      <span class="flex items-center gap-2 bg-red-300/60 p-2px !px-2 rounded-lg animate-pulse">
+        <span class="text-sm font-bold text-red-700"> Inválido </span>
+        <i class="pi pi-exclamation-circle text-red-700"></i>
+      </span>
+      }
+    </div>
   </span>
 </ng-template>

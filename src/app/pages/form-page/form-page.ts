@@ -222,7 +222,7 @@ export class FormPage implements OnInit {
       } else {
         identityNumberControl?.addValidators(Validators.required);
       }
-      
+
       identityNumberControl?.markAsPristine();
       identityNumberControl?.markAsUntouched();
       identityNumberControl?.updateValueAndValidity({ emitEvent: false });
@@ -294,7 +294,7 @@ export class FormPage implements OnInit {
     }
 
     // Para FormControl individual
-    return this.isControlValid(control);
+    return this.isControlCompleted(control);
   }
 
   /**
@@ -302,7 +302,7 @@ export class FormPage implements OnInit {
    * @param control - El control a verificar
    * @returns true si el control es válido
    */
-  private isControlValid(control: AbstractControl): boolean {
+  private isControlCompleted(control: AbstractControl): boolean {
     // Si no tiene error de required, es válido
     if (!control.hasError('required')) {
       return true;
@@ -310,5 +310,61 @@ export class FormPage implements OnInit {
 
     // Si tiene error de required, verificamos si tiene valor truthy
     return !!control.value;
+  }
+
+  /**
+   * Verifica si hay campos inválidos por validadores que no sean required en una sección específica
+   * @param section - El grupo a verificar: 'general', 'she', o 'he'
+   * @returns true si hay campos inválidos, false si todos los campos son válidos
+   */
+  areInvalidFields(section: FormGroupFields): boolean {
+    if (section === FormGroupFields.general) {
+      return this.checkInvalidFields(this.formGroup, true);
+    }
+
+    const groupName = section === FormGroupFields.she ? FormGroupFields.she : FormGroupFields.he;
+    const subGroup = this.formGroup.get(groupName);
+
+    return subGroup ? this.checkInvalidFields(subGroup, false) : false;
+  }
+
+  /**
+   * Verifica campos inválidos en un FormGroup o FormControl
+   * @param control - El control a verificar
+   * @param rootLevelOnly - Si true, solo verifica controles del nivel raíz (excluye subgrupos)
+   * @returns true si hay campos inválidos
+   */
+  private checkInvalidFields(control: AbstractControl, rootLevelOnly: boolean = false): boolean {
+    if (control instanceof FormGroup) {
+      return Object.entries(control.controls).some(([controlName, childControl]) => {
+        // Si es nivel raíz y encontramos un subgrupo, saltarlo
+        if (rootLevelOnly && (controlName === FormGroupFields.she || controlName === FormGroupFields.he)) {
+          return false;
+        }
+
+        return this.checkInvalidFields(childControl, false);
+      });
+    }
+
+    // Para FormControl individual
+    return this.isControlInvalid(control);
+  }
+
+  /**
+   * Verifica si un control individual es inválido (excluyendo errores de required)
+   * @param control - El control a verificar
+   * @returns true si el control es inválido por otros validadores
+   */
+  private isControlInvalid(control: AbstractControl): boolean {
+    // Si el control no tiene errores, es válido
+    if (!control.errors) {
+      return false;
+    }
+
+    // Obtener todas las claves de errores excepto 'required'
+    const errorKeys = Object.keys(control.errors).filter(key => key !== 'required');
+
+    // Si hay errores que no sean 'required', el control es inválido
+    return errorKeys.length > 0;
   }
 }
