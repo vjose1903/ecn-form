@@ -13,8 +13,13 @@ export const layoutRoutes: Routes = [
     loadComponent: () => import('../pages/form-page/form-page').then(m => m.FormPage),
   },
   {
-    path: 'listado/retiros',
+    path: 'retiros',
     loadComponent: () => import('../pages/retreat-list/retreat-list').then(m => m.RetreatList),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'casas-de-retiro',
+    loadComponent: () => import('../pages/retreat-home-list/retreat-home-list').then(m => m.RetreatHomeList),
     canActivate: [authGuard],
   },
   {

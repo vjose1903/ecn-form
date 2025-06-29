@@ -56,6 +56,7 @@ export class FormErrorMsgComponent implements OnInit, OnDestroy, AfterViewInit {
     sinRayas: () => `Complete el campo: ${this.fieldName || 'este campo'}`,
     pattern: 'Formato inválido.',
     maxlength: (error: any) => `Máximo ${error.requiredLength} caracteres.`,
+    invalidUrl: 'Ingrese una URL válida.',
   };
 
   constructor(private elementRef: ElementRef, private cdRef: ChangeDetectorRef) {}

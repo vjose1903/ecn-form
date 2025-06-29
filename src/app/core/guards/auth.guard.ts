@@ -2,7 +2,7 @@ import { inject } from '@angular/core';
 import { Router, type CanActivateFn } from '@angular/router';
 import { environment } from '../../../environments/environment';
 
-export const authGuard: CanActivateFn = (route, state) => {
+export const authGuard: CanActivateFn = async (route, state) => {
   const router = inject(Router);
   const currentUrl = state.url;
 
@@ -13,13 +13,6 @@ export const authGuard: CanActivateFn = (route, state) => {
 
   // Verificar si existe el token en localStorage
   const token = localStorage.getItem(environment.X_TOKEN);
-
-  if (currentUrl.startsWith('/auth/login') && token) {
-    router.navigateByUrl('/listado/retiros');
-    return false;
-  }
-
-  console.log('%c token', 'color: red; font-weight: bold;', token);
 
   if (!token) {
     // Si no hay token, redirigir al login

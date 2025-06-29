@@ -39,10 +39,7 @@ export class Login implements OnInit {
     });
   }
 
-  ngOnInit() {
-    // El manejo del redirect ahora se hace automáticamente en el AuthService
-    // a través de onAuthStateChanged
-  }
+  ngOnInit() {}
 
   onSubmit() {
     if (this.formGroup.valid) {
@@ -56,15 +53,10 @@ export class Login implements OnInit {
   }
 
   onGoogleLogin() {
-    console.log('🖱️ [Login] Botón de Google clickeado');
     this.isLoading.set(true);
     this.isGoogleLoading.set(true);
 
-    // Para testing, usar popup en lugar de redirect
-    console.log('🔄 [Login] Iniciando login con Google (popup)...');
-
     this.auth.loginWithGooglePopup().finally(() => {
-      console.log('✅ [Login] Login con Google completado');
       this.isLoading.set(false);
       this.isGoogleLoading.set(false);
     });
@@ -76,6 +68,6 @@ export class Login implements OnInit {
   }
 
   onTest() {
-    this.router.navigateByUrl('/listado/retiros');
+    this.router.navigateByUrl('/retiros');
   }
 }

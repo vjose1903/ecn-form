@@ -1,0 +1,125 @@
+<div class="grid grid-rows-[1fr_min-content] gap-10 h-full">
+  <form [formGroup]="formGroup" (ngSubmit)="onSubmit()">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-7 overflow-y-auto overflow-x-hidden">
+      <!-- Numero de Retiro -->
+      <div class="col-span-1 md:col-span-6" [id]="FormFieldId.number">
+        <div class="flex gap-1">
+          <label class="font-bold" [for]="FormFieldId.number + '_control'"> Número de Retiro </label>
+          <span class="text-red-500">*</span>
+        </div>
+        <p-inputnumber [formControlName]="FormControlName.number" [inputId]="FormFieldId.number + '_control'" placeholder="Ingrese el número del retiro" [min]="1" class="w-full" />
+
+        <form-error-msg [control]="formGroup.get(FormControlName.number)" />
+      </div>
+
+      <!-- Precio -->
+      <div class="col-span-1 md:col-span-6" [id]="FormFieldId.price">
+        <div class="flex gap-1">
+          <label class="font-bold" [for]="FormFieldId.price + '_control'"> Precio </label>
+          <span class="text-red-500">*</span>
+        </div>
+
+        <p-inputnumber [formControlName]="FormControlName.price" [inputId]="FormFieldId.price + '_control'" mode="decimal" [min]="0" [minFractionDigits]="2" [maxFractionDigits]="2" placeholder="Ingrese el precio del retiro" class="w-full" />
+
+        <form-error-msg [control]="formGroup.get(FormControlName.price)" />
+      </div>
+
+      <!-- Fecha de Inicio -->
+      <div class="col-span-1 md:col-span-4" [id]="FormFieldId.start_date">
+        <div class="flex gap-1">
+          <label class="font-bold" [for]="FormFieldId.start_date + '_control'"> Fecha de inicio </label>
+          <span class="text-red-500">*</span>
+        </div>
+
+        <p-datepicker
+          [inputId]="FormFieldId.start_date + '_control'"
+          class="w-full"
+          inputStyleClass="w-full"
+          panelStyleClass="{{ isDesktop ? '' : 'touch-ui' }}"
+          appendTo="body"
+          placeholder="Seleccione fecha de inicio"
+          [touchUI]="!isDesktop"
+          readonlyInput="true"
+          dateFormat="dd/mm/yy"
+          [formControlName]="FormControlName.start_date" 
+					[maxDate]="formGroup.get(FormControlName.max_request_date)?.value"
+					/>
+					
+        <form-error-msg [control]="formGroup.get(FormControlName.start_date)" />
+      </div>
+
+      <!-- Fecha de limite de solicitudes -->
+      <div class="col-span-1 md:col-span-4" [id]="FormFieldId.max_request_date">
+        <div class="flex gap-1">
+          <label class="font-bold" [for]="FormFieldId.max_request_date + '_control'"> Fecha limite de solicitudes </label>
+          <span class="text-red-500">*</span>
+        </div>
+
+        <p-datepicker
+          [inputId]="FormFieldId.max_request_date + '_control'"
+          class="w-full"
+          inputStyleClass="w-full"
+          panelStyleClass="{{ isDesktop ? '' : 'touch-ui' }}"
+          appendTo="body"
+          placeholder="Seleccione fecha de limite"
+          [touchUI]="!isDesktop"
+          readonlyInput="true"
+          dateFormat="dd/mm/yy"
+          [formControlName]="FormControlName.max_request_date"
+          [minDate]="formGroup.get(FormControlName.start_date)?.value"
+          [maxDate]="formGroup.get(FormControlName.end_date)?.value" />
+        <form-error-msg [control]="formGroup.get(FormControlName.max_request_date)" />
+      </div>
+
+      <!-- Fecha de Fin -->
+      <div class="col-span-1 md:col-span-4" [id]="FormFieldId.end_date">
+        <div class="flex gap-1">
+          <label class="font-bold" [for]="FormFieldId.end_date + '_control'"> Fecha de fin </label>
+          <span class="text-red-500">*</span>
+        </div>
+        <p-datepicker
+          [inputId]="FormFieldId.end_date + '_control'"
+          class="w-full"
+          inputStyleClass="w-full"
+          panelStyleClass="{{ isDesktop ? '' : 'touch-ui' }}"
+          appendTo="body"
+          placeholder="Seleccione fecha de fin"
+          [touchUI]="!isDesktop"
+          readonlyInput="true"
+          dateFormat="dd/mm/yy"
+          [formControlName]="FormControlName.end_date"
+          [minDate]="formGroup.get(FormControlName.max_request_date)?.value" />
+        <form-error-msg [control]="formGroup.get(FormControlName.end_date)" />
+      </div>
+
+      <!-- Ubicación -->
+      <div class="col-span-1 md:col-span-12" [id]="FormFieldId.location">
+        <div class="flex gap-4 md:gap-7 items-end">
+          <div class="flex flex-col flex-grow">
+            <div class="flex gap-1">
+              <label class="font-bold" [for]="FormFieldId.location + '_control'"> Ubicación </label>
+              <span class="text-red-500">*</span>
+            </div>
+
+            <input [id]="FormFieldId.location + '_control'" type="text" pInputText [formControlName]="FormControlName.location" placeholder="Ingrese el link de google maps" class="w-full" />
+            <form-error-msg [control]="formGroup.get(FormControlName.location)" />
+          </div>
+
+          <p-button type="button" severity="contrast" variant="text" (onClick)="openGoogleMaps()" class="w-auto">
+            <span class="flex items-center justify-center gap-2">
+              <span class="hidden md:block whitespace-nowrap">Abrir Google Maps</span>
+              <img src="icons/google-maps-icon.svg" alt="Google Maps" class="w-6 h-6" />
+            </span>
+          </p-button>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- Botones fijos en la parte inferior -->
+
+  <div class="flex justify-end gap-3">
+    <p-button type="button" label="Cancelar" severity="secondary" (onClick)="onCancel()" [disabled]="loading()" class="w-auto" />
+    <p-button type="button" label="Guardar Retiro" severity="success" (onClick)="onSubmit()" [loading]="loading()" [disabled]="formGroup.invalid || loading()" class="w-auto" />
+  </div>
+</div>

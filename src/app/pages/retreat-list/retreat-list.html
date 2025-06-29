@@ -1,1 +1,13 @@
-<p>retreat-list works!</p>
+<div class="grid grid-rows-[min-content_1fr] gap-4 h-full p-2 md:p-4 lg:p-6">
+  <div class="flex justify-between items-center flex-wrap gap-2">
+    <h1 class="text-2xl font-bold">Retiros</h1>
+    <!-- <p-button pButton type="button" label="Nuevo Retiro" icon="pi pi-plus" class="p-button-success" /> -->
+    <div class="flex items-center gap-3 ml-auto">
+      <p-button type="button" icon="pi pi-share-alt" label="Link de Formulario" severity="info" variant="text" styleClass="relative" (onClick)="copyLink()" > </p-button>
+      <p-button type="button" icon="pi pi-plus" label="Nuevo Retiro" severity="success" styleClass="relative" (onClick)="showNewRetreatDialog()"> </p-button>
+    </div>
+  </div>
+  <div class="overflow-y-auto overflow-x-hidden">
+    <h1>Retiros</h1>
+  </div>
+</div>

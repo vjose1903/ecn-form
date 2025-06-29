@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, inject, NgZone, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, NgZone, OnInit, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Ss } from '@core/services/singleton.service';
 import { fun } from '@core/services/functions.service';
@@ -6,6 +6,10 @@ import { LoadingComponent } from '@core/components/loading-component/loading-com
 import { ToastModule } from 'primeng/toast';
 import { AuthService } from '@core/services/auth.service';
 import { Firestore } from '@angular/fire/firestore';
+import { environment } from 'environments/environment';
+import { UserService } from '@core/entities/user/user.service';
+import { ToastService } from '@core/services/toast.service';
+import { CopyToClipboardService } from '@core/services/copy-to-clipboard.service';
 
 @Component({
   selector: 'app-root',
@@ -14,38 +18,77 @@ import { Firestore } from '@angular/fire/firestore';
   styleUrl: './app.scss',
 })
 export class App implements OnInit {
-  protected title = 'ECN Platform';
-  isReady: boolean = false;
+  protected readonly title = 'ECN Platform';
+  protected readonly isReady = signal(false);
 
-  cdRef = inject(ChangeDetectorRef);
-  ngZone = inject(NgZone);
-  authService = inject(AuthService);
-  firestore = inject(Firestore);
+  private readonly cdRef = inject(ChangeDetectorRef);
+  private readonly ngZone = inject(NgZone);
+  private readonly authService = inject(AuthService);
+  private readonly firestore = inject(Firestore);
+  private readonly userService = inject(UserService);
+  private readonly toastService = inject(ToastService);
+  private readonly copyToClipboardService = inject(CopyToClipboardService);
 
   ngOnInit(): void {
-    console.log('🚀 [App] Iniciando aplicación...');
-    this.initializeSingletonServices().then(() => {
-      console.log('✅ [App] Servicios singleton inicializados');
-
-      // Manejar el redirect de Google Auth antes de marcar la app como lista
-
-      this.isReady = true;
-      console.log('✅ [App] Aplicación lista (isReady = true)');
-    });
+    this.initializeApp();
   }
 
-  private initializeSingletonServices(): Promise<void> {
-    console.log('⚙️ [App] Inicializando servicios singleton...');
-    return new Promise<void>((resolve, reject) => {
-      Ss.cdRef = this.cdRef;
-      Ss.ngZone = this.ngZone;
-      Ss.firestore = this.firestore;
-      console.log('⏳ [App] Esperando 500ms para completar inicialización...');
+  private async initializeApp(): Promise<void> {
+    try {
+      await this.initializeSingletonServices();
 
-      fun.setTimeout(() => {
-        console.log('✅ [App] Delay completado, resolviendo promesa');
-        resolve();
-      }, 500);
-    });
+      await this.checkUser();
+
+      this.isReady.set(true);
+      this.cdRef.detectChanges();
+    } catch (error) {
+      console.error('❌ [App] Error durante la inicialización:', error);
+      // Aún marcar como lista para que la app funcione
+      this.isReady.set(true);
+      this.cdRef.detectChanges();
+    }
+  }
+
+  private async initializeSingletonServices(): Promise<void> {
+    // Inicializar servicios singleton inmediatamente
+    Ss.cdRef = this.cdRef;
+    Ss.ngZone = this.ngZone;
+    Ss.firestore = this.firestore;
+    Ss.toastService = this.toastService;
+    Ss.copyToClipboardService = this.copyToClipboardService;
+    Ss.authService = this.authService;
+
+    // Delay mínimo para asegurar que Firebase esté listo
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  private async checkUser(): Promise<void> {
+    const email = localStorage.getItem(environment.X_EMAIL);
+    const token = localStorage.getItem(environment.X_TOKEN);
+
+    // Si no hay credenciales, no hacer nada
+    if (!email || !token) return;
+
+    // Si ya hay usuario autenticado, no verificar de nuevo
+    if (this.authService.current_user()) {
+      console.log('%c ANDO AQUIIII', 'color: red; font-weight: bold;', JSON.stringify(this.authService.current_user()));
+      return;
+    }
+
+    try {
+      const user = await this.userService.getUserByEmail(email);
+
+      console.log('%c user', 'color: red; font-weight: bold;', JSON.stringify(user));
+      if (user) {
+        this.authService.current_user.set(user);
+      } else {
+        console.warn('⚠️ [App] Usuario no encontrado, cerrando sesión');
+        await this.authService.logout();
+      }
+    } catch (error) {
+      console.error('❌ [App] Error verificando usuario:', error);
+      await this.authService.logout();
+      throw error;
+    }
   }
 }

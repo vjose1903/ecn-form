@@ -3,19 +3,24 @@
   <div class="bg-red-500 w-full p-2 text-white flex items-center justify-between gap-4">
     <div class="flex items-center gap-4">
       <img src="images/Logo_ECN.png" alt="logo" srcset="" class="w-12 h-12" />
-      <span class="text-2xl font-bold">Encuentro Catolico para Novios</span>
+      <span class="text-md md:text-2xl font-bold">Encuentro Catolico para Novios</span>
     </div>
 
     <div class="flex items-center gap-2">
-      @if(showLogout()){
-        <p-button type="button" icon="pi pi-sign-out" [rounded]="true" severity="danger"  styleClass="w-10 h-10 relative" (onClick)="logOut()"> </p-button>
+      @if(isAdminRoute() ){
+      <p-button type="button" icon="pi pi-bars" [rounded]="true" severity="danger" class="lg:hidden" styleClass="w-10 h-10 relative" (onClick)="menuService.toggleMenu()"> </p-button>
       }
     </div>
   </div>
 
   <!-- Contenido de las páginas -->
-  <div class="bg-gray-50/50">
-    <router-outlet />
+  <div #contentRef class="bg-gray-50/50" [ngClass]="{'grid grid-cols-[min-content_1fr]': isAdminRoute()}">
+    @if(isAdminRoute()){
+    <app-menu  />
+    }
+    <div class="h-full">
+      <router-outlet />
+    </div>
   </div>
 
   <!-- Footer (opcional) -->

@@ -12,6 +12,7 @@ export class fun {
     const timeout = setTimeout(() => {
       callback();
       Ss.cdRef.markForCheck();
+      Ss.cdRef.detectChanges();
     }, time);
 
     return timeout;

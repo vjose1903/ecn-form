@@ -1,0 +1,32 @@
+<!-- Menú fijo para pantallas grandes -->
+<div class="hidden lg:grid lg:grid-rows-[min-content_1fr] bg-white w-64 h-full p-4 shadow-lg">
+  <h3 class="text-black font-bold mb-4 text-2xl">Menú</h3>
+  <ng-container *ngTemplateOutlet="menuContent"></ng-container>
+</div>
+
+<!-- Drawer para pantallas pequeñas -->
+<p-drawer [visible]="menuService.visible()" (visibleChange)="menuService.toggleMenu($event)" header="Menú" [modal]="true" appendTo="body" position="left" [style]="{width: '280px'}" class="lg:hidden">
+  <ng-container *ngTemplateOutlet="menuContent"></ng-container>
+</p-drawer>
+
+<ng-template #menuContent>
+  <ul class="flex flex-col gap-2 h-full">
+    @for(item of items; track item.label){
+    <li [ngClass]="item.liClass">
+      <ng-container *ngTemplateOutlet="menuItem; context: { label: item.label, command: item.command, icon: item.icon, severity: item.severity, item: item }"></ng-container>
+    </li>
+    }
+  </ul>
+</ng-template>
+
+<ng-template #menuItem let-label="label" let-command="command" let-icon="icon" let-severity="severity" let-item="item">
+  <div
+    class="flex gap-3 items-center p-2 rounded transition-colors cursor-pointer group"
+    [ngClass]="{'text-red-700 bg-red-100 hover:bg-red-200': severity === 'danger','text-black hover:bg-gray-100': severity === 'contrast' }"
+    (click)="executeCommand(item)"
+    [routerLink]="item.link"
+    [routerLinkActive]="'bg-gray-200 hover:bg-gray-300 font-bold'">
+    <i class="{{ icon }} opacity-40 group-hover:opacity-100 transition-opacity" style="font-size: 1.2rem" [routerLinkActive]="'opacity-100'"></i>
+    <span>{{ label }}</span>
+  </div>
+</ng-template>

@@ -10,7 +10,7 @@ export const loginGuard: CanActivateFn = (route, state) => {
 
   if (token) {
     // Si hay token, redirigir al listado de retiros
-    router.navigateByUrl('/listado/retiros');
+    router.navigateByUrl('/retiros');
     return false;
   }
 
