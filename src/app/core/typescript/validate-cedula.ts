@@ -48,7 +48,7 @@ export class CedulaValidator {
         const digito = parseInt(cedula.charAt(i)) * CedulaValidator.MULTIPLIERS[i];
         suma += digito > 9 ? Math.floor(digito / 10) + (digito % 10) : digito;
       }
-
+ 
       const verificador = fun.roundDecenaMayor(suma) - suma;
       return verificador === digitoVerificador || (verificador === 10 && digitoVerificador === 0);
     } catch {

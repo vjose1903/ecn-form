@@ -115,7 +115,7 @@
                   <span class="text-red-500">*</span>
                 </div>
                 <div class="flex flex-col">
-                  <input type="text" pInputText placeholder="Nombre de la persona que te invito" [formControlName]="FormControlName.who_invited_you" />
+                  <input type="text" pInputText placeholder="Nombre de la persona que te invito" [formControlName]="FormControlName.who_invited_you" class="w-full" />
                   <form-error-msg [control]="formGroup.get(FormControlName.who_invited_you)" />
                 </div>
               </div>

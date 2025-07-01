@@ -6,7 +6,7 @@ export const primeNGLocales = {
   equals: 'Igual',
   notEquals: 'No igual',
   noFilter: 'No Filtrar',
-  lt: 'Menos que',
+  lt: 'Menos que', 
   lte: 'Menos o igual que',
   gt: 'Mayor que',
   gte: 'Mayor o igual que',

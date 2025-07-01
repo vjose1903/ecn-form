@@ -1,0 +1,111 @@
+<div class="grid grid-rows-[1fr_min-content] gap-10 h-full">
+  <div class="h-full overflow-y-auto overflow-x-hidden">
+    <form [formGroup]="formGroup" (ngSubmit)="onSubmit()">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-7">
+        <!-- Numero de Retiro -->
+        <div class="col-span-1 md:col-span-6 relative" [id]="FormFieldId.name">
+          <div class="flex gap-1">
+            <label class="font-bold" [for]="FormFieldId.name + '_control'"> Nombre </label>
+            <span class="text-red-500">*</span>
+          </div>
+
+          <input type="text" pInputText placeholder="Nombre de la casa de retiro" [formControlName]="FormControlName.name" class="w-full" />
+
+          <form-error-msg [control]="formGroup.get(FormControlName.name)" />
+        </div>
+
+        <!-- Teléfono -->
+
+        <div class="col-span-1 md:col-span-6 relative" [id]="FormFieldId.phone">
+          <div class="flex gap-1">
+            <label class="font-bold" [for]="FormFieldId.phone + '_control'">Teléfono </label>
+          </div>
+          <div class="flex flex-col">
+            <p-inputmask [inputId]="FormFieldId.phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" [formControlName]="FormControlName.phone" />
+            <form-error-msg [control]="formGroup.get(FormControlName.phone)" />
+          </div>
+        </div>
+
+        <!-- Dirección -->
+
+        <div class="col-span-1 md:col-span-12 relative" [id]="FormFieldId.address">
+          <div class="flex gap-1">
+            <label class="font-bold" [for]="FormFieldId.address + '_control'">Dirección</label>
+          </div>
+          <div class="flex flex-col">
+            <textarea [id]="FormFieldId.address + '_control'" rows="5" cols="30" pTextarea class="w-full" [formControlName]="FormControlName.address"></textarea>
+            <form-error-msg [control]="formGroup.get(FormControlName.address)" />
+          </div>
+        </div>
+
+        <!-- Ubicación -->
+        <div class="col-span-1 md:col-span-12 relative" [id]="FormFieldId.location">
+          <div class="flex gap-4 md:gap-7 items-end">
+            <div class="flex flex-col flex-grow">
+              <div class="flex gap-1">
+                <label class="font-bold" [for]="FormFieldId.location + '_control'"> Ubicación </label>
+                <span class="text-red-500">*</span>
+              </div>
+
+              <input [id]="FormFieldId.location + '_control'" type="text" pInputText [formControlName]="FormControlName.location" placeholder="Ingrese el link de google maps" class="w-full" />
+              <form-error-msg [control]="formGroup.get(FormControlName.location)" />
+            </div>
+
+            <p-button type="button" severity="contrast" variant="text" (onClick)="openGoogleMaps()" class="w-auto">
+              <span class="flex items-center justify-center gap-2">
+                <span class="hidden md:block whitespace-nowrap">Abrir Google Maps</span>
+                <img src="icons/google-maps-icon.svg" alt="Google Maps" class="w-6 h-6" />
+              </span>
+            </p-button>
+          </div>
+        </div>
+
+        <div class="col-span-1 md:col-span-12 relative">
+          <divider-line />
+        </div>
+
+        <!-- Imágenes -->
+        <div class="col-span-1 md:col-span-12 relative" [id]="FormFieldId.images">
+          <div class="flex gap-1 mb-3">
+            <label class="font-bold text-lg md:text-xl">Imágenes</label>
+          </div>
+
+          <!-- Botón para seleccionar imágenes -->
+          <div class="mb-4">
+            <input type="file" #fileInput multiple accept="image/*" (change)="onFileSelected($event)" class="hidden" />
+            <p-button type="button" icon="pi pi-upload" label="Seleccionar Imágenes" severity="secondary" (onClick)="fileInput.click()" [disabled]="loading()" class="w-auto" />
+          </div>
+
+          <!-- Grid de miniaturas -->
+          <div class="grid grid-cols-2 md:grid-cols-6 gap-4 min-h-[200px] bg-gray-100/50 rounded-lg p-2 md:p-4 border border-gray-200/50">
+            <!-- Mensaje cuando no hay imágenes -->
+            <div *ngIf="selectedImages.length === 0" class="col-span-2 md:col-span-6 relative flex items-center justify-center">
+              <div class="text-center text-gray-500">
+                <div class="text-4xl md:text-6xl mb-2">📷</div>
+                <p class="text-lg font-medium">No hay imágenes seleccionadas</p>
+                <p class="text-sm">Haz clic en "Seleccionar Imágenes" para agregar fotos</p>
+              </div>
+            </div>
+
+            <!-- Imágenes seleccionadas -->
+            <div *ngFor="let image of selectedImages; let i = index" class="relative group">
+              <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
+                <img [src]="image.preview" [alt]="'Imagen ' + (i + 1)" class="w-full h-full object-cover" />
+              </div>
+
+              <!-- Botón de eliminar -->
+              <p-button icon="pi pi-times" [rounded]="true" severity="danger" (onClick)="removeImage(i)" class="absolute top-2 right-2 z-10" size="small" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Botones fijos en la parte inferior -->
+
+  <div class="flex justify-end gap-3">
+    <p-button type="button" label="Cancelar" severity="secondary" (onClick)="onCancel()" [disabled]="loading()" class="w-auto" />
+    <p-button type="button" label="Guardar Retiro" severity="success" (onClick)="onSubmit()" [loading]="loading()" [disabled]="formGroup.invalid || loading()" class="w-auto" />
+  </div>
+</div>
