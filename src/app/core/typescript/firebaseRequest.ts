@@ -1,11 +1,11 @@
-import { addDoc, collection, doc, getDoc, getDocs, updateDoc, query, where, limit, DocumentReference } from '@angular/fire/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, updateDoc, deleteDoc, query, where, limit, DocumentReference } from '@angular/fire/firestore';
 import { Ss } from '../services/singleton.service';
 import { fun } from '@core/services/functions.service';
 import { runInInjectionContext, Injector, inject } from '@angular/core';
 
 export class FirebaseRequest<T> {
   private _firebaseCollectionName!: string;
-  private injector = inject(Injector);
+  public injector = inject(Injector);
   private resolvedRefs = new Map<string, any>(); // Cache para referencias ya resueltas
 
   set firebaseCollectionName(value: string) {
@@ -14,9 +14,9 @@ export class FirebaseRequest<T> {
 
   // ========== MÉTODOS DE VALIDACIÓN ==========
   private async validateParams(
-    params: referenceParams | CreateInParentParams | UpdateInParentParams,
-    type: 'getAll' | 'getOne' | 'create' | 'update' | 'createInParent' | 'updateInParent'
-  ): Promise<referenceParams | CreateInParentParams | UpdateInParentParams> {
+    params: referenceParams | CreateInParentParams | UpdateInParentParams | DeleteInParentParams,
+    type: 'getAll' | 'getOne' | 'create' | 'update' | 'delete' | 'createInParent' | 'updateInParent' | 'deleteInParent'
+  ): Promise<referenceParams | CreateInParentParams | UpdateInParentParams | DeleteInParentParams> {
     if (fun.isEmpty(params)) params = {};
 
     // Validación específica para createInParent
@@ -38,11 +38,20 @@ export class FirebaseRequest<T> {
       return updateParams;
     }
 
+    // Validación específica para deleteInParent
+    if (type === 'deleteInParent') {
+      const deleteParams = params as DeleteInParentParams;
+      if (fun.isEmpty(deleteParams.parentCollection)) throw new Error('parentCollection is required');
+      if (fun.isEmpty(deleteParams.parentId)) throw new Error('parentId is required');
+      if (fun.isEmpty(deleteParams.documentId)) throw new Error('documentId is required');
+      return deleteParams;
+    }
+
     // Validaciones para otros tipos
     const refParams = params as referenceParams;
     if (fun.isEmpty(refParams.find_by)) refParams.find_by = 'id';
 
-    const findValueRequired = ['getOne', 'update'];
+    const findValueRequired = ['getOne', 'update', 'delete'];
     if (fun.isEmpty(refParams.find_value) && findValueRequired.includes(type)) {
       throw new Error('find_value is required');
     }
@@ -192,7 +201,7 @@ export class FirebaseRequest<T> {
   // ========== MÉTODOS PÚBLICOS PRINCIPALES ==========
   async _getAll(params: referenceParams = {}): Promise<T[]> {
     try {
-      params = await this.validateParams(params, 'getAll');
+      params = (await this.validateParams(params, 'getAll')) as referenceParams;
       const refString = this.makeEntityRefString(params);
       return await this.getDocumentsByField(refString);
     } catch (error) {
@@ -202,7 +211,7 @@ export class FirebaseRequest<T> {
 
   async _getOne(params: referenceParams): Promise<T | null> {
     try {
-      params = await this.validateParams(params, 'getOne');
+      params = (await this.validateParams(params, 'getOne')) as referenceParams;
 
       // Buscar por ID del documento
       if (!params.find_by || params.find_by === 'id') {
@@ -223,13 +232,14 @@ export class FirebaseRequest<T> {
 
   async _createOne(params: referenceParams): Promise<T> {
     try {
-      params = await this.validateParams(params, 'create');
+      params = (await this.validateParams(params, 'create')) as referenceParams;
       const refString = this.makeEntityRefString(params);
       const entityRef = collection(Ss.firestore, refString);
-      
-      const docRef = await addDoc(entityRef, params.data);
+
+      const { id, ...data } = { ...params.data };
+      const docRef = await addDoc(entityRef, data);
       const docSnapshot = await getDoc(docRef);
-      
+
       return await this.mapDocumentToObject(docSnapshot);
     } catch (error) {
       throw error;
@@ -243,9 +253,10 @@ export class FirebaseRequest<T> {
       const refString = `${params.parentCollection}/${params.parentId}/${this._firebaseCollectionName}`;
       const entityRef = collection(Ss.firestore, refString);
 
-      const docRef = await addDoc(entityRef, params.data);
+      const { id, ...data } = { ...params.data };
+      const docRef = await addDoc(entityRef, data);
       const docSnapshot = await getDoc(docRef);
-      
+
       return await this.mapDocumentToObject(docSnapshot);
     } catch (error) {
       throw error;
@@ -253,15 +264,49 @@ export class FirebaseRequest<T> {
   }
 
   async _updateOne(params: referenceParams): Promise<T> {
+    if (fun.isEmpty(params.data.id)) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      throw new Error('ID is required for update operation');
+    }
     try {
-      params = await this.validateParams(params, 'update');
+      params = (await this.validateParams(params, 'update')) as referenceParams;
+      params.find_value = params.data.id;
+
       const refString = this.makeEntityRefString(params);
       const entityRef = doc(Ss.firestore, refString);
-      
+
       await updateDoc(entityRef, params.data);
       const docSnapshot = await getDoc(entityRef);
-      
+
       return await this.mapDocumentToObject(docSnapshot);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async _deleteOne(params: referenceParams): Promise<boolean> {
+    if (fun.isEmpty(params.find_value)) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      throw new Error('ID is required for delete operation');
+    }
+    try {
+      params = (await this.validateParams(params, 'delete')) as referenceParams;
+
+      const refString = this.makeEntityRefString(params);
+      const entityRef = doc(Ss.firestore, refString);
+
+      // Verificar que el documento existe antes de eliminarlo
+      const docSnapshot = await getDoc(entityRef);
+      if (!docSnapshot.exists()) {
+        throw new Error('Document not found');
+      }
+
+      await deleteDoc(entityRef);
+
+      // Limpiar cache si existe
+      this.clearCacheForPath(refString);
+
+      return true;
     } catch (error) {
       throw error;
     }
@@ -276,8 +321,32 @@ export class FirebaseRequest<T> {
 
       await updateDoc(entityRef, params.data);
       const docSnapshot = await getDoc(entityRef);
-      
+
       return await this.mapDocumentToObject(docSnapshot);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async deleteOneInParentCollection(params: DeleteInParentParams): Promise<boolean> {
+    try {
+      params = (await this.validateParams(params, 'deleteInParent')) as DeleteInParentParams;
+
+      const refString = `${params.parentCollection}/${params.parentId}/${this._firebaseCollectionName}/${params.documentId}`;
+      const entityRef = doc(Ss.firestore, refString);
+
+      // Verificar que el documento existe antes de eliminarlo
+      const docSnapshot = await getDoc(entityRef);
+      if (!docSnapshot.exists()) {
+        throw new Error('Document not found');
+      }
+
+      await deleteDoc(entityRef);
+
+      // Limpiar cache si existe
+      this.clearCacheForPath(refString);
+
+      return true;
     } catch (error) {
       throw error;
     }
@@ -397,4 +466,10 @@ export interface UpdateInParentParams {
   parentId: string | number;
   documentId: string | number;
   data: any;
+}
+
+export interface DeleteInParentParams {
+  parentCollection: string;
+  parentId: string | number;
+  documentId: string | number;
 }

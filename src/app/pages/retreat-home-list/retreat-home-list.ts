@@ -32,8 +32,6 @@ export class RetreatHomeList {
     this.ref.onClose.subscribe(result => {
       if (result) {
         // Aquí puedes manejar el resultado del formulario
-        console.log('Retiro creado:', result);
-        Ss.toastService.success({ message: 'Retiro creado exitosamente' });
       }
     });
   }

@@ -1,4 +1,4 @@
-import { Component, Input, OnDestroy, OnInit, ElementRef, ChangeDetectionStrategy, ChangeDetectorRef, AfterViewInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit, ElementRef, ChangeDetectionStrategy, ChangeDetectorRef, AfterViewInit, inject } from '@angular/core';
 import { AbstractControl } from '@angular/forms';
 import { Subject, fromEvent, merge } from 'rxjs';
 import { takeUntil, debounceTime } from 'rxjs/operators';
@@ -43,6 +43,7 @@ export class FormErrorMsgComponent implements OnInit, OnDestroy, AfterViewInit {
   private mutationObserver?: MutationObserver;
   errorMessage: string = '';
   showError: boolean = false;
+  private cdRef = inject(ChangeDetectorRef);
 
   private readonly ERROR_MESSAGES: Record<string, string | ((error: any) => string)> = {
     required: 'Este campo es requerido.',
@@ -59,7 +60,7 @@ export class FormErrorMsgComponent implements OnInit, OnDestroy, AfterViewInit {
     invalidUrl: 'Ingrese una URL válida.',
   };
 
-  constructor(private elementRef: ElementRef, private cdRef: ChangeDetectorRef) {}
+  constructor(private elementRef: ElementRef) {}
 
   ngOnInit(): void {
     if (!this.control) return;
@@ -201,7 +202,8 @@ export class FormErrorMsgComponent implements OnInit, OnDestroy, AfterViewInit {
             Ss.ngZone.run(() => {
               if (this.control) {
                 this.control.markAsTouched();
-                fun.setTimeout(() => this.checkErrors(), 10);
+
+                this.checkErrors();
               }
             });
           }

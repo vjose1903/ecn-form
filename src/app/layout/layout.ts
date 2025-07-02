@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { NavigationCancel, NavigationEnd, NavigationError, Router, RouterOutlet } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
 import { CopyToClipboardService } from '@core/services/copy-to-clipboard.service';
@@ -23,6 +23,7 @@ export class Layout implements OnInit {
   currentYear = new Date().getFullYear();
   router = inject(Router);
   menuService = inject(MenuService);
+  private cdRef = inject(ChangeDetectorRef);
 
   // Signal para la ruta actual
   currentPath = signal(fun.getActualPathName());
@@ -56,7 +57,7 @@ export class Layout implements OnInit {
     this.router.events.pipe(takeUntil(this.onDestroy$)).subscribe(event => {
       if (event instanceof NavigationEnd || event instanceof NavigationCancel || event instanceof NavigationError) {
         this.currentPath.set(fun.getActualPathName());
-        Ss.cdRef.detectChanges();
+        this.cdRef.detectChanges();
       }
     });
   }

@@ -72,16 +72,16 @@ export class RetreatForm implements OnInit {
     // Suscripción a cambios en la fecha de inicio
     this.formGroup.get(FormControlName.start_date)?.valueChanges.subscribe(startDate => {
       if (isUpdating) return;
-      
+
       isUpdating = true;
       const maxRequestDateControl = this.formGroup.get(FormControlName.max_request_date);
       const endDateControl = this.formGroup.get(FormControlName.end_date);
-      
+
       if (startDate) {
         // Habilitar max_request_date
         maxRequestDateControl?.enable();
         maxRequestDateControl?.setValidators([Validators.required]);
-        
+
         // Si ya hay una fecha de fin, verificar que sea válida
         const endDate = endDateControl?.value;
         if (endDate && endDate < startDate) {
@@ -93,12 +93,12 @@ export class RetreatForm implements OnInit {
         maxRequestDateControl?.clearValidators();
         endDateControl?.disable();
         endDateControl?.clearValidators();
-        
+
         // Limpiar valores
         maxRequestDateControl?.setValue(null);
         endDateControl?.setValue(null);
       }
-      
+
       maxRequestDateControl?.updateValueAndValidity({ emitEvent: false });
       endDateControl?.updateValueAndValidity({ emitEvent: false });
       isUpdating = false;
@@ -107,16 +107,16 @@ export class RetreatForm implements OnInit {
     // Suscripción a cambios en la fecha máxima de solicitudes
     this.formGroup.get(FormControlName.max_request_date)?.valueChanges.subscribe(maxRequestDate => {
       if (isUpdating) return;
-      
+
       isUpdating = true;
       const endDateControl = this.formGroup.get(FormControlName.end_date);
       const startDate = this.formGroup.get(FormControlName.start_date)?.value;
-      
+
       if (maxRequestDate && startDate) {
         // Habilitar end_date
         endDateControl?.enable();
         endDateControl?.setValidators([Validators.required]);
-        
+
         // Si hay una fecha de fin menor que maxRequestDate, limpiarla
         const currentEndDate = endDateControl?.value;
         if (currentEndDate && currentEndDate < maxRequestDate) {
@@ -128,7 +128,7 @@ export class RetreatForm implements OnInit {
         endDateControl?.clearValidators();
         endDateControl?.setValue(null);
       }
-      
+
       endDateControl?.updateValueAndValidity({ emitEvent: false });
       isUpdating = false;
     });
@@ -136,11 +136,11 @@ export class RetreatForm implements OnInit {
     // Suscripción a cambios en la fecha de fin
     this.formGroup.get(FormControlName.end_date)?.valueChanges.subscribe(endDate => {
       if (isUpdating) return;
-      
+
       isUpdating = true;
       const maxRequestDateControl = this.formGroup.get(FormControlName.max_request_date);
       const startDate = this.formGroup.get(FormControlName.start_date)?.value;
-      
+
       if (endDate && startDate) {
         // Verificar que max_request_date no exceda end_date
         const currentMaxRequestDate = maxRequestDateControl?.value;
@@ -148,7 +148,7 @@ export class RetreatForm implements OnInit {
           maxRequestDateControl?.setValue(null);
         }
       }
-      
+
       maxRequestDateControl?.updateValueAndValidity({ emitEvent: false });
       isUpdating = false;
     });
@@ -171,7 +171,7 @@ export class RetreatForm implements OnInit {
       // Aquí puedes agregar la lógica para guardar en Firebase
       console.log('Datos del formulario:', formData);
       // this.retreatService
-      //   .createConfig(formData as RetreatI)
+      //   .create(formData as RetreatI)
       //   .then(retreat => {
       //     Ss.toastService.success({ message: 'Retiro creado correctamente' });
       //     console.log('Retiro creado:', retreat);
@@ -186,9 +186,8 @@ export class RetreatForm implements OnInit {
       //   .finally(() => {
       //     this.loading.set(false);
       //   });
-      fun.setTimeout(() => {
-        this.loading.set(false);
-      }, 1000);
+
+      this.loading.set(false);
     } else {
       Ss.toastService.error({ message: 'Por favor, complete todos los campos requeridos' });
     }

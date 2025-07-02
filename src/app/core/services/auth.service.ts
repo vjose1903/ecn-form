@@ -35,6 +35,7 @@ export class AuthService {
   private userService = inject(UserService);
 
   current_user = signal<UserC | null>(
+    // null
     new UserC({
       email: 'reclutamientopromocionecnlv@gmail.com',
       uid: 'VkUrg07gXtbpsfQ0NCCJkk8vm7Q2',

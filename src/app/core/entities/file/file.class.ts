@@ -1,18 +1,18 @@
 import { FileI } from './file.model';
 
-export class File {
+export class FileClass {
   id: string = '';
   name: string = '';
   size: number = 0;
-  fileData: globalThis.File | null = null;
   url: string = '';
+  file?: File;
 
-  constructor(file: FileI) {
-    this.id = file.id || '';
-    this.name = file.name;
-    this.size = file.size;
-    this.fileData = file.fileData || null;
-    this.url = file.url;
+  constructor(fileObj: FileI) {
+    this.id = fileObj.id || '';
+    this.name = fileObj.name || (fileObj.file?.name || '');
+    this.size = fileObj.size || (fileObj.file?.size || 0);
+    this.url = fileObj.url || '';
+    this.file = fileObj.file;
   }
 
   asJson() {
@@ -20,8 +20,11 @@ export class File {
       id: this.id,
       name: this.name,
       size: this.size,
-      file: this.fileData,
       url: this.url,
     };
+  }
+
+  get fileStoragePath() {
+    return `retreat_homes/${this.name}`;
   }
 }

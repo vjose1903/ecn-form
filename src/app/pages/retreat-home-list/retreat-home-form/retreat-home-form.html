@@ -30,7 +30,8 @@
 
         <div class="col-span-1 md:col-span-12 relative" [id]="FormFieldId.address">
           <div class="flex gap-1">
-            <label class="font-bold" [for]="FormFieldId.address + '_control'">Dirección</label>
+            <label class="font-bold" [for]="FormFieldId.address + '_control'"> Dirección </label>
+            <span class="text-red-500">*</span>
           </div>
           <div class="flex flex-col">
             <textarea [id]="FormFieldId.address + '_control'" rows="5" cols="30" pTextarea class="w-full" [formControlName]="FormControlName.address"></textarea>
@@ -73,13 +74,13 @@
           <!-- Botón para seleccionar imágenes -->
           <div class="mb-4">
             <input type="file" #fileInput multiple accept="image/*" (change)="onFileSelected($event)" class="hidden" />
-            <p-button type="button" icon="pi pi-upload" label="Seleccionar Imágenes" severity="secondary" (onClick)="fileInput.click()" [disabled]="loading()" class="w-auto" />
+            <p-button [disabled]="loading()" type="button" icon="pi pi-upload" label="Seleccionar Imágenes" severity="secondary" (onClick)="fileInput.click()" [disabled]="loading()" class="w-auto" />
           </div>
 
           <!-- Grid de miniaturas -->
           <div class="grid grid-cols-2 md:grid-cols-6 gap-4 min-h-[200px] bg-gray-100/50 rounded-lg p-2 md:p-4 border border-gray-200/50">
             <!-- Mensaje cuando no hay imágenes -->
-            <div *ngIf="selectedImages.length === 0" class="col-span-2 md:col-span-6 relative flex items-center justify-center">
+            <div *ngIf="!hasImages" class="col-span-2 md:col-span-6 relative flex items-center justify-center">
               <div class="text-center text-gray-500">
                 <div class="text-4xl md:text-6xl mb-2">📷</div>
                 <p class="text-lg font-medium">No hay imágenes seleccionadas</p>
@@ -88,13 +89,13 @@
             </div>
 
             <!-- Imágenes seleccionadas -->
-            <div *ngFor="let image of selectedImages; let i = index" class="relative group">
+            <div *ngFor="let image of imagesControl.value; let i = index" class="relative group">
               <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
-                <img [src]="image.preview" [alt]="'Imagen ' + (i + 1)" class="w-full h-full object-cover" />
+                <img [src]="image.url" [alt]="'Imagen ' + (i + 1)" class="w-full h-full object-cover" />
               </div>
 
               <!-- Botón de eliminar -->
-              <p-button icon="pi pi-times" [rounded]="true" severity="danger" (onClick)="removeImage(i)" class="absolute top-2 right-2 z-10" size="small" />
+              <p-button [disabled]="loading()" icon="pi pi-times" [rounded]="true" severity="danger" (onClick)="removeImage(i)" class="absolute top-2 right-2 z-10" styleClass="shadow-md" size="small" />
             </div>
           </div>
         </div>
@@ -106,6 +107,6 @@
 
   <div class="flex justify-end gap-3">
     <p-button type="button" label="Cancelar" severity="secondary" (onClick)="onCancel()" [disabled]="loading()" class="w-auto" />
-    <p-button type="button" label="Guardar Retiro" severity="success" (onClick)="onSubmit()" [loading]="loading()" [disabled]="formGroup.invalid || loading()" class="w-auto" />
+    <p-button type="button" [label]="loading() ? 'Guardando...' : 'Guardar'" severity="success" (onClick)="onSubmit()" [loading]="loading()" [disabled]="formGroup.invalid || loading()" class="w-auto" />
   </div>
 </div>

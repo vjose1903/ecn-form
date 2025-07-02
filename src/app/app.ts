@@ -51,7 +51,6 @@ export class App implements OnInit {
 
   private async initializeSingletonServices(): Promise<void> {
     // Inicializar servicios singleton inmediatamente
-    Ss.cdRef = this.cdRef;
     Ss.ngZone = this.ngZone;
     Ss.firestore = this.firestore;
     Ss.toastService = this.toastService;

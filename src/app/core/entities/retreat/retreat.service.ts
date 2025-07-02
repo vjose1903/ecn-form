@@ -41,7 +41,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
     });
   }
 
-  createConfig(newRetreat: RetreatI) {
+  create(newRetreat: RetreatI) {
     if (fun.isEmpty(this.authService.current_user())) throw new Error('User is not defined');
 
     return this.createOneInParentCollection({ parentCollection: this.userService.collectionName, parentId: this.authService.current_user()!.id, data: newRetreat });
