@@ -3,10 +3,12 @@ import { Ss } from '@core/services/singleton.service';
 import { ButtonModule } from 'primeng/button';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { RetreatForm } from './retreat-form/retreat-form';
+import { RetreatI } from '@core/entities/retreat/retreat.model';
+import { DynamicDataviewComponent } from '@core/components/dynamic-dataview';
 
 @Component({
   selector: 'app-retreat-list',
-  imports: [ButtonModule],
+  imports: [ButtonModule, DynamicDataviewComponent],
   templateUrl: './retreat-list.html',
   styleUrl: './retreat-list.scss',
 })
@@ -39,7 +41,7 @@ export class RetreatList implements OnDestroy {
       breakpoints: { '960px': '75vw', '640px': '90vw' },
     });
 
-    this.ref.onClose.subscribe(result => {
+    this.ref.onClose.subscribe((result: RetreatI) => {
       if (result) {
         // Aquí puedes manejar el resultado del formulario
         console.log('Retiro creado:', result);

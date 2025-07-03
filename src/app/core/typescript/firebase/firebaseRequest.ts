@@ -1,12 +1,13 @@
 import { addDoc, collection, doc, getDoc, getDocs, updateDoc, deleteDoc, query, where, limit, DocumentReference } from '@angular/fire/firestore';
-import { Ss } from '../services/singleton.service';
+import { Ss } from '../../services/singleton.service';
 import { fun } from '@core/services/functions.service';
 import { runInInjectionContext, Injector, inject } from '@angular/core';
+import { ReferenceResolver } from './reference-resolver';
 
 export class FirebaseRequest<T> {
   private _firebaseCollectionName!: string;
   public injector = inject(Injector);
-  private resolvedRefs = new Map<string, any>(); // Cache para referencias ya resueltas
+  private referenceResolver = inject(ReferenceResolver);
 
   set firebaseCollectionName(value: string) {
     this._firebaseCollectionName = value;
@@ -62,77 +63,11 @@ export class FirebaseRequest<T> {
   // ========== MÉTODOS HELPER ==========
   private async mapDocumentToObject(docSnapshot: any): Promise<T> {
     const data = { ...((docSnapshot.data() as object) || {}), id: docSnapshot.id };
-    return (await this.resolveDocumentReferences(data)) as T;
+    return (await this.referenceResolver.resolveDocumentReferences(data, 0)) as T;
   }
 
   private async mapDocumentsToArray(docs: any[]): Promise<T[]> {
     return Promise.all(docs.map(doc => this.mapDocumentToObject(doc)));
-  }
-
-  private async resolveDocumentReferences(data: any): Promise<any> {
-    if (!data || typeof data !== 'object') return data;
-
-    // Si es un array, procesar cada elemento
-    if (Array.isArray(data)) {
-      return Promise.all(data.map(item => this.resolveDocumentReferences(item)));
-    }
-
-    const resolvedData = { ...data };
-
-    // Procesar todas las propiedades en paralelo
-    const promises = Object.entries(data).map(async ([key, value]) => {
-      if (this.isDocumentReference(value)) {
-        try {
-          const resolvedValue = await this.resolveDocumentReference(value as DocumentReference);
-          return [key, resolvedValue];
-        } catch (error) {
-          console.warn(`Error resolving document reference for key ${key}:`, error);
-          return [key, value]; // Mantener la referencia original
-        }
-      } else if (typeof value === 'object' && value !== null) {
-        const resolvedValue = await this.resolveDocumentReferences(value);
-        return [key, resolvedValue];
-      }
-      return [key, value];
-    });
-
-    const results = await Promise.all(promises);
-    results.forEach(([key, value]) => {
-      resolvedData[key] = value;
-    });
-
-    return resolvedData;
-  }
-
-  private isDocumentReference(value: any): boolean {
-    return value && typeof value === 'object' && 'path' in value && 'id' in value && 'parent' in value && typeof value.path === 'string' && value.path.includes('/');
-  }
-
-  private async resolveDocumentReference(docRef: DocumentReference): Promise<any> {
-    const refKey = docRef.path;
-
-    // Verificar cache primero
-    if (this.resolvedRefs.has(refKey)) {
-      return this.resolvedRefs.get(refKey);
-    }
-
-    return runInInjectionContext(this.injector, async () => {
-      try {
-        const docSnapshot = await getDoc(docRef);
-        if (docSnapshot.exists()) {
-          const data = { ...((docSnapshot.data() as object) || {}), id: docSnapshot.id };
-          const resolvedData = await this.resolveDocumentReferences(data);
-
-          // Guardar en cache
-          this.resolvedRefs.set(refKey, resolvedData);
-          return resolvedData;
-        }
-        return null;
-      } catch (error) {
-        console.warn(`Error resolving document reference ${refKey}:`, error);
-        return null;
-      }
-    });
   }
 
   private makeEntityRefString(params: Partial<referenceParams> = {}): string {
@@ -194,6 +129,7 @@ export class FirebaseRequest<T> {
       }
 
       const entitySnapshot = await getDocs(q);
+
       return await this.mapDocumentsToArray(entitySnapshot.docs);
     });
   }
@@ -202,8 +138,21 @@ export class FirebaseRequest<T> {
   async _getAll(params: referenceParams = {}): Promise<T[]> {
     try {
       params = (await this.validateParams(params, 'getAll')) as referenceParams;
-      const refString = this.makeEntityRefString(params);
-      return await this.getDocumentsByField(refString);
+
+      // Si no hay filtros específicos, usar la ruta completa
+      if (!params.find_by || params.find_by === 'id') {
+        const refString = this.makeEntityRefString(params);
+
+        return await this.getDocumentsByField(refString);
+      }
+
+      // Para búsquedas por campo específico, usar solo la colección base
+      const refString = this.makeEntityRefString({
+        subEntity: params.subEntity,
+        subEntityId: params.subEntityId,
+      });
+
+      return await this.getDocumentsByField(refString, params.find_by, params.find_value);
     } catch (error) {
       return [];
     }
@@ -428,13 +377,22 @@ export class FirebaseRequest<T> {
     }
   }
 
+  async getDocumentRef(args: { id: string; collectionName?: string }): Promise<DocumentReference | null> {
+    try {
+      const collectionName = args.collectionName || this._firebaseCollectionName;
+      return doc(Ss.firestore, `${collectionName}/${args.id}`);
+    } catch {
+      return null;
+    }
+  }
+
   // ========== MÉTODOS DE LIMPIEZA ==========
   clearCache(): void {
-    this.resolvedRefs.clear();
+    this.referenceResolver.clearCache();
   }
 
   clearCacheForPath(path: string): void {
-    this.resolvedRefs.delete(path);
+    this.referenceResolver.clearCacheForPath(path);
   }
 }
 

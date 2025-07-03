@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { FirebaseRequest } from '@core/typescript/firebaseRequest';
+import { FirebaseRequest } from '@core/typescript/firebase/firebaseRequest';
 import { RetreatI } from './retreat.model';
 import { Retreat } from './retreat.class';
 import { UserService } from '../user/user.service';

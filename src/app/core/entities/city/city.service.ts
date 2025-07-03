@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { FirebaseRequest } from '@core/typescript/firebaseRequest';
+import { FirebaseRequest } from '@core/typescript/firebase/firebaseRequest';
 import { CityI } from './city.model';
 import { City } from './city.class';
 

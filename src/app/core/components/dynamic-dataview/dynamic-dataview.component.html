@@ -1,0 +1,46 @@
+<div class="card">
+  <div class="flex justify-content-between align-items-center mb-3 w-full">
+    <div>
+      <!-- <h3>Vista Dinámica</h3> -->
+    </div>
+    <p-selectbutton [(ngModel)]="layout" [options]="layoutOptions" [allowEmpty]="false">
+      <ng-template #item let-option>
+        <i [class]="option.icon"></i>
+      </ng-template>
+    </p-selectbutton>
+  </div>
+
+  <p-dataview
+    [value]="data()"
+    [layout]="layout()"
+    [paginator]="pagination().enabled"
+    [rows]="pagination().rows || 10"
+    [totalRecords]="pagination().totalRecords"
+    [sortField]="sortField()"
+    [sortOrder]="sortOrder()"
+    (onLazyLoad)="onLazyLoad($event)"
+    styleClass="p-dataview-dynamic">
+    <ng-template pTemplate="list" let-items>
+      <div class="grid grid-cols-12 gap-4">
+        <div class="col-span-12" *ngFor="let item of items; let first = first">
+          <div #listContainer></div>
+        </div>
+      </div>
+    </ng-template>
+
+    <ng-template pTemplate="grid" let-items>
+      <div class="grid grid-cols-12 gap-4">
+        <div class="col-span-12 md:col-span-6 lg:col-span-4 xl:col-span-3" *ngFor="let item of items">
+          <div #gridContainer></div>
+        </div>
+      </div>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <div class="text-center p-4">
+        <i class="pi pi-inbox text-4xl text-gray-400 mb-3"></i>
+        <p class="text-gray-500">No hay datos disponibles</p>
+      </div>
+    </ng-template>
+  </p-dataview>
+</div>

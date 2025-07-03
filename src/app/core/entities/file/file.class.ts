@@ -1,6 +1,9 @@
+import { inject } from '@angular/core';
 import { FileI } from './file.model';
+import { FileService } from './file.service';
 
 export class FileClass {
+  private fileService = inject(FileService);
   id: string = '';
   name: string = '';
   size: number = 0;
@@ -26,5 +29,9 @@ export class FileClass {
 
   get fileStoragePath() {
     return `retreat_homes/${this.name}`;
+  }
+
+  getFileReference() {
+    return this.fileService.getDocumentRef({ id: this.id });
   }
 }

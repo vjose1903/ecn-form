@@ -18,6 +18,7 @@ import { fun } from '@core/services/functions.service';
 import { UrlValidator } from '@core/typescript/validate-url';
 import { RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
 import { Ss } from '@core/services/singleton.service';
+import { AuthService } from '@core/services/auth.service';
 
 @Component({
   selector: 'app-retreat-home-form',
@@ -31,6 +32,7 @@ export class RetreatHomeForm {
   private cdr = inject(ChangeDetectorRef);
   private fileService = inject(FileService);
   private retreatHomeService = inject(RetreatHomeService);
+  private authService = inject(AuthService);
 
   FormFieldId = FormFieldId;
   FormControlName = FormControlName;
@@ -48,6 +50,7 @@ export class RetreatHomeForm {
     [FormControlName.phone]: [null],
     [FormControlName.address]: [null, [Validators.required]],
     [FormControlName.location]: [null, [Validators.required, UrlValidator.validate]],
+    [FormControlName.city]: [this.authService.current_user()?.cityRef],
     [FormControlName.is_active]: [true],
     [FormControlName.images]: this.fb.array([]),
   });
@@ -105,6 +108,16 @@ export class RetreatHomeForm {
     this.cdr.detectChanges();
   }
 
+  parseImagesReferences(images: Array<FileClass | string>) {
+    return images.map(image => {
+      if (image instanceof FileClass) {
+        return image.getFileReference();
+      } else {
+        return this.fileService.getDocumentRef({ id: image });
+      }
+    });
+  }
+
   async onSubmit() {
     console.log(this.formGroup.getRawValue());
     try {
@@ -131,7 +144,7 @@ export class RetreatHomeForm {
       }
 
       // Preparar referencias de archivos (solo los exitosos)
-      const filesReferences = [...filesSaved, ...uploadedFiles].map(file => `/files/${file.id}`);
+      const filesReferences = this.parseImagesReferences([...filesSaved, ...uploadedFiles]);
 
       formData.images = filesReferences;
 
@@ -150,8 +163,6 @@ export class RetreatHomeForm {
           message: `Casa de Retiro creada correctamente, pero ${failedCount} de ${totalCount} imágenes no se subieron correctamente`,
         });
       }
-
-      
 
       // Cerrar el dialog y devolver los datos
       this.ref.close(retreatHome);

@@ -1,0 +1,33 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.p-dataview-dynamic {
+  .p-dataview-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    padding: 1rem;
+  }
+  
+  .p-dataview-content {
+    min-height: 200px;
+  }
+  
+  .p-dataview-list {
+    .p-dataview-list-item {
+      border-bottom: 1px solid #dee2e6;
+      padding: 1rem;
+      
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+  }
+  
+  .p-dataview-grid {
+    .p-dataview-grid-item {
+      padding: 0.5rem;
+    }
+  }
+} 

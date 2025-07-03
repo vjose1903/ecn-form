@@ -4,6 +4,7 @@ export enum FormControlName {
   phone = 'phone',
   address = 'address',
   is_active = 'is_active',
+  city = 'city',
   location = 'location',
   images = 'images',
 }

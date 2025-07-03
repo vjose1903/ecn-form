@@ -70,7 +70,7 @@ export class App implements OnInit {
 
     // Si ya hay usuario autenticado, no verificar de nuevo
     if (this.authService.current_user()) {
-      console.log('%c ANDO AQUIIII', 'color: red; font-weight: bold;', JSON.stringify(this.authService.current_user()));
+      console.log('%c ANDO AQUIIII', 'color: red; font-weight: bold;', this.authService.current_user()?.asJson());
       return;
     }
 

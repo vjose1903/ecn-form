@@ -1,10 +1,12 @@
 import { inject, Injectable } from '@angular/core';
-import { FirebaseRequest } from '@core/typescript/firebaseRequest';
+import { FirebaseRequest } from '@core/typescript/firebase/firebaseRequest';
 import { RetreatHomeI } from './retreat-home.model';
 import { RetreatHome } from './retreat-home.class';
 import { UserService } from '../user/user.service';
 import { fun } from '@core/services/functions.service';
 import { AuthService } from '@core/services/auth.service';
+import { CityService } from '../city/city.service';
+import { Ss } from '@core/services/singleton.service';
 
 @Injectable({
   providedIn: 'root',
@@ -13,6 +15,7 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   private _collectionName = 'retreat_home';
   private userService = inject(UserService);
   private authService = inject(AuthService);
+  private cityService = inject(CityService);
 
   constructor() {
     super();
@@ -21,6 +24,15 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
 
   get collectionName() {
     return this._collectionName;
+  }
+
+  async getAll(): Promise<RetreatHome[]> {
+    const currentUser = this.authService.current_user();
+
+    const cityRef = await currentUser?.cityRef;
+    console.log('%c currentUser?.cityRef', 'color: red; font-weight: bold;', cityRef);
+
+    return this._getAll({ find_by: 'city', find_value: cityRef }).then(retreats => retreats.map(retreat => new RetreatHome(retreat)));
   }
 
   async getRetreatHomeById(id: string): Promise<RetreatHome | null> {

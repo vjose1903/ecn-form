@@ -5,7 +5,6 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { DatePickerModule } from 'primeng/datepicker';
-import { DropdownModule } from 'primeng/dropdown';
 import { TextareaModule } from 'primeng/textarea';
 import { DynamicDialogRef, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { Ss } from '@core/services/singleton.service';
@@ -21,7 +20,7 @@ import { RetreatI } from '@core/entities/retreat/retreat.model';
 
 @Component({
   selector: 'app-retreat-form',
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, FormsModule, DatePickerModule, InputNumberModule, DropdownModule, TextareaModule, FormErrorMsgComponent],
+  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, FormsModule, DatePickerModule, InputNumberModule, TextareaModule, FormErrorMsgComponent],
   templateUrl: './retreat-form.html',
   styleUrl: './retreat-form.scss',
 })

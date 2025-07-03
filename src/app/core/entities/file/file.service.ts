@@ -1,5 +1,5 @@
 import { inject, Injectable, Injector, runInInjectionContext } from '@angular/core';
-import { FirebaseRequest } from '@core/typescript/firebaseRequest';
+import { FirebaseRequest } from '@core/typescript/firebase/firebaseRequest';
 import { FileI } from './file.model';
 import { FileClass } from './file.class';
 import { UserService } from '../user/user.service';
@@ -55,10 +55,7 @@ export class FileService extends FirebaseRequest<FileI> {
   /**
    * Sube múltiples archivos y retorna información detallada sobre el resultado
    */
-  async uploadFiles(filePayloads: FileClass[]): Promise<{
-    successful: FileClass[];
-    failed: { file: FileClass; error: any }[];
-  }> {
+  async uploadFiles(filePayloads: FileClass[]): Promise<{ successful: FileClass[]; failed: { file: FileClass; error: any }[] }> {
     if (!filePayloads || filePayloads.length === 0) {
       return { successful: [], failed: [] };
     }
@@ -76,13 +73,9 @@ export class FileService extends FirebaseRequest<FileI> {
     try {
       const results = await Promise.all(uploadPromises);
 
-      const successful = results
-        .filter(result => result.success)
-        .map(result => result.file as FileClass);
+      const successful = results.filter(result => result.success).map(result => result.file as FileClass);
 
-      const failed = results
-        .filter(result => !result.success)
-        .map(result => ({ file: result.file as FileClass, error: result.error }));
+      const failed = results.filter(result => !result.success).map(result => ({ file: result.file as FileClass, error: result.error }));
 
       return { successful, failed };
     } catch (error) {

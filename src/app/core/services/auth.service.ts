@@ -22,6 +22,7 @@ import { environment } from 'environments/environment';
 import { ToastService } from './toast.service';
 import { UserService } from '@core/entities/user/user.service';
 import { UserC } from '@core/entities/user/user.class';
+import { CityService } from '@core/entities/city/city.service';
 
 @Injectable({
   providedIn: 'root',
@@ -33,6 +34,7 @@ export class AuthService {
   private injector = inject(Injector);
 
   private userService = inject(UserService);
+  private cityService = inject(CityService);
 
   current_user = signal<UserC | null>(
     // null
