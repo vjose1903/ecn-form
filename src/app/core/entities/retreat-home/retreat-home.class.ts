@@ -281,6 +281,16 @@ export class RetreatHome {
   }
 
   /**
+   * Obtiene la referencia de la casa de retiro
+   */
+  getRetreatHomeReference() {
+    return runInInjectionContext(Ss.injector, () => {
+      const retreatHomeService = inject(RetreatHomeService);
+
+      return retreatHomeService.getDocumentRef({ id: this.id });
+    });
+  }
+  /**
    * Abre la ubicación en Google Maps
    */
   openInGoogleMaps(): void {

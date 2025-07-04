@@ -1,30 +1,63 @@
-<div class="grid grid-rows-[1fr_min-content] gap-10 h-full">
-  <form [formGroup]="formGroup" (ngSubmit)="onSubmit()">
+<div class="grid grid-rows-[1fr_min-content] gap-10 h-full" *ngIf="form">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()">
     <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-7 overflow-y-auto overflow-x-hidden">
+      <!-- Casa de Retiro -->
+      <div class="col-span-1 md:col-span-6" [id]="FormFieldId.retreat_home">
+        <div class="flex gap-1">
+          <label class="font-bold" [for]="FormFieldId.retreat_home + '_control'"> Casa de Retiro </label>
+          <span class="text-red-500">*</span>
+        </div>
+        <div class="flex flex-col">
+          <p-select
+            [inputId]="FormFieldId.retreat_home + '_control'"
+            [options]="retreatHomes()"
+            optionLabel="name"
+            optionValue="id"
+            placeholder="Seleccione una casa de retiro"
+            class="w-full"
+            appendTo="body"
+            [formControlName]="FormControlName.retreat_home"
+            [disabled]="form.get(FormControlName.retreat_home)?.disabled ?? false" />
+          <form-error-msg [control]="form.get(FormControlName.retreat_home)" />
+        </div>
+      </div>
+
       <!-- Numero de Retiro -->
       <div class="col-span-1 md:col-span-6 relative" [id]="FormFieldId.number">
         <div class="flex gap-1">
           <label class="font-bold" [for]="FormFieldId.number + '_control'"> Número de Retiro </label>
           <span class="text-red-500">*</span>
         </div>
-        <p-inputnumber [formControlName]="FormControlName.number" [inputId]="FormFieldId.number + '_control'" placeholder="Ingrese el número del retiro" [min]="1" class="w-full" />
+        <p-inputnumber [formControlName]="FormControlName.number" [inputId]="FormFieldId.number + '_control'" placeholder="Ingrese el número del retiro" [min]="1" class="w-full" [disabled]="form.get(FormControlName.number)?.disabled ?? false" />
 
-        <form-error-msg [control]="formGroup.get(FormControlName.number)" />
+        <form-error-msg [control]="form.get(FormControlName.number)" />
       </div>
 
-      <!-- Precio -->
-      <div class="col-span-1 md:col-span-6 relative" [id]="FormFieldId.price">
+      <!-- Fecha Límite de Solicitudes -->
+      <div class="col-span-1 md:col-span-4 relative" [id]="FormFieldId.max_request_date">
         <div class="flex gap-1">
-          <label class="font-bold" [for]="FormFieldId.price + '_control'"> Precio </label>
+          <label class="font-bold" [for]="FormFieldId.max_request_date + '_control'"> Fecha Límite de Solicitudes </label>
           <span class="text-red-500">*</span>
         </div>
 
-        <p-inputnumber [formControlName]="FormControlName.price" [inputId]="FormFieldId.price + '_control'" mode="decimal" [min]="0" [minFractionDigits]="2" [maxFractionDigits]="2" placeholder="Ingrese el precio del retiro" class="w-full" />
+        <p-datepicker
+          [inputId]="FormFieldId.max_request_date + '_control'"
+          class="w-full"
+          inputStyleClass="w-full"
+          panelStyleClass="{{ isDesktop ? '' : 'touch-ui' }}"
+          appendTo="body"
+          placeholder="Seleccione fecha límite"
+          [touchUI]="!isDesktop"
+          readonlyInput="true"
+          [disabled]="form.get(FormControlName.max_request_date)?.disabled ?? false"
+          dateFormat="dd/mm/yy"
+          [formControlName]="FormControlName.max_request_date"
+          [showClear]="true" />
 
-        <form-error-msg [control]="formGroup.get(FormControlName.price)" />
+        <form-error-msg [control]="form.get(FormControlName.max_request_date)" />
       </div>
 
-      <!-- Fecha de Inicio -->
+      <!-- Fecha de inicio -->
       <div class="col-span-1 md:col-span-4 relative" [id]="FormFieldId.start_date">
         <div class="flex gap-1">
           <label class="font-bold" [for]="FormFieldId.start_date + '_control'"> Fecha de inicio </label>
@@ -40,35 +73,14 @@
           placeholder="Seleccione fecha de inicio"
           [touchUI]="!isDesktop"
           readonlyInput="true"
+          [disabled]="form.get(FormControlName.start_date)?.disabled ?? false"
           dateFormat="dd/mm/yy"
-          [formControlName]="FormControlName.start_date" 
-					[maxDate]="formGroup.get(FormControlName.max_request_date)?.value"
-					/>
-					
-        <form-error-msg [control]="formGroup.get(FormControlName.start_date)" />
-      </div>
+          [formControlName]="FormControlName.start_date"
+          [minDate]="form.get(FormControlName.max_request_date)?.value"
+          [maxDate]="form.get(FormControlName.end_date)?.value"
+          [showClear]="true" />
 
-      <!-- Fecha de limite de solicitudes -->
-      <div class="col-span-1 md:col-span-4 relative" [id]="FormFieldId.max_request_date">
-        <div class="flex gap-1">
-          <label class="font-bold" [for]="FormFieldId.max_request_date + '_control'"> Fecha limite de solicitudes </label>
-          <span class="text-red-500">*</span>
-        </div>
-
-        <p-datepicker
-          [inputId]="FormFieldId.max_request_date + '_control'"
-          class="w-full"
-          inputStyleClass="w-full"
-          panelStyleClass="{{ isDesktop ? '' : 'touch-ui' }}"
-          appendTo="body"
-          placeholder="Seleccione fecha de limite"
-          [touchUI]="!isDesktop"
-          readonlyInput="true"
-          dateFormat="dd/mm/yy"
-          [formControlName]="FormControlName.max_request_date"
-          [minDate]="formGroup.get(FormControlName.start_date)?.value"
-          [maxDate]="formGroup.get(FormControlName.end_date)?.value" />
-        <form-error-msg [control]="formGroup.get(FormControlName.max_request_date)" />
+        <form-error-msg [control]="form.get(FormControlName.start_date)" />
       </div>
 
       <!-- Fecha de Fin -->
@@ -86,27 +98,65 @@
           placeholder="Seleccione fecha de fin"
           [touchUI]="!isDesktop"
           readonlyInput="true"
+          [disabled]="form.get(FormControlName.end_date)?.disabled ?? false"
           dateFormat="dd/mm/yy"
           [formControlName]="FormControlName.end_date"
-          [minDate]="formGroup.get(FormControlName.max_request_date)?.value" />
-        <form-error-msg [control]="formGroup.get(FormControlName.end_date)" />
+          [minDate]="form.get(FormControlName.start_date)?.value"
+          [showClear]="true" />
+        <form-error-msg [control]="form.get(FormControlName.end_date)" />
       </div>
 
-      <!-- Casa de Retiro -->
-      <!-- <div class="col-span-1 md:col-span-12" [id]="FormFieldId.retreat_home"> relative
+      <!-- Modalidad -->
+      <div class="col-span-1 md:col-span-6 relative" [id]="FormFieldId.modality">
         <div class="flex gap-1">
-          <label class="font-bold" [for]="FormFieldId.retreat_home + '_control'"> Casa de Retiro </label>
+          <label class="font-bold" [for]="FormFieldId.modality + '_control'"> Modalidad </label>
           <span class="text-red-500">*</span>
         </div>
-      </div> -->
-      
+        <div class="flex flex-col">
+          <p-select
+            [inputId]="FormFieldId.modality + '_control'"
+            [options]="modalityOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Seleccione la modalidad"
+            class="w-full"
+            appendTo="body"
+            [formControlName]="FormControlName.modality"
+            [disabled]="form.get(FormControlName.modality)?.disabled ?? false" />
+          <form-error-msg [control]="form.get(FormControlName.modality)" />
+        </div>
+      </div>
+
+      <!-- Sección de Modalidad Mixta -->
+      <div *ngIf="form.get(FormControlName.modality)?.value === 'mixto' && mixedModalityDates().length > 0" class="col-span-1 md:col-span-12">
+        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <h3 class="text-lg font-semibold mb-1 text-gray-900">Configuración de Modalidad Mixta</h3>
+          <p class="text-sm text-gray-600 mb-4">Selecciona la modalidad para cada día del retiro:</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div *ngFor="let dateInfo of mixedModalityDates()" class="flex flex-col gap-2">
+              <label class="text-sm font-medium text-gray-700">{{ dateInfo.label | titlecase }}</label>
+              <p-select 
+                [options]="mixedModalityOptions" 
+                optionLabel="label" 
+                optionValue="value" 
+                [ngModel]="mixedModalityData()[dateInfo.date]" 
+                (ngModelChange)="updateMixedModalityValue(dateInfo.date, $event)"
+                [ngModelOptions]="{standalone: true}"
+                class="w-full" 
+                appendTo="body" 
+                [disabled]="form.disabled"
+                placeholder="Seleccionar" />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </form>
 
   <!-- Botones fijos en la parte inferior -->
-
   <div class="flex justify-end gap-3">
     <p-button type="button" label="Cancelar" severity="secondary" (onClick)="onCancel()" [disabled]="loading()" class="w-auto" />
-    <p-button type="button" label="Guardar Retiro" severity="success" (onClick)="onSubmit()" [loading]="loading()" [disabled]="formGroup.invalid || loading()" class="w-auto" />
+    <p-button type="button" label="Guardar" severity="success" (onClick)="onSubmit()" [loading]="loading()" [disabled]="!isFormValid || loading()" class="w-auto" />
   </div>
 </div>

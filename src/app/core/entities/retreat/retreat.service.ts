@@ -5,6 +5,8 @@ import { Retreat } from './retreat.class';
 import { UserService } from '../user/user.service';
 import { fun } from '@core/services/functions.service';
 import { AuthService } from '@core/services/auth.service';
+import { Ss } from '@core/services/singleton.service';
+import { BehaviorSubject, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -13,6 +15,33 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   private _collectionName = 'retreat';
   private userService = inject(UserService);
   private authService = inject(AuthService);
+
+  private _reload: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  private _retreats: BehaviorSubject<Retreat[]> = new BehaviorSubject<Retreat[]>([]);
+  private _loadingRetreatList: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  private _lastFetch: number = 0;
+  private readonly CACHE_DURATION = 3 * 60 * 1000; // 3 minutos
+
+  // Observables públicos
+  get reload$(): Observable<boolean> {
+    return this._reload.asObservable();
+  }
+
+  get retreats$(): Observable<Retreat[]> {
+    return this._retreats.asObservable();
+  }
+
+  get loadingRetreats$(): Observable<boolean> {
+    return this._loadingRetreatList.asObservable();
+  }
+
+  get retreats(): Retreat[] {
+    return this._retreats.value;
+  }
+
+  get loadingRetreats(): boolean {
+    return this._loadingRetreatList.value;
+  }
 
   constructor() {
     super();
@@ -23,25 +52,251 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
     return this._collectionName;
   }
 
+  /**
+   * Establece el estado de recarga
+   */
+  setReload(reload: boolean) {
+    this._reload.next(reload);
+  }
+
+  /**
+   * Obtiene todos los retiros con caché
+   */
+  async getAll(): Promise<Retreat[]> {
+    const now = Date.now();
+
+    // Verificar si el caché es válido
+    if (this._retreats.value.length > 0 && now - this._lastFetch < this.CACHE_DURATION) {
+      return this._retreats.value;
+    }
+
+    return this.fetchAllRetreats();
+  }
+
+  /**
+   * Obtiene todos los retiros desde Firebase
+   */
+  private async fetchAllRetreats(): Promise<Retreat[]> {
+    try {
+      this._loadingRetreatList.next(true);
+      const currentUser = this.authService.current_user();
+      const cityRef = await currentUser?.cityRef;
+
+      if (!cityRef) {
+        throw new Error('No se pudo obtener la referencia de la ciudad del usuario');
+      }
+
+      const retreats = await this._getAll({ find_by: 'city', find_value: cityRef });
+      const retreatList = retreats.map(retreat => new Retreat(retreat));
+
+      this._retreats.next(retreatList);
+      this._lastFetch = Date.now();
+
+      return retreatList;
+    } catch (error) {
+      console.error('Error al obtener retiros:', error);
+      Ss.toastService.error({ message: 'Error al cargar los retiros', title: 'Error de carga' });
+      throw error;
+    } finally {
+      this._loadingRetreatList.next(false);
+    }
+  }
+
+  /**
+   * Obtiene un retiro por ID
+   */
   async getRetreatById(id: string): Promise<Retreat | null> {
+    if (!id) {
+      return null;
+    }
+
+    // Primero buscar en caché
+    const cached = this._retreats.value.find(r => r.id === id);
+    if (cached) {
+      return cached;
+    }
+
     return this.processGetRetreat(id, 'id');
   }
 
+  /**
+   * Procesa la obtención de un retiro
+   */
   private processGetRetreat(value: string, by: string): Promise<Retreat | null> {
-    return new Promise<Retreat | null>(resolve => {
+    return new Promise<Retreat | null>((resolve, reject) => {
       this._getOne({ find_by: by, find_value: value })
         .then(retreat => {
-          resolve(retreat ? new Retreat(retreat) : null);
+          const retreatObj = retreat ? new Retreat(retreat) : null;
+          resolve(retreatObj);
         })
         .catch(error => {
-          resolve(null);
+          console.error(`Error al obtener retiro por ${by}:`, error);
+          reject(error);
         });
     });
   }
 
-  create(newRetreat: RetreatI) {
-    if (fun.isEmpty(this.authService.current_user())) throw new Error('User is not defined');
+  /**
+   * Crea un nuevo retiro
+   */
+  async createRetreat(newRetreat: RetreatI): Promise<RetreatI> {
+    if (fun.isEmpty(this.authService.current_user())) {
+      throw new Error('Usuario no autenticado');
+    }
 
-    return this.createOneInParentCollection({ parentCollection: this.userService.collectionName, parentId: this.authService.current_user()!.id, data: newRetreat });
+    try {
+      const result = await this.createOneInParentCollection({
+        parentCollection: this.userService.collectionName,
+        parentId: this.authService.current_user()!.id,
+        data: newRetreat,
+      });
+
+      // Invalidar caché
+      this.invalidateCache();
+
+      Ss.toastService.success({ message: 'Retiro creado correctamente', title: 'Éxito' });
+
+      return result;
+    } catch (error) {
+      console.error('Error al crear retiro:', error);
+      Ss.toastService.error({ message: 'Error al crear el retiro', title: 'Error' });
+      throw error;
+    }
+  }
+
+  /**
+   * Actualiza un retiro
+   */
+  async updateRetreat(retreat: RetreatI): Promise<RetreatI> {
+    if (!retreat.id) {
+      throw new Error('ID de retiro requerido para actualización');
+    }
+
+    try {
+      const result = await this._updateOne({
+        find_by: 'id',
+        find_value: retreat.id,
+        data: retreat,
+      });
+
+      // Actualizar caché
+      this.updateCacheItem(retreat.id, new Retreat(result));
+
+      Ss.toastService.success({ message: 'Retiro actualizado correctamente', title: 'Éxito' });
+
+      return result;
+    } catch (error) {
+      console.error('Error al actualizar retiro:', error);
+      Ss.toastService.error({ message: 'Error al actualizar el retiro', title: 'Error' });
+      throw error;
+    }
+  }
+
+  /**
+   * Cambia el estado de un retiro
+   */
+  async toggleRetreatStatus(retreat: Retreat): Promise<RetreatI> {
+    try {
+      const result = await this._updateOne({
+        find_by: 'id',
+        find_value: retreat.id,
+        data: { is_active: !retreat.is_active },
+      });
+
+      // Actualizar caché
+      this.updateCacheItem(retreat.id, new Retreat(result));
+
+      const action = retreat.is_active ? 'desactivado' : 'activado';
+      Ss.toastService.success({ message: `Retiro ${action} correctamente`, title: 'Éxito' });
+
+      return result;
+    } catch (error) {
+      console.error('Error al cambiar estado del retiro:', error);
+      Ss.toastService.error({ message: 'Error al cambiar el estado del retiro', title: 'Error' });
+      throw error;
+    }
+  }
+
+  /**
+   * Elimina un retiro
+   */
+  async deleteRetreat(id: string): Promise<void> {
+    try {
+      await this._deleteOne({ find_by: 'id', find_value: id });
+
+      // Remover del caché
+      this.removeFromCache(id);
+
+      Ss.toastService.success({ message: 'Retiro eliminado correctamente', title: 'Éxito' });
+    } catch (error) {
+      console.error('Error al eliminar retiro:', error);
+      Ss.toastService.error({ message: 'Error al eliminar el retiro', title: 'Error' });
+      throw error;
+    }
+  }
+
+  /**
+   * Obtiene estadísticas
+   */
+  getStats(): { total: number; active: number; inactive: number } {
+    const retreats = this._retreats.value;
+    const total = retreats.length;
+    const active = retreats.filter(r => r.is_active).length;
+    const inactive = total - active;
+
+    return { total, active, inactive };
+  }
+
+  /**
+   * Actualiza un elemento en el caché
+   */
+  private updateCacheItem(id: string, retreat: Retreat): void {
+    const currentRetreats = this._retreats.value;
+    const index = currentRetreats.findIndex(r => r.id === id);
+
+    if (index !== -1) {
+      currentRetreats[index] = retreat;
+      this._retreats.next([...currentRetreats]);
+    }
+  }
+
+  /**
+   * Remueve un elemento del caché
+   */
+  private removeFromCache(id: string): void {
+    const currentRetreats = this._retreats.value;
+    const filteredRetreats = currentRetreats.filter(r => r.id !== id);
+    this._retreats.next(filteredRetreats);
+  }
+
+  /**
+   * Invalida el caché
+   */
+  private invalidateCache(): void {
+    this._retreats.next([]);
+    this._lastFetch = 0;
+  }
+
+  /**
+   * Refresca los datos
+   */
+  async refresh(): Promise<void> {
+    this.invalidateCache();
+    await this.getAll();
+  }
+
+  /**
+   * Limpia el caché
+   */
+  override clearCache(): void {
+    this._retreats.next([]);
+    this._loadingRetreatList.next(false);
+    this._reload.next(false);
+    this._lastFetch = 0;
+  }
+
+  // Método legacy para compatibilidad
+  create(newRetreat: RetreatI) {
+    return this.createRetreat(newRetreat);
   }
 }

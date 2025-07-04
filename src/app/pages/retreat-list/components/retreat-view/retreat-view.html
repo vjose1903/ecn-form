@@ -1,0 +1,115 @@
+<div *ngIf="retreat" class="space-y-6">
+  <!-- Información básica -->
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+    <!-- Estado -->
+    <div class="flex items-center gap-3 col-span-12 md:col-span-6">
+      <div class="flex items-center gap-2">
+        <i class="pi pi-info-circle text-red-600" aria-hidden="true"></i>
+        <span class="text-gray-800 font-medium">Estado:</span>
+      </div>
+      <p-tag [severity]="retreat.statusSeverity" [value]="retreat.statusText" [rounded]="true" [attr.aria-label]="'Estado: ' + retreat.statusText" />
+    </div>
+
+    <div class="col-span-12 md:hidden">
+      <divider-line separatorClass="my-4" />
+    </div>
+
+    <!-- Casa de Retiro -->
+    <div class="flex flex-col gap-3 col-span-12 md:col-span-6">
+      <div class="flex items-center gap-2">
+        <i class="pi pi-home text-red-600" aria-hidden="true"></i>
+        <span class="text-gray-800 font-medium">Casa de Retiro:</span>
+      </div>
+      <p class="text-gray-600 m-0" [title]="getContactInfoText()">{{ getContactInfoText() }}</p>
+    </div>
+
+    <div class="col-span-12">
+      <divider-line separatorClass="my-4" />
+    </div>
+
+    <!-- Número de Retiro -->
+    <div class="flex flex-col gap-3 col-span-12 md:col-span-6">
+      <div class="flex items-center gap-2">
+        <i class="pi pi-hashtag text-red-600" aria-hidden="true"></i>
+        <span class="text-gray-800 font-medium">Número de Retiro:</span>
+      </div>
+      <p class="text-gray-600 m-0" [title]="retreat.displayNumber">{{ retreat.displayNumber }}</p>
+    </div>
+
+    <!-- Modalidad -->
+    <div class="flex flex-col gap-3 col-span-12 md:col-span-6">
+      <div class="flex items-center gap-2">
+        <i class="pi pi-globe text-red-600" aria-hidden="true"></i>
+        <span class="text-gray-800 font-medium">Modalidad:</span>
+      </div>
+      <p class="text-gray-600 m-0" [title]="retreat.displayModality">{{ retreat.displayModality }}</p>
+    </div>
+
+    <div class="col-span-12">
+      <divider-line separatorClass="my-4" />
+    </div>
+
+    <!-- Fechas -->
+    <div class="flex flex-col gap-3 col-span-12">
+      <div class="flex items-center gap-2">
+        <i class="pi pi-calendar text-red-600" aria-hidden="true"></i>
+        <span class="text-gray-800 font-medium">Período del Retiro:</span>
+      </div>
+      <p class="text-gray-600 m-0" [title]="retreat.displayDateRange">{{ retreat.displayDateRange }}</p>
+    </div>
+
+    <div class="col-span-12">
+      <divider-line separatorClass="my-4" />
+    </div>
+
+    <!-- Estado de Solicitudes -->
+    <div class="flex items-center gap-3 col-span-12 md:col-span-6">
+      <div class="flex items-center gap-2">
+        <i class="pi pi-check-circle text-red-600" aria-hidden="true"></i>
+        <span class="text-gray-800 font-medium">Solicitudes:</span>
+      </div>
+      <p-tag [severity]="retreat.requestsStatusSeverity" [value]="retreat.requestsStatusText" [rounded]="true" [attr.aria-label]="'Estado de solicitudes: ' + retreat.requestsStatusText" />
+    </div>
+
+    <!-- Fecha Límite de Solicitudes -->
+    <div class="flex flex-col gap-3 col-span-12 md:col-span-6">
+      <div class="flex items-center gap-2">
+        <i class="pi pi-clock text-red-600" aria-hidden="true"></i>
+        <span class="text-gray-800 font-medium">Fecha Límite:</span>
+      </div>
+      <p class="text-gray-600 m-0" [title]="getMaxRequestDateFormatted()">{{ getMaxRequestDateFormatted() }}</p>
+    </div>
+  </div>
+
+  <!-- Mensaje cuando no hay información completa -->
+  <div *ngIf="!retreat.hasRetreatHome || !retreat.hasDates || !retreat.hasModality" class="relative flex items-center justify-center py-12">
+    <div class="text-center text-gray-500">
+      <div class="text-4xl md:text-6xl mb-2">⚠️</div>
+      <p class="text-lg font-medium">Información incompleta</p>
+      <p class="text-sm">Este retiro tiene información faltante que debe ser completada</p>
+    </div>
+  </div>
+
+  <!-- Acciones -->
+  <div class="flex justify-end gap-3 w-full pt-4 border-t border-gray-200">
+    <p-button
+      type="button"
+      [label]="getStatusButtonText()"
+      [severity]="getStatusButtonSeverity()"
+      [disabled]="loading()"
+      [icon]="getStatusButtonIcon()"
+      class="w-auto"
+      (onClick)="confirmToggleStatus()"
+      [attr.aria-label]="getStatusButtonText() + ' ' + retreat.displayNumber" />
+
+    <p-button *ngIf="retreat.is_active" type="button" label="Editar" severity="secondary" [disabled]="loading()" icon="pi pi-pencil" class="w-auto" (onClick)="openEditForm()" [attr.aria-label]="'Editar ' + retreat.displayNumber" />
+  </div>
+
+  <!-- Indicador de carga general -->
+  <div *ngIf="loading()" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg z-20">
+    <div class="text-center">
+      <i class="pi pi-spinner pi-spin text-3xl text-blue-600 mb-2"></i>
+      <p class="text-gray-600">Procesando...</p>
+    </div>
+  </div>
+</div>

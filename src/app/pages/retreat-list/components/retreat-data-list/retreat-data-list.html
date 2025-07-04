@@ -1,1 +1,99 @@
 <p>retreat-data-list works!</p>
+
+<p-card
+  class="cursor-pointer transition-all duration-200 hover:shadow-lg"
+  styleClass="hover:!bg-gray-50"
+  [class]="getLoadingClass()"
+  (click)="onCardClick($event)"
+  [attr.aria-label]="'Retiro: ' + item.displayNumber"
+  role="button"
+  tabindex="0"
+  (keydown.enter)="openRetreatView()"
+  (keydown.space)="openRetreatView()">
+  <div class="flex justify-between items-center flex-wrap gap-x-5 gap-y-3">
+    <div class="flex items-center gap-x-3 flex-1 min-w-0">
+      <!-- Icono del retiro -->
+      <div class="hidden md:block aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 w-22 h-22 flex-shrink-0 flex items-center justify-center">
+        <i class="pi pi-calendar text-gray-400 text-2xl"></i>
+      </div>
+
+      <!-- Información principal -->
+      <div class="flex-1 min-w-0">
+        <!-- Estado -->
+        <div class="mb-2">
+          <p-tag [severity]="item.statusSeverity" [value]="item.statusText" [rounded]="true" [attr.aria-label]="'Estado: ' + item.statusText" />
+        </div>
+
+        <!-- Número de retiro -->
+        <h3 class="text-lg font-semibold mb-2 text-gray-900 truncate" [title]="item.displayNumber">{{ item.displayNumber }}</h3>
+
+        <!-- Información del retiro -->
+        <div class="flex flex-wrap gap-x-7 gap-y-2 text-sm text-gray-600">
+          <!-- Casa de retiro -->
+          <span *ngIf="item.hasRetreatHome" class="flex items-center min-w-0">
+            <i class="pi pi-home mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
+            <span class="line-clamp-2 truncate" [title]="item.retreatHomeName"> {{ item.retreatHomeName }} </span>
+          </span>
+
+          <!-- Modalidad -->
+          <span *ngIf="item.hasModality" class="flex items-center min-w-0">
+            <i class="pi pi-globe mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
+            <span class="truncate" [title]="item.displayModality"> {{ item.displayModality }} </span>
+          </span>
+
+          <!-- Fechas -->
+          <span *ngIf="item.hasDates" class="flex items-center min-w-0">
+            <i class="pi pi-calendar mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
+            <span class="truncate" [title]="item.displayDateRange"> {{ item.displayDateRange }} </span>
+          </span>
+
+          <!-- Estado de solicitudes -->
+          <span class="flex items-center min-w-0">
+            <i class="pi pi-check-circle mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
+            <span class="truncate" [title]="item.requestsStatusText"> {{ item.requestsStatusText }} </span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div *ngIf="showActions" class="flex items-center gap-2 flex-shrink-0">
+      <p-button
+        type="button"
+        icon="pi pi-eye"
+        severity="secondary"
+        variant="text"
+        size="small"
+        [disabled]="loading()"
+        (onClick)="openRetreatView()"
+        pTooltip="Ver detalles"
+        tooltipPosition="top"
+        [attr.aria-label]="'Ver detalles de ' + item.displayNumber" />
+
+      <p-button
+        *ngIf="item.is_active"
+        type="button"
+        icon="pi pi-pencil"
+        severity="secondary"
+        variant="text"
+        size="small"
+        [disabled]="loading()"
+        (onClick)="openEditForm()"
+        pTooltip="Editar"
+        tooltipPosition="top"
+        [attr.aria-label]="'Editar ' + item.displayNumber" />
+
+      <p-button
+        type="button"
+        [icon]="item.is_active ? 'pi pi-trash' : 'pi pi-undo'"
+        [severity]="item.is_active ? 'danger' : 'success'"
+        variant="text"
+        size="small"
+        [disabled]="loading()"
+        (onClick)="confirmToggleStatus()"
+        [pTooltip]="item.is_active ? 'Desactivar' : 'Activar'"
+        tooltipPosition="top"
+        [attr.aria-label]="(item.is_active ? 'Desactivar' : 'Activar') + ' ' + item.displayNumber" />
+    </div>
+  </div>
+</p-card>
