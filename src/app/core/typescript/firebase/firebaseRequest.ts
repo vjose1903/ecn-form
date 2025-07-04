@@ -223,8 +223,9 @@ export class FirebaseRequest<T> {
 
       const refString = this.makeEntityRefString(params);
       const entityRef = doc(Ss.firestore, refString);
-      
+
       const { id, ...data } = { ...params.data };
+
       await updateDoc(entityRef, data);
       const docSnapshot = await getDoc(entityRef);
 

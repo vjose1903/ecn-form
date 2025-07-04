@@ -26,10 +26,28 @@
 
     <div class="flex gap-2 justify-end w-full md:w-auto">
       @if (item.is_active) {
-      <p-button  [disabled]="loading()" type="button" icon="pi pi-pencil" severity="secondary" size="small" [text]="true" pTooltip="Editar" tooltipPosition="left"> </p-button>
-      <p-button [disabled]="loading()" type="button" [icon]="loading()? 'pi pi-spinner pi-spin': 'pi pi-trash'" severity="danger" size="small" [text]="true" pTooltip="Eliminar" (onClick)="$event.stopPropagation(); confirmToggleStatus(item)" tooltipPosition="left"></p-button>
+      <p-button [disabled]="loading()" type="button" icon="pi pi-pencil" severity="secondary" size="small" [text]="true" pTooltip="Editar" tooltipPosition="left" (onClick)="$event.stopPropagation(); openEditForm()"> </p-button>
+      <p-button
+        [disabled]="loading()"
+        type="button"
+        [icon]="loading()? 'pi pi-spinner pi-spin': 'pi pi-trash'"
+        severity="danger"
+        size="small"
+        [text]="true"
+        pTooltip="Eliminar"
+        (onClick)="$event.stopPropagation(); confirmToggleStatus(item)"
+        tooltipPosition="left"></p-button>
       } @else {
-      <p-button [disabled]="loading()" type="button" [icon]="loading()? 'pi pi-spinner pi-spin': 'pi pi-undo'" severity="success" size="small" [text]="true" pTooltip="Reactivar" (onClick)="$event.stopPropagation(); confirmToggleStatus(item)" tooltipPosition="left"></p-button>
+      <p-button
+        [disabled]="loading()"
+        type="button"
+        [icon]="loading()? 'pi pi-spinner pi-spin': 'pi pi-undo'"
+        severity="success"
+        size="small"
+        [text]="true"
+        pTooltip="Reactivar"
+        (onClick)="$event.stopPropagation(); confirmToggleStatus(item)"
+        tooltipPosition="left"></p-button>
       }
     </div>
   </div>

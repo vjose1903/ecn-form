@@ -23,7 +23,7 @@
   <ng-template #footer>
     <div class="flex gap-2 justify-end w-full md:w-auto">
       @if (item.is_active) {
-      <p-button [disabled]="loading()" type="button" icon="pi pi-pencil" severity="secondary" size="small" [text]="true" pTooltip="Editar" tooltipPosition="left"> </p-button>
+      <p-button [disabled]="loading()" type="button" icon="pi pi-pencil" severity="secondary" size="small" [text]="true" pTooltip="Editar" tooltipPosition="left" (onClick)="$event.stopPropagation(); openEditForm()"> </p-button>
       <p-button
         [disabled]="loading()"
         type="button"

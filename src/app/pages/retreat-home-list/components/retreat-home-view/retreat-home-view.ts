@@ -22,7 +22,6 @@ import { ToastService } from '@core/services/toast.service';
 export class RetreatHomeView implements OnInit {
   private ref = inject(DynamicDialogRef);
   private config = inject(DynamicDialogConfig);
-  private retreatHomeService = inject(RetreatHomeService);
 
   retreatHome!: RetreatHome;
 
@@ -64,9 +63,12 @@ export class RetreatHomeView implements OnInit {
 
   openEditForm() {
     this.ref.close();
+    this.retreatHome.openForm();
   }
 
   confirmToggleStatus() {
-    this.retreatHomeService.confirmToggleStatus(this.retreatHome, this.loading, this.ref);
+    this.retreatHome.confirmToggleStatus(this.retreatHome, this.loading).then(() => {
+      this.ref.close();
+    });
   }
 }

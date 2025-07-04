@@ -44,6 +44,10 @@ export class RetreatHomeDataGrid {
   }
 
   confirmToggleStatus(retreatHome: RetreatHome) {
-    this.retreatHomeService.confirmToggleStatus(retreatHome, this.loading);
+    retreatHome.confirmToggleStatus(retreatHome, this.loading);
+  }
+
+  openEditForm() {
+    this.item.openForm();
   }
 }

@@ -31,11 +31,9 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
     return new Promise<Retreat | null>(resolve => {
       this._getOne({ find_by: by, find_value: value })
         .then(retreat => {
-          console.log('%c retreat', 'color: blue; font-weight: bold;', retreat);
           resolve(retreat ? new Retreat(retreat) : null);
         })
         .catch(error => {
-          console.log(`ℹ️ [RetreatService] Retiro no encontrado con ${by}: ${value}`);
           resolve(null);
         });
     });

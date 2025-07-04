@@ -1,18 +1,18 @@
+import { inject, runInInjectionContext } from '@angular/core';
 import { FileI } from './file.model';
 import { FileService } from './file.service';
+import { Ss } from '@core/services/singleton.service';
 
 export class FileClass {
   id: string = '';
   name: string = '';
-  size: number = 0;
   url: string = '';
   file?: File;
   loaded?: boolean = false;
 
-  constructor(fileObj: FileI, private fileService?: FileService) {
+  constructor(fileObj: FileI) {
     this.id = fileObj.id || '';
-    this.name = fileObj.name || (fileObj.file?.name || '');
-    this.size = fileObj.size || (fileObj.file?.size || 0);
+    this.name = fileObj.name || fileObj.file?.name || '';
     this.url = fileObj.url || '';
     this.file = fileObj.file;
   }
@@ -21,7 +21,6 @@ export class FileClass {
     return {
       id: this.id,
       name: this.name,
-      size: this.size,
       url: this.url,
     };
   }
@@ -31,14 +30,10 @@ export class FileClass {
   }
 
   getFileReference() {
-    if (!this.fileService) {
-      throw new Error('FileService not provided. Use FileClass.create() method instead.');
-    }
-    return this.fileService.getDocumentRef({ id: this.id });
-  }
+    return runInInjectionContext(Ss.injector, () => {
+      const fileService = inject(FileService);
 
-  // Método estático para crear instancias con inyección de dependencias
-  static create(fileObj: FileI, fileService: FileService): FileClass {
-    return new FileClass(fileObj, fileService);
+      return fileService.getDocumentRef({ id: this.id });
+    });
   }
 }

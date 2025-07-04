@@ -53,8 +53,6 @@ export class AuthService {
       return new Promise<void>((resolve, reject) => {
         signInWithEmailAndPassword(this.auth, payload.email, payload.password)
           .then(async (userCredential: UserCredential) => {
-            console.log(userCredential);
-
             const user = await this.userService.getUserByEmail(payload.email);
 
             if (!user) {
@@ -87,8 +85,6 @@ export class AuthService {
       return new Promise<void>((resolve, reject) => {
         createUserWithEmailAndPassword(this.auth, payload.email, payload.password)
           .then((userCredential: UserCredential) => {
-            console.log(userCredential);
-
             resolve();
           })
           .catch(error => {
@@ -116,8 +112,6 @@ export class AuthService {
           .then(async (userCredential: UserCredential) => {
             const email = userCredential.user?.email;
 
-            console.log('%c Email del usuario:', 'color: lime; font-weight: bold;', email);
-
             if (!email) {
               this.toastService.error({ message: 'No se pudo obtener el email del usuario', title: 'Error' });
               await signOut(this.auth);
@@ -128,8 +122,6 @@ export class AuthService {
             // Verificar si el usuario ya existe en Firebase
             try {
               const user = await this.userService.getUserByEmail(email);
-
-              console.log('%c user', 'color: lime; font-weight: bold;', user);
 
               // Si no hay métodos de inicio de sesión, el usuario no existe
               if (!user) {
@@ -143,7 +135,7 @@ export class AuthService {
               }
 
               // Si el usuario existe, permitir el acceso
-              console.log('Usuario verificado:', userCredential);
+
               localStorage.setItem(environment.X_TOKEN, userCredential.user?.uid ?? '');
               localStorage.setItem(environment.X_EMAIL, userCredential.user?.email ?? '');
               this.current_user.set(user);
@@ -195,7 +187,6 @@ export class AuthService {
 
   private getAuthMessage(error: AuthError): AuthResult {
     const errorCode = error.code;
-    console.log('%c errorCode', 'color: red; font-weight: bold;', errorCode);
 
     return errorMessages[errorCode] || errorMessages['error'];
   }

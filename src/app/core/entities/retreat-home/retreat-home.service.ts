@@ -59,11 +59,9 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
     return new Promise<RetreatHome | null>(resolve => {
       this._getOne({ find_by: by, find_value: value })
         .then(retreat => {
-          console.log('%c retreat', 'color: blue; font-weight: bold;', retreat);
           resolve(retreat ? new RetreatHome(retreat) : null);
         })
         .catch(error => {
-          console.log(`ℹ️ [RetreatService] Retiro no encontrado con ${by}: ${value}`);
           resolve(null);
         });
     });
@@ -77,38 +75,5 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
 
   toggleRetreatHomeStatus(retreatHome: RetreatHome) {
     return this._updateOne({ find_by: 'id', find_value: retreatHome.id, data: { id: retreatHome.id, is_active: !retreatHome.is_active } });
-  }
-
-  confirmToggleStatus(retreatHome: RetreatHome, loading: WritableSignal<boolean>, modalRef?: DynamicDialogRef) {
-    loading.set(true);
-    this.confirmationService.confirm({
-      message: retreatHome.is_active ? '¿Estás seguro de querer desactivar esta casa de retiro?' : '¿Estás seguro de querer reactivar esta casa de retiro?',
-      header: retreatHome.is_active ? 'Desactivar Casa de Retiro' : 'Activar Casa de Retiro',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Si',
-      rejectLabel: 'No',
-      acceptIcon: 'pi pi-check',
-      rejectIcon: 'pi pi-times',
-      acceptButtonStyleClass: retreatHome.is_active ? 'p-button-danger' : 'p-button-success',
-      rejectButtonStyleClass: 'p-button-secondary',
-      accept: () => this.toggleStatus(retreatHome, loading, modalRef),
-      reject: () => loading.set(false),
-    });
-  }
-
-  toggleStatus(retreatHome: RetreatHome, loading: WritableSignal<boolean>, modalRef?: DynamicDialogRef) {
-    this.toggleRetreatHomeStatus(retreatHome)
-      .then(() => {
-        this.toastService.success({ message: 'Estado de la casa de retiro cambiado correctamente', title: 'Estado cambiado' });
-        this.ngZone.run(() => {
-          this.setReload(true);
-          modalRef?.close();
-        });
-      })
-      .catch(error => {
-        console.log('%c error', 'color: red; font-weight: bold;', error);
-        this.toastService.error({ message: 'Error al cambiar el estado de la casa de retiro', title: 'Error' });
-      })
-      .finally(() => loading.set(false));
   }
 }

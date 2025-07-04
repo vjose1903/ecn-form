@@ -19,6 +19,7 @@ import { Subject, takeUntil } from 'rxjs';
 })
 export class RetreatHomeList implements OnInit, OnDestroy {
   private retreatHomeService = inject(RetreatHomeService);
+  private dialogService = inject(DialogService);
   ref: DynamicDialogRef | undefined;
 
   dataviewConfig = new DynamicDataviewConfig({
@@ -33,14 +34,13 @@ export class RetreatHomeList implements OnInit, OnDestroy {
 
   private onDestroy$: Subject<void> = new Subject<void>();
 
-  constructor(public dialogService: DialogService) {
+  constructor() {
     // this.showNewRetreatDialog();
   }
 
   ngOnInit(): void {
     this.getRetreatHomes();
     this.retreatHomeService.reload$.pipe(takeUntil(this.onDestroy$)).subscribe(reload => {
-      console.log('%c reload', 'color: lime >>>>; font-weight: bold;', reload);
       if (reload) {
         this.getRetreatHomes();
         this.retreatHomeService.setReload(false);
@@ -55,27 +55,11 @@ export class RetreatHomeList implements OnInit, OnDestroy {
 
   getRetreatHomes() {
     this.retreatHomeService.getAll().then(retreats => {
-      console.log('%c retreats', 'color: blue; font-weight: bold;', JSON.stringify(retreats));
-
       this.dataviewConfig.setData(retreats);
     });
   }
 
   showNewRetreatDialog() {
-    this.ref = this.dialogService.open(RetreatHomeForm, {
-      header: 'Nueva Casa de Retiro',
-      width: '70%',
-      contentStyle: { overflow: 'auto' },
-      baseZIndex: 10000,
-      maximizable: true,
-      modal: true,
-      breakpoints: { '960px': '75vw', '640px': '90vw' },
-    });
-
-    this.ref.onClose.subscribe(result => {
-      if (result) {
-        // Aquí puedes manejar el resultado del formulario
-      }
-    });
+    new RetreatHome().openForm();
   }
 }

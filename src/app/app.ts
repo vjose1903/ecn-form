@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, inject, NgZone, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, Injector, NgZone, OnInit, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Ss } from '@core/services/singleton.service';
 import { fun } from '@core/services/functions.service';
@@ -12,6 +12,9 @@ import { ToastService } from '@core/services/toast.service';
 import { CopyToClipboardService } from '@core/services/copy-to-clipboard.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
+import { ConfirmationService } from 'primeng/api';
+import { DialogService } from 'primeng/dynamicdialog';
+import { FileService } from '@core/entities/file/file.service';
 
 @Component({
   selector: 'app-root',
@@ -30,6 +33,10 @@ export class App implements OnInit {
   private readonly userService = inject(UserService);
   private readonly toastService = inject(ToastService);
   private readonly copyToClipboardService = inject(CopyToClipboardService);
+  private readonly confirmationService = inject(ConfirmationService);
+  private readonly injector = inject(Injector);
+  private readonly dialogService = inject(DialogService);
+  private readonly fileService = inject(FileService);
 
   ngOnInit(): void {
     this.initializeApp();
@@ -58,6 +65,10 @@ export class App implements OnInit {
     Ss.toastService = this.toastService;
     Ss.copyToClipboardService = this.copyToClipboardService;
     Ss.authService = this.authService;
+    Ss.confirmationService = this.confirmationService;
+    Ss.injector = this.injector;
+    Ss.dialogService = this.dialogService;
+    Ss.fileService = this.fileService;
 
     // Delay mínimo para asegurar que Firebase esté listo
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -72,14 +83,12 @@ export class App implements OnInit {
 
     // Si ya hay usuario autenticado, no verificar de nuevo
     if (this.authService.current_user()) {
-      console.log('%c ANDO AQUIIII', 'color: red; font-weight: bold;', this.authService.current_user()?.asJson());
       return;
     }
 
     try {
       const user = await this.userService.getUserByEmail(email);
 
-      console.log('%c user', 'color: red; font-weight: bold;', JSON.stringify(user));
       if (user) {
         this.authService.current_user.set(user);
       } else {

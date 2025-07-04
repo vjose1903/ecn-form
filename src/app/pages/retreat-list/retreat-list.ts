@@ -44,7 +44,6 @@ export class RetreatList implements OnDestroy {
     this.ref.onClose.subscribe((result: RetreatI) => {
       if (result) {
         // Aquí puedes manejar el resultado del formulario
-        console.log('Retiro creado:', result);
         Ss.toastService.success({ message: 'Retiro creado exitosamente' });
       }
     });

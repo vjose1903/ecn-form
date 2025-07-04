@@ -1,5 +1,8 @@
+@if (formGroup(); as formGroup) {
 <div class="grid grid-rows-[1fr_min-content] gap-10 h-full">
   <div class="h-full overflow-y-auto overflow-x-hidden">
+    <!-- Formulario real -->
+
     <form [formGroup]="formGroup" (ngSubmit)="onSubmit()">
       <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-7">
         <!-- Numero de Retiro -->
@@ -21,7 +24,7 @@
             <label class="font-bold" [for]="FormFieldId.phone + '_control'">Teléfono </label>
           </div>
           <div class="flex flex-col">
-            <p-inputmask [inputId]="FormFieldId.phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" [formControlName]="FormControlName.phone" />
+            <p-inputmask [inputId]="FormFieldId.phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" [formControlName]="FormControlName.phone" [disabled]="loading()" />
             <form-error-msg [control]="formGroup.get(FormControlName.phone)" />
           </div>
         </div>
@@ -52,7 +55,7 @@
               <form-error-msg [control]="formGroup.get(FormControlName.location)" />
             </div>
 
-            <p-button type="button" severity="contrast" variant="text" (onClick)="openGoogleMaps()" class="w-auto">
+            <p-button [disabled]="loading()" type="button" severity="contrast" variant="text" (onClick)="openGoogleMaps()" class="w-auto">
               <span class="flex items-center justify-center gap-2">
                 <span class="hidden md:block whitespace-nowrap">Abrir Google Maps</span>
                 <img src="icons/google-maps-icon.svg" alt="Google Maps" class="w-6 h-6" />
@@ -103,3 +106,56 @@
     <p-button type="button" [label]="loading() ? 'Guardando...' : 'Guardar'" severity="success" (onClick)="onSubmit()" [loading]="loading()" [disabled]="formGroup.invalid || loading()" class="w-auto" />
   </div>
 </div>
+}@else{
+<div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-7">
+  <!-- Nombre -->
+  <div class="col-span-1 md:col-span-6">
+    <p-skeleton height="1.5rem" width="4rem" class="mb-2" />
+    <p-skeleton height="2.5rem" width="100%" />
+  </div>
+
+  <!-- Teléfono -->
+  <div class="col-span-1 md:col-span-6">
+    <p-skeleton height="1.5rem" width="4rem" class="mb-2" />
+    <p-skeleton height="2.5rem" width="100%" />
+  </div>
+
+  <!-- Dirección -->
+  <div class="col-span-1 md:col-span-12">
+    <p-skeleton height="1.5rem" width="4rem" class="mb-2" />
+    <p-skeleton height="8rem" width="100%" />
+  </div>
+
+  <!-- Ubicación -->
+  <div class="col-span-1 md:col-span-12">
+    <div class="flex gap-4 md:gap-7 items-end">
+      <div class="flex flex-col flex-grow">
+        <p-skeleton height="1.5rem" width="4rem" class="mb-2" />
+        <p-skeleton height="2.5rem" width="100%" />
+      </div>
+      <p-skeleton height="2.5rem" width="8rem" />
+    </div>
+  </div>
+
+  <!-- Divider -->
+  <div class="col-span-1 md:col-span-12">
+    <p-skeleton height="1px" width="100%" />
+  </div>
+
+  <!-- Imágenes -->
+  <div class="col-span-1 md:col-span-12">
+    <p-skeleton height="1.5rem" width="6rem" class="mb-3" />
+    <p-skeleton height="2.5rem" width="12rem" class="mb-4" />
+    <div class="min-h-[200px] bg-gray-100/50 rounded-lg p-2 md:p-4 border border-gray-200/50">
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+        <p-skeleton height="8rem" width="100%" />
+        <p-skeleton height="8rem" width="100%" />
+        <p-skeleton height="8rem" width="100%" />
+        <p-skeleton height="8rem" width="100%" />
+        <p-skeleton height="8rem" width="100%" />
+        <p-skeleton height="8rem" width="100%" />
+      </div>
+    </div>
+  </div>
+</div>
+}

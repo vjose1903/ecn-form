@@ -103,11 +103,9 @@ export class FileService extends FirebaseRequest<FileI> {
     return new Promise<FileClass | null>(resolve => {
       this._getOne({ find_by: by, find_value: value })
         .then(file => {
-          console.log('%c file', 'color: blue; font-weight: bold;', file);
           resolve(file ? new FileClass(file) : null);
         })
         .catch(error => {
-          console.log(`ℹ️ [FileService] File no encontrado con ${by}: ${value}`);
           resolve(null);
         });
     });

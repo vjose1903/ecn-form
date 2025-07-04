@@ -10,6 +10,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { DividerLine } from '@core/components/divider-line/divider-line';
 import { InputMaskModule } from 'primeng/inputmask';
 import { TextareaModule } from 'primeng/textarea';
+import { SkeletonModule } from 'primeng/skeleton';
 import { FileI } from '@core/entities/file/file.model';
 import { FileClass } from '@core/entities/file/file.class';
 import { FileService } from '@core/entities/file/file.service';
@@ -20,10 +21,11 @@ import { Ss } from '@core/services/singleton.service';
 import { AuthService } from '@core/services/auth.service';
 import { GalleryComponent } from '@core/components/gallery/gallery.component';
 import { RetreatHome } from '@core/entities/retreat-home/retreat-home.class';
+import { RetreatHomeI } from '@core/entities/retreat-home/retreat-home.model';
 
 @Component({
   selector: 'app-retreat-home-form',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, InputNumberModule, ButtonModule, FormErrorMsgComponent, InputTextModule, InputMaskModule, TextareaModule, DividerLine, GalleryComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, InputNumberModule, ButtonModule, FormErrorMsgComponent, InputTextModule, InputMaskModule, TextareaModule, SkeletonModule, DividerLine, GalleryComponent],
   templateUrl: './retreat-home-form.html',
   styleUrl: './retreat-home-form.scss',
 })
@@ -36,41 +38,60 @@ export class RetreatHomeForm implements OnInit {
   private retreatHomeService = inject(RetreatHomeService);
   private authService = inject(AuthService);
 
-  retreatHome!: RetreatHome;
+  retreatHome!: RetreatHome | undefined;
 
   FormFieldId = FormFieldId;
   FormControlName = FormControlName;
 
   loading = signal(false);
   filesToDelete = signal<FileClass[]>([]);
+  formGroup = signal<FormGroup | undefined>(undefined);
 
   get hasImages(): boolean {
     return this.imagesControl.length > 0;
   }
 
-  formGroup: FormGroup = this.fb.group({
-    [FormControlName.id]: [null],
-    [FormControlName.name]: [null, [Validators.required]],
-    [FormControlName.phone]: [null],
-    [FormControlName.address]: [null, [Validators.required]],
-    [FormControlName.location]: [null, [Validators.required, UrlValidator.validate]],
-    [FormControlName.city]: [this.authService.current_user()?.cityRef],
-    [FormControlName.is_active]: [true],
-    [FormControlName.images]: this.fb.array([]),
-  });
-
   get imagesControl() {
-    return this.formGroup.get(FormControlName.images) as FormArray;
+    return this.formGroup()?.get(FormControlName.images) as FormArray;
   }
 
   constructor() {
     effect(() => {
-      this.loading() ? this.formGroup.disable() : this.formGroup.enable();
+      const form = this.formGroup();
+      if (form) {
+        this.loading() ? form?.disable() : form?.enable();
+      }
     });
   }
 
   ngOnInit(): void {
-    this.retreatHome = this.config.data.retreatHome;
+    if (this.config?.data?.retreatHome) this.retreatHome = this.config.data.retreatHome;
+
+    this.createForm(this.retreatHome);
+  }
+
+  async createForm(retreatHome: RetreatHome | undefined) {
+    const cityRef = await this.authService.current_user()?.cityRef;
+
+    this.formGroup.set(
+      this.fb.group({
+        [FormControlName.id]: [retreatHome?.id ?? null, []],
+        [FormControlName.name]: [retreatHome?.name ?? null, [Validators.required]],
+        [FormControlName.phone]: [retreatHome?.phone ?? null, []],
+        [FormControlName.address]: [retreatHome?.address ?? null, [Validators.required]],
+        [FormControlName.location]: [retreatHome?.location ?? null, [Validators.required, UrlValidator.validate]],
+        [FormControlName.city]: [cityRef, []],
+        [FormControlName.is_active]: [retreatHome?.is_active ?? true, []],
+        [FormControlName.images]: this.fb.array([]),
+      })
+    );
+
+    if (retreatHome) {
+      this.imagesControl.clear();
+      retreatHome.imagesData.forEach(image => {
+        this.addImage(image);
+      });
+    }
   }
 
   openGoogleMaps() {
@@ -89,12 +110,7 @@ export class RetreatHomeForm implements OnInit {
         if (file.type.startsWith('image/')) {
           const reader = new FileReader();
           reader.onload = (e: any) => {
-            this.addImage({
-              file: file,
-              name: file.name,
-              size: file.size,
-              url: e.target.result,
-            });
+            this.addImage({ file: file, name: file.name, url: e.target.result });
           };
           reader.readAsDataURL(file);
         }
@@ -110,28 +126,32 @@ export class RetreatHomeForm implements OnInit {
   }
 
   removeImage(index: number) {
-    this.imagesControl.removeAt(index);
     const fileRemoved = this.imagesControl.at(index).value;
+    this.imagesControl.removeAt(index);
     if (fun.hasValue(fileRemoved.id)) this.filesToDelete.set([...this.filesToDelete(), fileRemoved]);
     this.cdr.detectChanges();
   }
 
-  parseImagesReferences(images: Array<FileClass | string>) {
-    return images.map(image => {
+  async parseImagesReferences(images: Array<FileClass | string>) {
+    const promises = images.map(async image => {
       if (image instanceof FileClass) {
-        return image.getFileReference();
+        return await image.getFileReference();
       } else {
         return this.fileService.getDocumentRef({ id: image });
       }
     });
+
+    return await Promise.all(promises);
   }
 
   async onSubmit() {
-    console.log(this.formGroup.getRawValue());
+    const form = this.formGroup();
+    if (!form) return;
+
     try {
       this.loading.set(true);
 
-      const formData = this.formGroup.getRawValue();
+      const formData = form.getRawValue();
 
       const filesToUpload = formData.images.filter((image: FileI) => !fun.hasValue(image.id)).map((file: FileI) => new FileClass(file));
       const filesSaved = formData.images.filter((image: FileI) => fun.hasValue(image.id));
@@ -152,23 +172,28 @@ export class RetreatHomeForm implements OnInit {
       }
 
       // Preparar referencias de archivos (solo los exitosos)
-      const filesReferences = this.parseImagesReferences([...filesSaved, ...uploadedFiles]);
+      const filesReferences = await this.parseImagesReferences([...filesSaved, ...uploadedFiles]);
 
       formData.images = filesReferences;
 
+      let retreatHome: RetreatHomeI | undefined;
       // Crear la casa de retiro
-      const retreatHome = await this.retreatHomeService._createOne({ data: formData });
+      if (formData.id) {
+        retreatHome = await this.retreatHomeService._updateOne({ data: formData, find_by: 'id', find_value: formData.id });
+      } else {
+        retreatHome = await this.retreatHomeService._createOne({ data: formData });
+      }
 
       // Mostrar mensaje según el resultado
       if (failedFiles.length === 0) {
         // Todo salió bien
-        Ss.toastService.success({ message: 'Casa de Retiro creada correctamente' });
+        Ss.toastService.success({ message: formData.id ? 'Casa de Retiro editada correctamente' : 'Casa de Retiro creada correctamente' });
       } else {
         // Se creó la casa pero algunos archivos fallaron
         const failedCount = failedFiles.length;
         const totalCount = filesToUpload.length;
         Ss.toastService.warning({
-          message: `Casa de Retiro creada correctamente, pero ${failedCount} de ${totalCount} imágenes no se subieron correctamente`,
+          message: `Casa de Retiro ${formData.id ? 'editada' : 'creada'} correctamente, pero ${failedCount} de ${totalCount} imágenes no se subieron correctamente`,
         });
       }
 
