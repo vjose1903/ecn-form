@@ -1,54 +1,113 @@
-<p-card class="cursor-pointer" styleClass="hover:!bg-gray-100" (click)="openRetreatHomeView()">
+<p-card 
+  class="cursor-pointer transition-all duration-200 hover:shadow-lg" 
+  styleClass="hover:!bg-gray-50" 
+  [class]="getLoadingClass()"
+  (click)="onCardClick($event)"
+  [attr.aria-label]="'Casa de retiro: ' + item.displayName"
+  role="button"
+  tabindex="0"
+  (keydown.enter)="openRetreatHomeView()"
+  (keydown.space)="openRetreatHomeView()">
+  
   <div class="flex justify-between items-center flex-wrap gap-x-5 gap-y-3">
-    <div class="flex items-center gap-x-3">
-      <div class="hidden md:block aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 w-22 h-22">
-        <img [src]="item.imagesData[0].url" class="w-full h-full object-cover" />
+    <div class="flex items-center gap-x-3 flex-1 min-w-0">
+      <!-- Imagen con lazy loading y fallback -->
+      <div class="hidden md:block aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 w-22 h-22 flex-shrink-0">
+        <div *ngIf="!imageLoaded()" class="w-full h-full flex items-center justify-center">
+          <i class="pi pi-image text-gray-400 text-2xl"></i>
+        </div>
+        <img 
+          *ngIf="imageLoaded() && !imageError()"
+          [src]="item.mainImageUrl" 
+          [alt]="'Imagen de ' + item.displayName"
+          class="w-full h-full object-cover transition-opacity duration-200"
+          loading="lazy"
+          (error)="imageError.set(true)" />
+        <div *ngIf="imageError()" class="w-full h-full flex items-center justify-center bg-gray-200">
+          <i class="pi pi-image text-gray-500 text-xl"></i>
+        </div>
       </div>
 
-      <div>
+      <!-- Información principal -->
+      <div class="flex-1 min-w-0">
+        <!-- Estado -->
         <div class="mb-2">
-          <p-tag [severity]="item.is_active ? 'success' : 'danger'" [value]="item.is_active ? 'Activo' : 'Inactivo'" [rounded]="true" />
+          <p-tag 
+            [severity]="item.statusSeverity" 
+            [value]="item.statusText" 
+            [rounded]="true"
+            [attr.aria-label]="'Estado: ' + item.statusText" />
         </div>
 
-        <h3 class="text-lg font-semibold mb-2">{{ item.name || 'Sin Nombre Definido' }}</h3>
-        <div class="flex flex-wrap gap-x-7 gap-y-2 text-sm text-gray-500">
-          <span *ngIf="item?.address" class="flex items-center">
-            <i class="pi pi-map-marker mr-1 text-red-800"></i>
-            <span class="line-clamp-3">{{ item.address }}</span>
+        <!-- Nombre -->
+        <h3 class="text-lg font-semibold mb-2 text-gray-900 truncate" [title]="item.displayName">
+          {{ item.displayName }}
+        </h3>
+
+        <!-- Información de contacto -->
+        <div class="flex flex-wrap gap-x-7 gap-y-2 text-sm text-gray-600">
+          <!-- Dirección -->
+          <span *ngIf="item.displayAddress" class="flex items-center min-w-0">
+            <i class="pi pi-map-marker mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
+            <span class="line-clamp-2 truncate" [title]="item.displayAddress">
+              {{ item.displayAddress }}
+            </span>
           </span>
-          <span *ngIf="item?.phone" class="flex items-center">
-            <i class="pi pi-phone mr-1 text-red-800"></i>
-            <span class="truncate">{{ item.phone }}</span>
+
+          <!-- Teléfono -->
+          <span *ngIf="item.hasPhone" class="flex items-center min-w-0">
+            <i class="pi pi-phone mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
+            <span class="truncate" [title]="item.phone">
+              {{ item.phone }}
+            </span>
+          </span>
+
+          <!-- Indicador de imágenes -->
+          <span *ngIf="item.hasImages" class="flex items-center min-w-0">
+            <i class="pi pi-images mr-1 text-blue-600 flex-shrink-0" aria-hidden="true"></i>
+            <span class="text-xs">
+              {{ item.imagesData.length }} imagen{{ item.imagesData.length !== 1 ? 'es' : '' }}
+            </span>
           </span>
         </div>
       </div>
     </div>
 
-    <div class="flex gap-2 justify-end w-full md:w-auto">
-      @if (item.is_active) {
-      <p-button [disabled]="loading()" type="button" icon="pi pi-pencil" severity="secondary" size="small" [text]="true" pTooltip="Editar" tooltipPosition="left" (onClick)="$event.stopPropagation(); openEditForm()"> </p-button>
+    <!-- Acciones -->
+    <div class="flex gap-2 justify-end w-full md:w-auto flex-shrink-0">
+      <!-- Botón de editar (solo si está activo) -->
+      <p-button 
+        *ngIf="item.is_active"
+        [disabled]="loading()" 
+        type="button" 
+        icon="pi pi-pencil" 
+        severity="secondary" 
+        size="small" 
+        [text]="true" 
+        pTooltip="Editar casa de retiro" 
+        tooltipPosition="left" 
+        (onClick)="$event.stopPropagation(); openEditForm()"
+        [attr.aria-label]="'Editar ' + item.displayName">
+      </p-button>
+
+      <!-- Botón de cambiar estado -->
       <p-button
         [disabled]="loading()"
-        type="button"
-        [icon]="loading()? 'pi pi-spinner pi-spin': 'pi pi-trash'"
-        severity="danger"
+        type="button" 
+        [icon]="getStatusButtonIcon()"
+        [severity]="getStatusButtonSeverity()"
         size="small"
         [text]="true"
-        pTooltip="Eliminar"
+        [pTooltip]="getStatusButtonText()"
+        tooltipPosition="left"
         (onClick)="$event.stopPropagation(); confirmToggleStatus(item)"
-        tooltipPosition="left"></p-button>
-      } @else {
-      <p-button
-        [disabled]="loading()"
-        type="button"
-        [icon]="loading()? 'pi pi-spinner pi-spin': 'pi pi-undo'"
-        severity="success"
-        size="small"
-        [text]="true"
-        pTooltip="Reactivar"
-        (onClick)="$event.stopPropagation(); confirmToggleStatus(item)"
-        tooltipPosition="left"></p-button>
-      }
+        [attr.aria-label]="getStatusButtonText() + ' ' + item.displayName">
+      </p-button>
     </div>
+  </div>
+
+  <!-- Indicador de carga -->
+  <div *ngIf="loading()" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg">
+    <i class="pi pi-spinner pi-spin text-2xl text-blue-600"></i>
   </div>
 </p-card>

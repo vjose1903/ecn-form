@@ -10,7 +10,8 @@ import { Ss } from '@core/services/singleton.service';
 import { ConfirmationService } from 'primeng/api';
 import { ToastService } from '@core/services/toast.service';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
+import { catchError, map, shareReplay, switchMap, tap } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root',
@@ -25,13 +26,30 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   private toastService = inject(ToastService);
 
   private _reload: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  private _retreatHomes: BehaviorSubject<RetreatHome[]> = new BehaviorSubject<RetreatHome[]>([]);
+  private _loading: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  private _lastFetch: number = 0;
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
+  // Observables públicos
   get reload$(): Observable<boolean> {
     return this._reload.asObservable();
   }
 
-  setReload(reload: boolean) {
-    this._reload.next(reload);
+  get retreatHomes$(): Observable<RetreatHome[]> {
+    return this._retreatHomes.asObservable();
+  }
+
+  get loading$(): Observable<boolean> {
+    return this._loading.asObservable();
+  }
+
+  get retreatHomes(): RetreatHome[] {
+    return this._retreatHomes.value;
+  }
+
+  get loading(): boolean {
+    return this._loading.value;
   }
 
   constructor() {
@@ -43,37 +61,288 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
     return this._collectionName;
   }
 
-  async getAll(): Promise<RetreatHome[]> {
-    const currentUser = this.authService.current_user();
-
-    const cityRef = await currentUser?.cityRef;
-
-    return this._getAll({ find_by: 'city', find_value: cityRef }).then(retreats => retreats.map(retreat => new RetreatHome(retreat)));
+  /**
+   * Establece el estado de recarga
+   */
+  setReload(reload: boolean) {
+    this._reload.next(reload);
   }
 
+  /**
+   * Obtiene todas las casas de retiro con caché
+   */
+  async getAll(): Promise<RetreatHome[]> {
+    const now = Date.now();
+
+    // Verificar si el caché es válido
+    if (this._retreatHomes.value.length > 0 && now - this._lastFetch < this.CACHE_DURATION) {
+      return this._retreatHomes.value;
+    }
+
+    return this.fetchAllRetreatHomes();
+  }
+
+  /**
+   * Obtiene todas las casas de retiro desde Firebase
+   */
+  private async fetchAllRetreatHomes(): Promise<RetreatHome[]> {
+    try {
+      this._loading.next(true);
+      const currentUser = this.authService.current_user();
+      const cityRef = await currentUser?.cityRef;
+
+      if (!cityRef) {
+        throw new Error('No se pudo obtener la referencia de la ciudad del usuario');
+      }
+
+      const retreats = await this._getAll({ find_by: 'city', find_value: cityRef });
+      const retreatHomes = retreats.map(retreat => new RetreatHome(retreat));
+
+      this._retreatHomes.next(retreatHomes);
+      this._lastFetch = Date.now();
+
+      return retreatHomes;
+    } catch (error) {
+      console.error('Error al obtener casas de retiro:', error);
+      this.toastService.error({
+        message: 'Error al cargar las casas de retiro',
+        title: 'Error de carga',
+      });
+      throw error;
+    } finally {
+      this._loading.next(false);
+    }
+  }
+
+  /**
+   * Obtiene una casa de retiro por ID
+   */
   async getRetreatHomeById(id: string): Promise<RetreatHome | null> {
+    if (!id) {
+      return null;
+    }
+
+    // Primero buscar en caché
+    const cached = this._retreatHomes.value.find(rh => rh.id === id);
+    if (cached) {
+      return cached;
+    }
+
     return this.processGetRetreatHome(id, 'id');
   }
 
+  /**
+   * Procesa la obtención de una casa de retiro
+   */
   private processGetRetreatHome(value: string, by: string): Promise<RetreatHome | null> {
-    return new Promise<RetreatHome | null>(resolve => {
+    return new Promise<RetreatHome | null>((resolve, reject) => {
       this._getOne({ find_by: by, find_value: value })
         .then(retreat => {
-          resolve(retreat ? new RetreatHome(retreat) : null);
+          const retreatHome = retreat ? new RetreatHome(retreat) : null;
+          resolve(retreatHome);
         })
         .catch(error => {
-          resolve(null);
+          console.error(`Error al obtener casa de retiro por ${by}:`, error);
+          reject(error);
         });
     });
   }
 
-  createRetreatHome(newRetreatHome: RetreatHomeI) {
-    if (fun.isEmpty(this.authService.current_user())) throw new Error('User is not defined');
+  /**
+   * Crea una nueva casa de retiro
+   */
+  async createRetreatHome(newRetreatHome: RetreatHomeI): Promise<RetreatHomeI> {
+    if (fun.isEmpty(this.authService.current_user())) {
+      throw new Error('Usuario no autenticado');
+    }
 
-    return this.createOneInParentCollection({ parentCollection: this.userService.collectionName, parentId: this.authService.current_user()!.id, data: newRetreatHome });
+    try {
+      const result = await this.createOneInParentCollection({
+        parentCollection: this.userService.collectionName,
+        parentId: this.authService.current_user()!.id,
+        data: newRetreatHome,
+      });
+
+      // Invalidar caché
+      this.invalidateCache();
+
+      this.toastService.success({
+        message: 'Casa de retiro creada correctamente',
+        title: 'Éxito',
+      });
+
+      return result;
+    } catch (error) {
+      console.error('Error al crear casa de retiro:', error);
+      this.toastService.error({
+        message: 'Error al crear la casa de retiro',
+        title: 'Error',
+      });
+      throw error;
+    }
   }
 
-  toggleRetreatHomeStatus(retreatHome: RetreatHome) {
-    return this._updateOne({ find_by: 'id', find_value: retreatHome.id, data: { id: retreatHome.id, is_active: !retreatHome.is_active } });
+  /**
+   * Actualiza una casa de retiro
+   */
+  async updateRetreatHome(retreatHome: RetreatHomeI): Promise<RetreatHomeI> {
+    if (!retreatHome.id) {
+      throw new Error('ID de casa de retiro requerido para actualización');
+    }
+
+    try {
+      const result = await this._updateOne({
+        find_by: 'id',
+        find_value: retreatHome.id,
+        data: retreatHome,
+      });
+
+      // Actualizar caché
+      this.updateCacheItem(retreatHome.id, new RetreatHome(result));
+
+      this.toastService.success({
+        message: 'Casa de retiro actualizada correctamente',
+        title: 'Éxito',
+      });
+
+      return result;
+    } catch (error) {
+      console.error('Error al actualizar casa de retiro:', error);
+      this.toastService.error({
+        message: 'Error al actualizar la casa de retiro',
+        title: 'Error',
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Cambia el estado de una casa de retiro
+   */
+  async toggleRetreatHomeStatus(retreatHome: RetreatHome): Promise<RetreatHomeI> {
+    try {
+      const result = await this._updateOne({
+        find_by: 'id',
+        find_value: retreatHome.id,
+        data: {
+          id: retreatHome.id,
+          is_active: !retreatHome.is_active,
+        },
+      });
+
+      // Actualizar caché
+      this.updateCacheItem(retreatHome.id, new RetreatHome(result));
+
+      return result;
+    } catch (error) {
+      console.error('Error al cambiar estado de casa de retiro:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Elimina una casa de retiro
+   */
+  async deleteRetreatHome(id: string): Promise<void> {
+    if (!id) {
+      throw new Error('ID de casa de retiro requerido para eliminación');
+    }
+
+    try {
+      await this._deleteOne({ find_by: 'id', find_value: id });
+
+      // Remover de caché
+      this.removeFromCache(id);
+
+      this.toastService.success({
+        message: 'Casa de retiro eliminada correctamente',
+        title: 'Éxito',
+      });
+    } catch (error) {
+      console.error('Error al eliminar casa de retiro:', error);
+      this.toastService.error({
+        message: 'Error al eliminar la casa de retiro',
+        title: 'Error',
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Busca casas de retiro por nombre
+   */
+  searchByName(name: string): RetreatHome[] {
+    if (!name?.trim()) {
+      return this._retreatHomes.value;
+    }
+
+    const searchTerm = name.toLowerCase().trim();
+    return this._retreatHomes.value.filter(retreat => retreat.name.toLowerCase().includes(searchTerm) || retreat.address.toLowerCase().includes(searchTerm));
+  }
+
+  /**
+   * Filtra casas de retiro por estado
+   */
+  filterByStatus(isActive: boolean): RetreatHome[] {
+    return this._retreatHomes.value.filter(retreat => retreat.is_active === isActive);
+  }
+
+  /**
+   * Obtiene estadísticas básicas
+   */
+  getStats(): { total: number; active: number; inactive: number } {
+    const retreats = this._retreatHomes.value;
+    const active = retreats.filter(r => r.is_active).length;
+
+    return {
+      total: retreats.length,
+      active,
+      inactive: retreats.length - active,
+    };
+  }
+
+  /**
+   * Actualiza un elemento en el caché
+   */
+  private updateCacheItem(id: string, retreatHome: RetreatHome): void {
+    const current = this._retreatHomes.value;
+    const index = current.findIndex(rh => rh.id === id);
+
+    if (index >= 0) {
+      current[index] = retreatHome;
+      this._retreatHomes.next([...current]);
+    }
+  }
+
+  /**
+   * Remueve un elemento del caché
+   */
+  private removeFromCache(id: string): void {
+    const current = this._retreatHomes.value;
+    const filtered = current.filter(rh => rh.id !== id);
+    this._retreatHomes.next(filtered);
+  }
+
+  /**
+   * Invalida el caché
+   */
+  private invalidateCache(): void {
+    this._retreatHomes.next([]);
+    this._lastFetch = 0;
+  }
+
+  /**
+   * Refresca los datos
+   */
+  async refresh(): Promise<void> {
+    this.invalidateCache();
+    await this.fetchAllRetreatHomes();
+  }
+
+  /**
+   * Limpia el caché
+   */
+  override clearCache(): void {
+    this.invalidateCache();
   }
 }

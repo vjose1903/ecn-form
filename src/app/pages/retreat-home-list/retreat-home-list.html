@@ -1,11 +1,154 @@
-<div class="grid grid-rows-[min-content_1fr] gap-4 h-full p-2 md:p-4 lg:p-6">
+<div class="grid grid-rows-[min-content_min-content_1fr] gap-4 h-full p-2 md:p-4 lg:p-6">
+  <!-- Header con título y botón de agregar -->
   <div class="flex justify-between items-center flex-wrap gap-2">
-    <h1 class="text-2xl font-bold">Casas de Retiros</h1>
-    <!-- <p-button pButton type="button" label="Nuevo Retiro" icon="pi pi-plus" class="p-button-success" /> -->
+    <div class="flex items-center gap-4">
+      <h1 class="text-2xl font-bold text-gray-900">Casas de Retiros</h1>
+      
+      <!-- Estadísticas -->
+      <div class="flex items-center gap-4 text-sm text-gray-600">
+        <span class="flex items-center gap-1">
+          <i class="pi pi-home text-blue-600"></i>
+          <span>Total: {{ getStats().total }}</span>
+        </span>
+        <span class="flex items-center gap-1">
+          <i class="pi pi-check-circle text-green-600"></i>
+          <span>Activos: {{ getStats().active }}</span>
+        </span>
+        <span class="flex items-center gap-1">
+          <i class="pi pi-times-circle text-red-600"></i>
+          <span>Inactivos: {{ getStats().inactive }}</span>
+        </span>
+      </div>
+    </div>
 
-    <p-button type="button" icon="pi pi-plus" label="Agregar" severity="success" styleClass="relative" (onClick)="showNewRetreatDialog()"> </p-button>
+    <div class="flex items-center gap-2">
+      <!-- Botón de refrescar -->
+      <p-button 
+        type="button" 
+        icon="pi pi-refresh" 
+        severity="secondary" 
+        [text]="true"
+        [loading]="loading()"
+        pTooltip="Refrescar datos" 
+        (onClick)="refreshData()"
+        [attr.aria-label]="'Refrescar datos'">
+      </p-button>
+
+      <!-- Botón de agregar -->
+      <p-button 
+        type="button" 
+        icon="pi pi-plus" 
+        label="Agregar" 
+        severity="success" 
+        [disabled]="loading()"
+        pTooltip="Agregar nueva casa de retiro" 
+        (onClick)="showNewRetreatDialog()"
+        [attr.aria-label]="'Agregar nueva casa de retiro'">
+      </p-button>
+    </div>
   </div>
-  <!-- <div class="overflow-y-auto overflow-x-hidden"> -->
+
+  <!-- Filtros y controles -->
+  <div class="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
+    <div class="flex flex-col md:flex-row gap-4 items-start md:items-center">
+      <!-- Búsqueda -->
+      <div class="flex-1 min-w-0">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
+        <div class="relative">
+          <i class="pi pi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+          <input 
+            type="text" 
+            pInputText 
+            placeholder="Buscar por nombre, dirección o teléfono..." 
+            [value]="searchTerm()"
+            (input)="onSearchChange($event)"
+            class="w-full pl-10"
+            [disabled]="loading()" />
+        </div>
+      </div>
+
+      <!-- Filtro de estado -->
+      <div class="w-full md:w-48">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+        <select 
+          [value]="statusFilter()"
+          (change)="onStatusFilterChange($event)"
+          class="w-full p-2 border border-gray-300 rounded-md"
+          [disabled]="loading()">
+          <option value="all">Todos</option>
+          <option value="active">Activos</option>
+          <option value="inactive">Inactivos</option>
+        </select>
+      </div>
+
+      <!-- Ordenamiento -->
+      <div class="w-full md:w-48">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Ordenar por</label>
+        <div class="flex gap-1">
+          <select 
+            [value]="sortBy()"
+            (change)="onSortChange($event)"
+            class="flex-1 p-2 border border-gray-300 rounded-md"
+            [disabled]="loading()">
+            <option value="name">Nombre</option>
+            <option value="address">Dirección</option>
+            <option value="status">Estado</option>
+          </select>
+          <button 
+            type="button"
+            [icon]="getSortIcon()"
+            pButton
+            severity="secondary"
+            [text]="true"
+            (onClick)="toggleSortOrder()"
+            [disabled]="loading()"
+            pTooltip="Cambiar orden"
+            class="px-3"
+            [attr.aria-label]="'Cambiar orden de clasificación'">
+          </button>
+        </div>
+      </div>
+
+      <!-- Botón limpiar filtros -->
+      <div class="w-full md:w-auto flex items-end">
+        <p-button 
+          *ngIf="hasActiveFilters"
+          type="button" 
+          icon="pi pi-times" 
+          label="Limpiar" 
+          severity="secondary" 
+          [text]="true"
+          [disabled]="loading()"
+          pTooltip="Limpiar filtros" 
+          (onClick)="clearFilters()"
+          [attr.aria-label]="'Limpiar filtros'">
+        </p-button>
+      </div>
+    </div>
+
+    <!-- Información de filtros activos -->
+    <div *ngIf="hasActiveFilters" class="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-2 rounded-md">
+      <i class="pi pi-info-circle text-blue-600"></i>
+      <span>
+        Filtros activos: 
+        <span *ngIf="searchTerm()" class="font-medium">"{{ searchTerm() }}"</span>
+        <span *ngIf="statusFilter() !== 'all'" class="font-medium">{{ getStatusFilterText() }}</span>
+        <span class="font-medium">{{ getSortText() }} ({{ sortOrder() === 'asc' ? 'A-Z' : 'Z-A' }})</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Contenido principal -->
+  <div class="relative">
+    <!-- Indicador de carga -->
+    <div *ngIf="loading()" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg z-10">
+      <div class="text-center">
+        <i class="pi pi-spinner pi-spin text-3xl text-blue-600 mb-2"></i>
+        <p class="text-gray-600">Cargando casas de retiro...</p>
+      </div>
+    </div>
+
+    <!-- Dataview -->
     <dynamic-dataview [config]="dataviewConfig"></dynamic-dataview>
-  <!-- </div> -->
+  </div>
 </div>

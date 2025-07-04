@@ -20,48 +20,170 @@ export class RetreatHome {
   images: Array<FileClass | string> = [];
   imagesData: Array<FileClass> = [];
 
+  // Propiedades computadas para optimizar el rendimiento
+  private _displayName: string | null = null;
+  private _displayAddress: string | null = null;
+  private _mainImage: FileClass | null = null;
+
   constructor(retreatHome?: RetreatHomeI & { city?: any; images?: any[] }) {
     if (retreatHome) {
-      this.id = retreatHome.id || '';
-      this.name = retreatHome.name;
-      this.phone = retreatHome.phone;
-      this.address = retreatHome.address;
-      this.location = retreatHome.location;
-
-      // Manejar city que puede ser string (ID) o objeto (referencia resuelta)
-      if (typeof retreatHome.city === 'string') {
-        this.city = retreatHome.city;
-      } else if (retreatHome.city && typeof retreatHome.city === 'object' && retreatHome.city.id) {
-        // Si city es un objeto (referencia resuelta), extraer el ID y crear cityData
-        this.city = retreatHome.city.id;
-        this.cityData = new City(retreatHome.city);
-      } else {
-        this.city = '';
-      }
-
-      this.is_active = retreatHome.is_active ?? true;
-
-      // Manejar images que pueden ser strings (IDs) u objetos (referencias resueltas)
-      if (retreatHome.images && Array.isArray(retreatHome.images)) {
-        this.images = [];
-        this.imagesData = [];
-
-        retreatHome.images.forEach(image => {
-          if (typeof image === 'string') {
-            // Si es string, es un ID
-            this.images.push(image);
-          } else if (image && typeof image === 'object' && image.id) {
-            // Si es objeto (referencia resuelta), extraer el ID y crear FileClass
-            this.images.push(image.id);
-            this.imagesData.push(new FileClass(image));
-          }
-        });
-      } else {
-        this.images = [];
-      }
+      this.initializeFromData(retreatHome);
     }
   }
 
+  /**
+   * Inicializa la instancia desde datos externos
+   */
+  private initializeFromData(retreatHome: RetreatHomeI & { city?: any; images?: any[] }): void {
+    this.id = retreatHome.id || '';
+    this.name = retreatHome.name?.trim() || '';
+    this.phone = retreatHome.phone?.trim() || '';
+    this.address = retreatHome.address?.trim() || '';
+    this.location = retreatHome.location?.trim() || '';
+    this.is_active = retreatHome.is_active ?? true;
+
+    this.initializeCity(retreatHome.city);
+    this.initializeImages(retreatHome.images);
+  }
+
+  /**
+   * Inicializa los datos de la ciudad
+   */
+  private initializeCity(city: any): void {
+    if (typeof city === 'string') {
+      this.city = city;
+    } else if (city && typeof city === 'object' && city.id) {
+      this.city = city.id;
+      this.cityData = new City(city);
+    } else {
+      this.city = '';
+    }
+  }
+
+  /**
+   * Inicializa las imágenes
+   */
+  private initializeImages(images: any[] | undefined): void {
+    this.images = [];
+    this.imagesData = [];
+    this._mainImage = null;
+
+    if (images && Array.isArray(images)) {
+      images.forEach(image => {
+        if (typeof image === 'string') {
+          this.images.push(image);
+        } else if (image && typeof image === 'object' && image.id) {
+          this.images.push(image.id);
+          const fileClass = new FileClass(image);
+          this.imagesData.push(fileClass);
+          
+          // Establecer la primera imagen como principal
+          if (!this._mainImage) {
+            this._mainImage = fileClass;
+          }
+        }
+      });
+    }
+  }
+
+  /**
+   * Obtiene el nombre para mostrar (con fallback)
+   */
+  get displayName(): string {
+    if (this._displayName === null) {
+      this._displayName = this.name || 'Sin Nombre Definido';
+    }
+    return this._displayName;
+  }
+
+  /**
+   * Obtiene la dirección para mostrar (con fallback)
+   */
+  get displayAddress(): string {
+    if (this._displayAddress === null) {
+      this._displayAddress = this.address || 'Sin dirección definida';
+    }
+    return this._displayAddress;
+  }
+
+  /**
+   * Obtiene la imagen principal
+   */
+  get mainImage(): FileClass | null {
+    return this._mainImage || (this.imagesData.length > 0 ? this.imagesData[0] : null);
+  }
+
+  /**
+   * Obtiene la URL de la imagen principal
+   */
+  get mainImageUrl(): string {
+    return this.mainImage?.url || 'assets/images/placeholder.jpg';
+  }
+
+  /**
+   * Verifica si tiene imágenes
+   */
+  get hasImages(): boolean {
+    return this.imagesData.length > 0;
+  }
+
+  /**
+   * Verifica si tiene teléfono
+   */
+  get hasPhone(): boolean {
+    return !!this.phone?.trim();
+  }
+
+  /**
+   * Verifica si tiene ubicación
+   */
+  get hasLocation(): boolean {
+    return !!this.location?.trim();
+  }
+
+  /**
+   * Obtiene el estado formateado
+   */
+  get statusText(): string {
+    return this.is_active ? 'Activo' : 'Inactivo';
+  }
+
+  /**
+   * Obtiene la severidad del estado para PrimeNG
+   */
+  get statusSeverity(): 'success' | 'danger' {
+    return this.is_active ? 'success' : 'danger';
+  }
+
+  /**
+   * Valida si la instancia es válida
+   */
+  isValid(): boolean {
+    return !!(this.name?.trim() && this.address?.trim() && this.location?.trim());
+  }
+
+  /**
+   * Obtiene errores de validación
+   */
+  getValidationErrors(): string[] {
+    const errors: string[] = [];
+    
+    if (!this.name?.trim()) {
+      errors.push('El nombre es requerido');
+    }
+    if (!this.address?.trim()) {
+      errors.push('La dirección es requerida');
+    }
+    if (!this.location?.trim()) {
+      errors.push('La ubicación es requerida');
+    }
+    
+    return errors;
+  }
+
+  /**
+   * Convierte la instancia a JSON
+   */
   asJson() {
     return {
       id: this.id,
@@ -77,7 +199,10 @@ export class RetreatHome {
     };
   }
 
-  openForm() {
+  /**
+   * Abre el formulario de edición/creación
+   */
+  openForm(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       const ref = Ss.dialogService.open(RetreatHomeForm, {
         header: this.id ? 'Editar Casa de Retiro' : 'Nueva Casa de Retiro',
@@ -95,19 +220,25 @@ export class RetreatHome {
           runInInjectionContext(Ss.injector, () => {
             const retreatHomeService = inject(RetreatHomeService);
             retreatHomeService.setReload(true);
-
             resolve(result);
           });
+        } else {
+          resolve();
         }
       });
     });
   }
 
-  confirmToggleStatus(retreatHome: RetreatHome, loading: WritableSignal<boolean>) {
+  /**
+   * Confirma el cambio de estado
+   */
+  confirmToggleStatus(retreatHome: RetreatHome, loading: WritableSignal<boolean>): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       loading.set(true);
       Ss.confirmationService.confirm({
-        message: retreatHome.is_active ? '¿Estás seguro de querer desactivar esta casa de retiro?' : '¿Estás seguro de querer reactivar esta casa de retiro?',
+        message: retreatHome.is_active 
+          ? '¿Estás seguro de querer desactivar esta casa de retiro?' 
+          : '¿Estás seguro de querer reactivar esta casa de retiro?',
         header: retreatHome.is_active ? 'Desactivar Casa de Retiro' : 'Activar Casa de Retiro',
         icon: 'pi pi-exclamation-triangle',
         acceptLabel: 'Si',
@@ -117,27 +248,77 @@ export class RetreatHome {
         acceptButtonStyleClass: retreatHome.is_active ? 'p-button-danger' : 'p-button-success',
         rejectButtonStyleClass: 'p-button-secondary',
         accept: () => this.toggleStatus(retreatHome, loading, resolve, reject),
-        reject: () => loading.set(false),
+        reject: () => {
+          loading.set(false);
+          resolve();
+        },
       });
     });
   }
 
-  toggleStatus(retreatHome: RetreatHome, loading: WritableSignal<boolean>, resolve: Function, reject: Function) {
+  /**
+   * Cambia el estado de la casa de retiro
+   */
+  private toggleStatus(retreatHome: RetreatHome, loading: WritableSignal<boolean>, resolve: Function, reject: Function): void {
     runInInjectionContext(Ss.injector, () => {
       const retreatHomeService = inject(RetreatHomeService);
 
       retreatHomeService
         .toggleRetreatHomeStatus(retreatHome)
         .then(() => {
-          Ss.toastService.success({ message: 'Estado de la casa de retiro cambiado correctamente', title: 'Estado cambiado' });
+          Ss.toastService.success({ 
+            message: 'Estado de la casa de retiro cambiado correctamente', 
+            title: 'Estado cambiado' 
+          });
           resolve();
           retreatHomeService.setReload(true);
         })
         .catch(error => {
-          Ss.toastService.error({ message: 'Error al cambiar el estado de la casa de retiro', title: 'Error' });
-          reject();
+          console.error('Error al cambiar estado:', error);
+          Ss.toastService.error({ 
+            message: 'Error al cambiar el estado de la casa de retiro', 
+            title: 'Error' 
+          });
+          reject(error);
         })
         .finally(() => loading.set(false));
     });
+  }
+
+  /**
+   * Abre la ubicación en Google Maps
+   */
+  openInGoogleMaps(): void {
+    if (this.hasLocation) {
+      window.open(this.location, '_blank');
+    }
+  }
+
+  /**
+   * Clona la instancia
+   */
+  clone(): RetreatHome {
+    return new RetreatHome(this.asJson());
+  }
+
+  /**
+   * Actualiza los datos desde otra instancia
+   */
+  updateFrom(other: RetreatHome): void {
+    this.id = other.id;
+    this.name = other.name;
+    this.phone = other.phone;
+    this.address = other.address;
+    this.location = other.location;
+    this.city = other.city;
+    this.cityData = other.cityData;
+    this.is_active = other.is_active;
+    this.images = [...other.images];
+    this.imagesData = [...other.imagesData];
+    
+    // Resetear propiedades computadas
+    this._displayName = null;
+    this._displayAddress = null;
+    this._mainImage = other._mainImage;
   }
 }
