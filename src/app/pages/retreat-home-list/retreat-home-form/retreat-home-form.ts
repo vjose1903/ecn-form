@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal, ChangeDetectorRef, effect, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, ChangeDetectorRef, effect, OnInit, OnDestroy, NgZone, ChangeDetectionStrategy } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -29,12 +29,14 @@ import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
   imports: [CommonModule, FormsModule, ReactiveFormsModule, InputNumberModule, ButtonModule, FormErrorMsgComponent, InputTextModule, InputMaskModule, TextareaModule, SkeletonModule, DividerLine, GalleryComponent],
   templateUrl: './retreat-home-form.html',
   styleUrl: './retreat-home-form.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RetreatHomeForm implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private ref = inject(DynamicDialogRef);
   private config = inject(DynamicDialogConfig);
   private cdr = inject(ChangeDetectorRef);
+  private ngZone = inject(NgZone);
   private fileService = inject(FileService);
   private retreatHomeService = inject(RetreatHomeService);
   private authService = inject(AuthService);
@@ -49,14 +51,13 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
   formGroup = signal<FormGroup | undefined>(undefined);
   uploadProgress = signal<number>(0);
   isFormValid = signal<boolean>(false);
+  hasImages = signal<boolean>(false);
 
   private destroy$ = new Subject<void>();
   private readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   private readonly MAX_FILES = 10;
 
-  get hasImages(): boolean {
-    return this.imagesControl.length > 0;
-  }
+
 
   get imagesControl() {
     return this.formGroup()?.get(FormControlName.images) as FormArray;
@@ -163,6 +164,9 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
         retreatHome.imagesData.forEach(image => {
           this.addImage(image);
         });
+      } else {
+        // Inicializar la señal hasImages
+        this.hasImages.set(false);
       }
     } catch (error) {
       console.error('Error al crear formulario:', error);
@@ -254,11 +258,14 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
     validFiles.forEach(file => {
       const reader = new FileReader();
       reader.onload = (e: any) => {
-                 this.addImage({ 
-           file: file, 
-           name: file.name, 
-           url: e.target.result
-         });
+        // Usar NgZone.run para asegurar que los cambios se detecten correctamente
+        this.ngZone.run(() => {
+          this.addImage({ 
+            file: file, 
+            name: file.name, 
+            url: e.target.result
+          });
+        });
       };
       reader.readAsDataURL(file);
     });
@@ -280,21 +287,27 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
     }
 
     this.imagesControl.push(this.fb.control(image));
-    this.cdr.detectChanges();
+    // Actualizar la señal de hasImages
+    this.hasImages.set(this.imagesControl.length > 0);
+    // Marcar para detección de cambios
+    this.cdr.markForCheck();
   }
 
   /**
    * Remueve una imagen del formulario
    */
   removeImage(index: number) {
-    const fileRemoved = this.imagesControl.at(index).value;
+    const fileRemoved = this.imagesControl.length > index ? this.imagesControl.at(index).value : null;
     this.imagesControl.removeAt(index);
     
-    if (fun.hasValue(fileRemoved.id)) {
+    if (fileRemoved && fun.hasValue(fileRemoved.id)) {
       this.filesToDelete.set([...this.filesToDelete(), fileRemoved]);
     }
     
-    this.cdr.detectChanges();
+    // Actualizar la señal de hasImages
+    this.hasImages.set(this.imagesControl.length > 0);
+    // Marcar para detección de cambios
+    this.cdr.markForCheck();
   }
 
   /**

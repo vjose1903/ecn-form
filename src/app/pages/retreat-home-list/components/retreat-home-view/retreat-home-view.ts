@@ -32,7 +32,7 @@ export class RetreatHomeView implements OnInit, OnDestroy {
   activeIndex = 0;
   loading = signal(false);
   imagesLoaded = signal(0);
-  
+
   responsiveOptions: any[] = [
     {
       breakpoint: '1024px',
@@ -120,9 +120,9 @@ export class RetreatHomeView implements OnInit, OnDestroy {
     if (this.retreatHome.hasLocation) {
       window.open(this.retreatHome.location, '_blank');
     } else {
-      this.toastService.warning({ 
-        message: 'No hay ubicación disponible', 
-        title: 'Ubicación no disponible' 
+      this.toastService.warning({
+        message: 'No hay ubicación disponible',
+        title: 'Ubicación no disponible',
       });
     }
   }
@@ -145,14 +145,12 @@ export class RetreatHomeView implements OnInit, OnDestroy {
   confirmToggleStatus(): void {
     if (this.loading()) return;
 
-    this.retreatHome.confirmToggleStatus(this.retreatHome, this.loading)
+    this.retreatHome
+      .confirmToggleStatus(this.retreatHome)
       .then(() => {
         this.ref.close();
       })
-      .catch(error => {
-        console.error('Error al cambiar estado:', error);
-        this.loading.set(false);
-      });
+      .finally(() => this.loading.set(false));
   }
 
   /**

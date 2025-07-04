@@ -2,14 +2,18 @@ import { Component, input, OnInit, ViewChildren, QueryList, OnDestroy, signal, c
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectButtonModule } from 'primeng/selectbutton';
-import { DynamicDataviewConfig } from './dynamic-dataview.config';
+import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
+import { ButtonModule } from 'primeng/button';
+import { TooltipModule } from 'primeng/tooltip';
+import { DynamicDataviewConfig, FilterConfig, SortConfig } from './dynamic-dataview.config';
 import { DynamicListDirective } from './directives/dynamic-list.directive';
 import { DynamicGridDirective } from './directives/dynamic-grid.directive';
 
 @Component({
   selector: 'dynamic-dataview',
   standalone: true,
-  imports: [CommonModule, FormsModule, SelectButtonModule, DynamicListDirective, DynamicGridDirective],
+  imports: [CommonModule, FormsModule, SelectButtonModule, InputTextModule, SelectModule, ButtonModule, TooltipModule, DynamicListDirective, DynamicGridDirective],
   templateUrl: './dynamic-dataview.component.html',
   styleUrl: './dynamic-dataview.component.scss',
 })
@@ -25,9 +29,77 @@ export class DynamicDataviewComponent implements OnInit, AfterViewInit, OnDestro
   readonly data = computed(() => this.config().data());
   readonly componentProps = computed(() => this.config().componentProps());
   readonly pagination = computed(() => this.config().pagination());
-  readonly sortField = computed(() => this.config().sortField());
-  readonly sortOrder = computed(() => this.config().sortOrder());
   readonly filters = computed(() => this.config().filters());
+  readonly sorting = computed(() => this.config().sorting());
+
+  // Computed signals para filtros
+  readonly hasActiveFilters = computed(() => {
+    const filtersConfig = this.filters();
+    
+    // Si los filtros no están habilitados, no hay filtros activos
+    if (!filtersConfig.enabled) {
+      return false;
+    }
+    
+    const filterValues = filtersConfig.values;
+    
+    // Si no hay valores de filtros, no hay filtros activos
+    if (!filterValues || Object.keys(filterValues).length === 0) {
+      return false;
+    }
+    
+    const hasActive = Object.entries(filterValues).some(([key, value]) => {
+      // Buscar la configuración del filtro para determinar su tipo
+      const config = filtersConfig.configs.find(c => c.key === key);
+      
+      // Para filtros de búsqueda, considerar activo si no está vacío
+      if (config?.type === 'search') {
+        return value !== '' && value !== null && value !== undefined;
+      }
+      // Para filtros de select, considerar activo si no es 'all' y no está vacío
+      else if (config?.type === 'select') {
+        return value !== '' && value !== null && value !== undefined && value !== 'all';
+      }
+      // Los filtros de tipo 'sort' no cuentan como filtros activos
+      else if (config?.type === 'sort') {
+        return false;
+      }
+      
+      // Para cualquier otro tipo, usar la lógica por defecto
+      return value !== '' && value !== null && value !== undefined && value !== 'all';
+    });
+    
+    return hasActive;
+  });
+
+  readonly activeFiltersText = computed(() => {
+    const filtersConfig = this.filters();
+    const filterValues = filtersConfig.values;
+    const activeFilters: string[] = [];
+
+    Object.entries(filterValues).forEach(([key, value]) => {
+      // Buscar la configuración del filtro para determinar su tipo
+      const config = filtersConfig.configs.find(c => c.key === key);
+      
+      // Para filtros de búsqueda, mostrar si no está vacío
+      if (config?.type === 'search' && value !== '' && value !== null && value !== undefined) {
+        activeFilters.push(`"${value}"`);
+      }
+      // Para filtros de select, mostrar si no es 'all' y no está vacío
+      else if (config?.type === 'select' && value !== '' && value !== null && value !== undefined && value !== 'all') {
+        if (config.options) {
+          const option = config.options.find(opt => opt.value === value);
+          if (option) {
+            activeFilters.push(option.label);
+          }
+        }
+      }
+      // Los filtros de tipo 'sort' no se muestran en el texto de filtros activos
+      // else if (config?.type === 'sort') - no hacer nada
+    });
+
+    return activeFilters.join(', ');
+  });
 
   // Signal para el layout actual
   layout = signal<'list' | 'grid'>('list');
@@ -92,6 +164,35 @@ export class DynamicDataviewComponent implements OnInit, AfterViewInit, OnDestro
   onLayoutChange(event: any) {
     this.layout.set(event.value);
     this.loadTrigger.update(v => v + 1);
+  }
+
+  // Métodos para manejar filtros
+  onFilterChange(key: string, value: any) {
+    this.config().updateFilterValue(key, value);
+  }
+
+  onSortFieldChange(field: string) {
+    const currentSorting = this.sorting();
+    this.config().updateSorting(field, currentSorting.order);
+  }
+
+  onSortOrderChange() {
+    const currentSorting = this.sorting();
+    const newOrder = currentSorting.order === 'asc' ? 'desc' : 'asc';
+    this.config().updateSorting(currentSorting.field, newOrder);
+  }
+
+  onClearFilters() {
+    this.config().clearFilters();
+  }
+
+  // Helpers para filtros
+  getFilterValue(key: string): any {
+    return this.filters().values[key] || '';
+  }
+
+  getSortIcon(): string {
+    return this.sorting().order === 'asc' ? 'pi pi-sort-up' : 'pi pi-sort-down';
   }
 
   private tryLoadComponents() {

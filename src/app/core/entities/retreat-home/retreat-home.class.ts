@@ -76,7 +76,7 @@ export class RetreatHome {
           this.images.push(image.id);
           const fileClass = new FileClass(image);
           this.imagesData.push(fileClass);
-          
+
           // Establecer la primera imagen como principal
           if (!this._mainImage) {
             this._mainImage = fileClass;
@@ -117,7 +117,7 @@ export class RetreatHome {
    * Obtiene la URL de la imagen principal
    */
   get mainImageUrl(): string {
-    return this.mainImage?.url || 'assets/images/placeholder.jpg';
+    return this.mainImage?.url || '';
   }
 
   /**
@@ -167,7 +167,7 @@ export class RetreatHome {
    */
   getValidationErrors(): string[] {
     const errors: string[] = [];
-    
+
     if (!this.name?.trim()) {
       errors.push('El nombre es requerido');
     }
@@ -177,7 +177,7 @@ export class RetreatHome {
     if (!this.location?.trim()) {
       errors.push('La ubicación es requerida');
     }
-    
+
     return errors;
   }
 
@@ -232,13 +232,10 @@ export class RetreatHome {
   /**
    * Confirma el cambio de estado
    */
-  confirmToggleStatus(retreatHome: RetreatHome, loading: WritableSignal<boolean>): Promise<void> {
+  confirmToggleStatus(retreatHome: RetreatHome): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      loading.set(true);
       Ss.confirmationService.confirm({
-        message: retreatHome.is_active 
-          ? '¿Estás seguro de querer desactivar esta casa de retiro?' 
-          : '¿Estás seguro de querer reactivar esta casa de retiro?',
+        message: retreatHome.is_active ? '¿Estás seguro de querer desactivar esta casa de retiro?' : '¿Estás seguro de querer reactivar esta casa de retiro?',
         header: retreatHome.is_active ? 'Desactivar Casa de Retiro' : 'Activar Casa de Retiro',
         icon: 'pi pi-exclamation-triangle',
         acceptLabel: 'Si',
@@ -247,9 +244,8 @@ export class RetreatHome {
         rejectIcon: 'pi pi-times',
         acceptButtonStyleClass: retreatHome.is_active ? 'p-button-danger' : 'p-button-success',
         rejectButtonStyleClass: 'p-button-secondary',
-        accept: () => this.toggleStatus(retreatHome, loading, resolve, reject),
+        accept: () => this.toggleStatus(retreatHome, resolve, reject),
         reject: () => {
-          loading.set(false);
           resolve();
         },
       });
@@ -259,29 +255,28 @@ export class RetreatHome {
   /**
    * Cambia el estado de la casa de retiro
    */
-  private toggleStatus(retreatHome: RetreatHome, loading: WritableSignal<boolean>, resolve: Function, reject: Function): void {
+  private toggleStatus(retreatHome: RetreatHome, resolve: Function, reject: Function): void {
     runInInjectionContext(Ss.injector, () => {
       const retreatHomeService = inject(RetreatHomeService);
 
       retreatHomeService
         .toggleRetreatHomeStatus(retreatHome)
         .then(() => {
-          Ss.toastService.success({ 
-            message: 'Estado de la casa de retiro cambiado correctamente', 
-            title: 'Estado cambiado' 
+          Ss.toastService.success({
+            message: 'Estado de la casa de retiro cambiado correctamente',
+            title: 'Estado cambiado',
           });
           resolve();
           retreatHomeService.setReload(true);
         })
         .catch(error => {
           console.error('Error al cambiar estado:', error);
-          Ss.toastService.error({ 
-            message: 'Error al cambiar el estado de la casa de retiro', 
-            title: 'Error' 
+          Ss.toastService.error({
+            message: 'Error al cambiar el estado de la casa de retiro',
+            title: 'Error',
           });
           reject(error);
-        })
-        .finally(() => loading.set(false));
+        });
     });
   }
 
@@ -315,7 +310,7 @@ export class RetreatHome {
     this.is_active = other.is_active;
     this.images = [...other.images];
     this.imagesData = [...other.imagesData];
-    
+
     // Resetear propiedades computadas
     this._displayName = null;
     this._displayAddress = null;

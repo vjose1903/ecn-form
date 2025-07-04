@@ -41,7 +41,7 @@ export class RetreatHomeDataList implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    
+
     // Cerrar dialog si está abierto
     if (this.dialogRef) {
       this.dialogRef.close();
@@ -52,7 +52,7 @@ export class RetreatHomeDataList implements OnInit, OnDestroy {
    * Precarga la imagen principal
    */
   private preloadImage(): void {
-    if (!this.item.mainImageUrl || this.item.mainImageUrl === 'assets/images/placeholder.jpg') {
+    if (!this.item.mainImageUrl) {
       this.imageLoaded.set(true);
       return;
     }
@@ -89,11 +89,9 @@ export class RetreatHomeDataList implements OnInit, OnDestroy {
     });
 
     // Limpiar referencia cuando se cierre
-    this.dialogRef.onClose
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        this.dialogRef = undefined;
-      });
+    this.dialogRef.onClose.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this.dialogRef = undefined;
+    });
   }
 
   /**
@@ -104,13 +102,9 @@ export class RetreatHomeDataList implements OnInit, OnDestroy {
 
     // Debounce para evitar múltiples clicks
     this.loading.set(true);
-    
+
     setTimeout(() => {
-      retreatHome.confirmToggleStatus(retreatHome, this.loading)
-        .catch(error => {
-          console.error('Error al cambiar estado:', error);
-          this.loading.set(false);
-        });
+      retreatHome.confirmToggleStatus(retreatHome).finally(() => this.loading.set(false));
     }, 100);
   }
 

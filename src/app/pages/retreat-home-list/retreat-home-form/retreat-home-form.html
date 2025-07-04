@@ -81,18 +81,20 @@
           </div>
 
           <!-- Grid de miniaturas -->
-          <div class="min-h-[200px] bg-gray-100/50 rounded-lg p-2 md:p-4 border border-gray-200/50">
+          <div class="min-h-[200px] bg-gray-100/50 rounded-lg p-2 md:p-4 border border-gray-200/50 flex">
             <!-- Mensaje cuando no hay imágenes -->
-            <div *ngIf="!hasImages" class="relative flex items-center justify-center">
+            @if(!hasImages()){
+            <div class="relative flex items-center justify-center w-full flex-1">
               <div class="text-center text-gray-500">
                 <div class="text-4xl md:text-6xl mb-2">📷</div>
                 <p class="text-lg font-medium">No hay imágenes seleccionadas</p>
                 <p class="text-sm">Haz clic en "Seleccionar Imágenes" para agregar fotos</p>
               </div>
             </div>
-
+            }@else{
             <!-- Imágenes seleccionadas -->
             <gallery classColumns="columns-2 md:columns-3 lg:columns-6" [galleryImgs]="imagesControl.value" [showRemoveImage]="true" (clickRemoveImage)="removeImage($event)" [disableRemoveImage]="loading()" />
+            }
           </div>
         </div>
       </div>

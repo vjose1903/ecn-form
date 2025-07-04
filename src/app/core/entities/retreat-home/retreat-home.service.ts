@@ -1,17 +1,12 @@
-import { inject, Injectable, NgZone, WritableSignal } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { FirebaseRequest } from '@core/typescript/firebase/firebaseRequest';
 import { RetreatHomeI } from './retreat-home.model';
 import { RetreatHome } from './retreat-home.class';
 import { UserService } from '../user/user.service';
 import { fun } from '@core/services/functions.service';
 import { AuthService } from '@core/services/auth.service';
-import { CityService } from '../city/city.service';
 import { Ss } from '@core/services/singleton.service';
-import { ConfirmationService } from 'primeng/api';
-import { ToastService } from '@core/services/toast.service';
-import { DynamicDialogRef } from 'primeng/dynamicdialog';
-import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
-import { catchError, map, shareReplay, switchMap, tap } from 'rxjs/operators';
+import { BehaviorSubject, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -20,16 +15,12 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   private _collectionName = 'retreat_home';
   private userService = inject(UserService);
   private authService = inject(AuthService);
-  private ngZone = inject(NgZone);
-
-  private confirmationService = inject(ConfirmationService);
-  private toastService = inject(ToastService);
 
   private _reload: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   private _retreatHomes: BehaviorSubject<RetreatHome[]> = new BehaviorSubject<RetreatHome[]>([]);
-  private _loading: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  private _loadingRetreatHomeList: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   private _lastFetch: number = 0;
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+  private readonly CACHE_DURATION = 3 * 60 * 1000; // 3 minutos
 
   // Observables públicos
   get reload$(): Observable<boolean> {
@@ -40,16 +31,16 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
     return this._retreatHomes.asObservable();
   }
 
-  get loading$(): Observable<boolean> {
-    return this._loading.asObservable();
+  get loadingRetreatHomes$(): Observable<boolean> {
+    return this._loadingRetreatHomeList.asObservable();
   }
 
   get retreatHomes(): RetreatHome[] {
     return this._retreatHomes.value;
   }
 
-  get loading(): boolean {
-    return this._loading.value;
+  get loadingRetreatHomes(): boolean {
+    return this._loadingRetreatHomeList.value;
   }
 
   constructor() {
@@ -87,7 +78,7 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
    */
   private async fetchAllRetreatHomes(): Promise<RetreatHome[]> {
     try {
-      this._loading.next(true);
+      this._loadingRetreatHomeList.next(true);
       const currentUser = this.authService.current_user();
       const cityRef = await currentUser?.cityRef;
 
@@ -104,13 +95,10 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
       return retreatHomes;
     } catch (error) {
       console.error('Error al obtener casas de retiro:', error);
-      this.toastService.error({
-        message: 'Error al cargar las casas de retiro',
-        title: 'Error de carga',
-      });
+      Ss.toastService.error({ message: 'Error al cargar las casas de retiro', title: 'Error de carga' });
       throw error;
     } finally {
-      this._loading.next(false);
+      this._loadingRetreatHomeList.next(false);
     }
   }
 
@@ -166,18 +154,12 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
       // Invalidar caché
       this.invalidateCache();
 
-      this.toastService.success({
-        message: 'Casa de retiro creada correctamente',
-        title: 'Éxito',
-      });
+      Ss.toastService.success({ message: 'Casa de retiro creada correctamente', title: 'Éxito' });
 
       return result;
     } catch (error) {
       console.error('Error al crear casa de retiro:', error);
-      this.toastService.error({
-        message: 'Error al crear la casa de retiro',
-        title: 'Error',
-      });
+      Ss.toastService.error({ message: 'Error al crear la casa de retiro', title: 'Error' });
       throw error;
     }
   }
@@ -200,18 +182,12 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
       // Actualizar caché
       this.updateCacheItem(retreatHome.id, new RetreatHome(result));
 
-      this.toastService.success({
-        message: 'Casa de retiro actualizada correctamente',
-        title: 'Éxito',
-      });
+      Ss.toastService.success({ message: 'Casa de retiro actualizada correctamente', title: 'Éxito' });
 
       return result;
     } catch (error) {
       console.error('Error al actualizar casa de retiro:', error);
-      this.toastService.error({
-        message: 'Error al actualizar la casa de retiro',
-        title: 'Error',
-      });
+      Ss.toastService.error({ message: 'Error al actualizar la casa de retiro', title: 'Error' });
       throw error;
     }
   }
@@ -254,37 +230,12 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
       // Remover de caché
       this.removeFromCache(id);
 
-      this.toastService.success({
-        message: 'Casa de retiro eliminada correctamente',
-        title: 'Éxito',
-      });
+      Ss.toastService.success({ message: 'Casa de retiro eliminada correctamente', title: 'Éxito' });
     } catch (error) {
       console.error('Error al eliminar casa de retiro:', error);
-      this.toastService.error({
-        message: 'Error al eliminar la casa de retiro',
-        title: 'Error',
-      });
+      Ss.toastService.error({ message: 'Error al eliminar la casa de retiro', title: 'Error' });
       throw error;
     }
-  }
-
-  /**
-   * Busca casas de retiro por nombre
-   */
-  searchByName(name: string): RetreatHome[] {
-    if (!name?.trim()) {
-      return this._retreatHomes.value;
-    }
-
-    const searchTerm = name.toLowerCase().trim();
-    return this._retreatHomes.value.filter(retreat => retreat.name.toLowerCase().includes(searchTerm) || retreat.address.toLowerCase().includes(searchTerm));
-  }
-
-  /**
-   * Filtra casas de retiro por estado
-   */
-  filterByStatus(isActive: boolean): RetreatHome[] {
-    return this._retreatHomes.value.filter(retreat => retreat.is_active === isActive);
   }
 
   /**

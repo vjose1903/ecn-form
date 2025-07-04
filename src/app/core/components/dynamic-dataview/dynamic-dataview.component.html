@@ -1,4 +1,72 @@
 <div class="card h-full">
+  <!-- Sección de filtros avanzados -->
+  <div *ngIf="filters().enabled" class="bg-white rounded-lg border border-gray-200 p-4 space-y-4 mb-4">
+    <div class="flex flex-col md:flex-row gap-4 items-start md:items-end">
+      <!-- Renderizar filtros según la configuración -->
+      <ng-container *ngFor="let filterConfig of filters().configs">
+        <!-- Filtro de búsqueda -->
+        <div *ngIf="filterConfig.type === 'search'" class="flex-1 min-w-0">
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ filterConfig.label }}</label>
+          <div class="relative">
+            <i class="pi pi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+            <input type="text" pInputText [placeholder]="filterConfig.placeholder || 'Buscar...'" [value]="getFilterValue(filterConfig.key)" (input)="onFilterChange(filterConfig.key, $any($event.target).value)" class="w-full !pl-10" />
+          </div>
+        </div>
+
+        <!-- Filtro de select -->
+        <div *ngIf="filterConfig.type === 'select'" [class]="filterConfig.width || 'w-full md:w-48'">
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ filterConfig.label }}</label>
+          <p-select
+            [options]="filterConfig.options"
+            optionLabel="label"
+            optionValue="value"
+            [placeholder]="filterConfig.placeholder || '...'"
+            class="w-full"
+            appendTo="body"
+            [ngModel]="getFilterValue(filterConfig.key)"
+            (onChange)="onFilterChange(filterConfig.key, $event.value)" />
+        </div>
+
+        <!-- Filtro de ordenamiento -->
+        <div *ngIf="filterConfig.type === 'sort'" class="w-full md:w-48">
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ filterConfig.label }}</label>
+          <div class="flex gap-1">
+            <p-select
+              [options]="filterConfig.options"
+              optionLabel="label"
+              optionValue="value"
+              [placeholder]="filterConfig.placeholder || '...'"
+              class="w-full"
+              appendTo="body"
+              [ngModel]="sorting().field"
+              (onChange)="onSortFieldChange($event.value)" />
+            <button type="button" [icon]="getSortIcon()" pButton severity="secondary" [text]="true" (click)="onSortOrderChange()" pTooltip="Cambiar orden" class="px-3" [attr.aria-label]="'Cambiar orden de clasificación'"></button>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Botón limpiar filtros -->
+      <div class="w-full md:w-auto">
+        @if (hasActiveFilters()) {
+        <p-button type="button" icon="pi pi-times" label="Limpiar" severity="secondary" [text]="true" pTooltip="Limpiar filtros" (click)="onClearFilters()" [attr.aria-label]="'Limpiar filtros'"> </p-button>
+        }
+      </div>
+    </div>
+
+    <!-- Información de filtros activos -->
+    @if (hasActiveFilters()) {
+    <div class="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-2 rounded-md">
+      <i class="pi pi-info-circle text-blue-600"></i>
+      <span class="flex gap-1 items-center">
+        Filtros activos:
+        <span class="font-medium">{{ activeFiltersText() }}</span>
+        <span *ngIf="sorting().enabled" class="font-medium"> ({{ sorting().order === 'asc' ? 'A-Z' : 'Z-A' }}) </span>
+      </span>
+    </div>
+    }
+  </div>
+
+  <!-- Controles de layout -->
   <div class="flex justify-content-between align-items-center mb-3 w-full">
     <div>
       <!-- <h3>Vista Dinámica - Debug</h3> -->

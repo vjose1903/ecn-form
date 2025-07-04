@@ -1,5 +1,26 @@
 import { Type, signal, Signal } from '@angular/core';
 
+// Interfaces para los filtros
+export interface FilterOption {
+  label: string;
+  value: any;
+}
+
+export interface FilterConfig {
+  type: 'search' | 'select' | 'sort';
+  key: string;
+  label: string;
+  placeholder?: string;
+  options?: FilterOption[];
+  defaultValue?: any;
+  width?: string;
+}
+
+export interface SortConfig {
+  field: string;
+  order: 'asc' | 'desc';
+}
+
 export interface DynamicDataviewConfigData<T = any> {
   // Componente a usar para la vista de lista
   listComponent: Type<any>;
@@ -18,19 +39,29 @@ export interface DynamicDataviewConfigData<T = any> {
     [key: string]: any;
   };
   
+  // Configuración de filtros
+  filters?: {
+    enabled: boolean;
+    configs: FilterConfig[];
+    values: { [key: string]: any };
+    onFilterChange?: (filters: { [key: string]: any }) => void;
+  };
+  
+  // Configuración de ordenamiento
+  sorting?: {
+    enabled: boolean;
+    field: string;
+    order: 'asc' | 'desc';
+    options?: FilterOption[];
+    onSortChange?: (sorting: SortConfig) => void;
+  };
+  
   // Configuración de paginación
   pagination?: {
     enabled: boolean;
     rows?: number;
     totalRecords?: number;
   };
-  
-  // Configuración de ordenamiento
-  sortField?: string;
-  sortOrder?: number;
-  
-  // Configuración de filtros
-  filters?: any;
 }
 
 export class DynamicDataviewConfig<T = any> {
@@ -40,14 +71,30 @@ export class DynamicDataviewConfig<T = any> {
   readonly data = signal<T[]>([]);
   readonly layout = signal<'list' | 'grid'>('list');
   readonly componentProps = signal<{[key: string]: any}>({});
+  
+  // Signals para filtros
+  readonly filters = signal<{
+    enabled: boolean;
+    configs: FilterConfig[];
+    values: { [key: string]: any };
+    onFilterChange?: (filters: { [key: string]: any }) => void;
+  }>({ enabled: false, configs: [], values: {} });
+  
+  // Signals para ordenamiento
+  readonly sorting = signal<{
+    enabled: boolean;
+    field: string;
+    order: 'asc' | 'desc';
+    options?: FilterOption[];
+    onSortChange?: (sorting: SortConfig) => void;
+  }>({ enabled: false, field: '', order: 'asc' });
+  
+  // Signals para paginación
   readonly pagination = signal<{
     enabled: boolean;
     rows?: number;
     totalRecords?: number;
   }>({ enabled: false });
-  readonly sortField = signal<string>('');
-  readonly sortOrder = signal<number>(1);
-  readonly filters = signal<any>(null);
 
   constructor(config?: Partial<DynamicDataviewConfigData<T>>) {
     if (config) {
@@ -72,17 +119,14 @@ export class DynamicDataviewConfig<T = any> {
     if (config.componentProps !== undefined) {
       this.componentProps.set(config.componentProps);
     }
-    if (config.pagination !== undefined) {
-      this.pagination.set(config.pagination);
-    }
-    if (config.sortField !== undefined) {
-      this.sortField.set(config.sortField);
-    }
-    if (config.sortOrder !== undefined) {
-      this.sortOrder.set(config.sortOrder);
-    }
     if (config.filters !== undefined) {
       this.filters.set(config.filters);
+    }
+    if (config.sorting !== undefined) {
+      this.sorting.set(config.sorting);
+    }
+    if (config.pagination !== undefined) {
+      this.pagination.set(config.pagination);
     }
   }
 
@@ -107,16 +151,63 @@ export class DynamicDataviewConfig<T = any> {
     this.componentProps.set(props);
   }
 
+  setFilters(filters: {
+    enabled: boolean;
+    configs: FilterConfig[];
+    values: { [key: string]: any };
+    onFilterChange?: (filters: { [key: string]: any }) => void;
+  }): void {
+    this.filters.set(filters);
+  }
+
+  setSorting(sorting: {
+    enabled: boolean;
+    field: string;
+    order: 'asc' | 'desc';
+    options?: FilterOption[];
+    onSortChange?: (sorting: SortConfig) => void;
+  }): void {
+    this.sorting.set(sorting);
+  }
+
   setPagination(pagination: {enabled: boolean; rows?: number; totalRecords?: number}): void {
     this.pagination.set(pagination);
   }
 
-  setSorting(sortField: string, sortOrder: number): void {
-    this.sortField.set(sortField);
-    this.sortOrder.set(sortOrder);
+  // Métodos para actualizar valores de filtros
+  updateFilterValue(key: string, value: any): void {
+    const currentFilters = this.filters();
+    const newValues = { ...currentFilters.values, [key]: value };
+    this.filters.set({ ...currentFilters, values: newValues });
+    
+    if (currentFilters.onFilterChange) {
+      currentFilters.onFilterChange(newValues);
+    }
   }
 
-  setFilters(filters: any): void {
-    this.filters.set(filters);
+  updateSorting(field: string, order: 'asc' | 'desc'): void {
+    const currentSorting = this.sorting();
+    const newSorting = { ...currentSorting, field, order };
+    this.sorting.set(newSorting);
+    
+    if (currentSorting.onSortChange) {
+      currentSorting.onSortChange(newSorting);
+    }
+  }
+
+  clearFilters(): void {
+    const currentFilters = this.filters();
+    const clearedValues: { [key: string]: any } = {};
+    
+    // Resetear a valores por defecto
+    currentFilters.configs.forEach(config => {
+      clearedValues[config.key] = config.defaultValue || '';
+    });
+    
+    this.filters.set({ ...currentFilters, values: clearedValues });
+    
+    if (currentFilters.onFilterChange) {
+      currentFilters.onFilterChange(clearedValues);
+    }
   }
 } 

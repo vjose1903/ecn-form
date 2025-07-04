@@ -12,6 +12,7 @@ import { MenuModule } from 'primeng/menu';
 import { Subject, takeUntil } from 'rxjs';
 import { Menu } from './menu/menu';
 import { MenuService } from './menu/menu.service';
+import { RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
 
 @Component({
   selector: 'app-layout',
@@ -24,6 +25,7 @@ export class Layout implements OnInit {
   router = inject(Router);
   menuService = inject(MenuService);
   private cdRef = inject(ChangeDetectorRef);
+  retreatHomeService = inject(RetreatHomeService);
 
   // Signal para la ruta actual
   currentPath = signal(fun.getActualPathName());
@@ -46,6 +48,7 @@ export class Layout implements OnInit {
 
   ngOnInit(): void {
     this.setupRouterListener();
+    this.retreatHomeService.refresh();
   }
 
   ngOnDestroy(): void {
