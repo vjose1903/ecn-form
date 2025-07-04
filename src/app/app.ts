@@ -10,10 +10,12 @@ import { environment } from 'environments/environment';
 import { UserService } from '@core/entities/user/user.service';
 import { ToastService } from '@core/services/toast.service';
 import { CopyToClipboardService } from '@core/services/copy-to-clipboard.service';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DialogModule } from 'primeng/dialog';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, LoadingComponent, ToastModule],
+  imports: [RouterOutlet, LoadingComponent, ToastModule, ConfirmDialogModule, DialogModule],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

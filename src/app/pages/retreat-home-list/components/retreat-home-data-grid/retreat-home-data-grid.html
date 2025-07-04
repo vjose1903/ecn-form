@@ -1,1 +1,51 @@
-<p>retreat-home-data-grid works!</p>
+<p-card class="overflow-hidden relative cursor-pointer" (click)="openRetreatHomeView()">
+  <ng-template #header>
+    <div class="absolute top-2 left-2">
+      <p-tag [severity]="item.is_active ? 'success' : 'danger'" [value]="item.is_active ? 'Activo' : 'Inactivo'" [rounded]="true" />
+    </div>
+    <img [src]="item.imagesData[0].url" class="w-full h-full object-cover" />
+  </ng-template>
+  <div class="">
+    <h3 class="text-md md:text-lg font-semibold mb-4">{{ item.name || 'Sin título' }}</h3>
+
+    <div class="space-y-2 text-xs text-gray-500 mb-3">
+      <div *ngIf="item?.address" class="flex items-center gap-1">
+        <i class="pi pi-map-marker mr-1 text-red-700"></i>
+        <span class="line-clamp-3">{{ item.address }}</span>
+      </div>
+      <div *ngIf="item?.phone" class="flex items-center gap-1">
+        <i class="pi pi-phone mr-1 text-red-700"></i>
+        <span class="truncate">{{ item.phone }}</span>
+      </div>
+    </div>
+  </div>
+
+  <ng-template #footer>
+    <div class="flex gap-2 justify-end w-full md:w-auto">
+      @if (item.is_active) {
+      <p-button [disabled]="loading()" type="button" icon="pi pi-pencil" severity="secondary" size="small" [text]="true" pTooltip="Editar" tooltipPosition="left"> </p-button>
+      <p-button
+        [disabled]="loading()"
+        type="button"
+        [icon]="loading()? 'pi pi-spinner pi-spin': 'pi pi-trash'"
+        severity="danger"
+        size="small"
+        [text]="true"
+        pTooltip="Eliminar"
+        (onClick)="$event.stopPropagation(); confirmToggleStatus(item)"
+        tooltipPosition="left"></p-button>
+      } @else {
+      <p-button
+        [disabled]="loading()"
+        type="button"
+        [icon]="loading() ? 'pi pi-spinner pi-spin' : 'pi pi-undo'"
+        severity="success"
+        size="small"
+        [text]="true"
+        pTooltip="Reactivar"
+        (onClick)="$event.stopPropagation(); confirmToggleStatus(item)"
+        tooltipPosition="left"></p-button>
+      }
+    </div>
+  </ng-template>
+</p-card>

@@ -1,21 +1,23 @@
-import { Component, input, OnInit, ViewChild, ViewContainerRef, ComponentRef, OnDestroy, signal, computed, effect } from '@angular/core';
+import { Component, input, OnInit, ViewChildren, QueryList, OnDestroy, signal, computed, effect, AfterViewInit, ChangeDetectorRef, ViewContainerRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DataViewModule } from 'primeng/dataview';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { DynamicDataviewConfig } from './dynamic-dataview.config';
+import { DynamicListDirective } from './directives/dynamic-list.directive';
+import { DynamicGridDirective } from './directives/dynamic-grid.directive';
 
 @Component({
   selector: 'dynamic-dataview',
   standalone: true,
-  imports: [CommonModule, FormsModule, DataViewModule, SelectButtonModule],
+  imports: [CommonModule, FormsModule, SelectButtonModule, DynamicListDirective, DynamicGridDirective],
   templateUrl: './dynamic-dataview.component.html',
   styleUrl: './dynamic-dataview.component.scss',
 })
-export class DynamicDataviewComponent implements OnInit, OnDestroy {
+export class DynamicDataviewComponent implements OnInit, AfterViewInit, OnDestroy {
   config = input.required<DynamicDataviewConfig>();
-  @ViewChild('listContainer', { read: ViewContainerRef }) listContainer!: ViewContainerRef;
-  @ViewChild('gridContainer', { read: ViewContainerRef }) gridContainer!: ViewContainerRef;
+
+  @ViewChildren(DynamicListDirective) listDirectives!: QueryList<DynamicListDirective>;
+  @ViewChildren(DynamicGridDirective) gridDirectives!: QueryList<DynamicGridDirective>;
 
   // Signals computados para acceder a los valores de configuración
   readonly listComponent = computed(() => this.config().listComponent());
@@ -30,13 +32,30 @@ export class DynamicDataviewComponent implements OnInit, OnDestroy {
   // Signal para el layout actual
   layout = signal<'list' | 'grid'>('list');
 
-  listComponentRef?: ComponentRef<any>;
-  gridComponentRef?: ComponentRef<any>;
+  // Signal para controlar cuando intentar cargar componentes
+  private loadTrigger = signal(0);
 
   layoutOptions = [
     { label: 'Lista', value: 'list', icon: 'pi pi-list' },
     { label: 'Grid', value: 'grid', icon: 'pi pi-th-large' },
   ];
+
+  private componentRefs: any[] = [];
+  private cdr = inject(ChangeDetectorRef);
+  private subscriptions: any[] = [];
+
+  constructor() {
+    // Effect para manejar la carga de componentes
+    effect(() => {
+      const currentData = this.data();
+      const currentLayout = this.layout();
+      const trigger = this.loadTrigger();
+
+      if (currentData && currentData.length > 0) {
+        this.tryLoadComponents();
+      }
+    });
+  }
 
   ngOnInit() {
     const configLayout = this.config().layout();
@@ -45,61 +64,129 @@ export class DynamicDataviewComponent implements OnInit, OnDestroy {
     }
   }
 
+  ngAfterViewInit() {
+    // Suscribirse a cambios en las directivas
+    this.subscriptions.push(
+      this.listDirectives.changes.subscribe(() => {
+        this.loadTrigger.update(v => v + 1);
+      })
+    );
+
+    this.subscriptions.push(
+      this.gridDirectives.changes.subscribe(() => {
+        this.loadTrigger.update(v => v + 1);
+      })
+    );
+
+    // Trigger inicial
+    this.loadTrigger.update(v => v + 1);
+  }
+
   ngOnDestroy() {
-    this.destroyComponents();
+    this.destroyAllComponents();
+    // Limpiar suscripciones
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+    this.subscriptions = [];
   }
 
   onLayoutChange(event: any) {
     this.layout.set(event.value);
-    this.loadComponent();
+    this.loadTrigger.update(v => v + 1);
   }
 
-  loadComponent() {
-    this.destroyComponents();
+  private tryLoadComponents() {
+    const currentData = this.data();
+    const currentLayout = this.layout();
 
-    if (this.layout() === 'list') {
-      this.loadListComponent();
+    if (currentData && currentData.length > 0) {
+      const directives = currentLayout === 'list' ? this.listDirectives : this.gridDirectives;
+
+      if (directives && directives.length > 0) {
+        this.loadComponents(currentData, currentLayout);
+      } else {
+      }
     } else {
-      this.loadGridComponent();
     }
   }
 
-  private loadListComponent() {
-    if (this.listContainer && this.listComponent()) {
-      this.listComponentRef = this.listContainer.createComponent(this.listComponent());
-      this.setComponentProperties(this.listComponentRef);
+  private loadComponents(items: any[], layout: 'list' | 'grid') {
+    this.destroyAllComponents();
+
+    const directives = layout === 'list' ? this.listDirectives : this.gridDirectives;
+    const componentType = layout === 'list' ? this.listComponent() : this.gridComponent();
+
+    if (directives.length === 0) {
+      console.error('No directives available for layout:', layout);
+      return;
     }
+
+    if (!componentType) {
+      console.error('Component type not available for layout:', layout);
+      return;
+    }
+
+    // Crear un componente por cada directiva disponible
+    directives.forEach((directive, index) => {
+      const item = items[index];
+      if (item) {
+        const componentRef = directive.viewContainerRef.createComponent(componentType);
+        this.setComponentProperties(componentRef, item);
+        this.componentRefs.push(componentRef);
+      }
+    });
+
+    this.cdr.detectChanges();
   }
 
-  private loadGridComponent() {
-    if (this.gridContainer && this.gridComponent()) {
-      this.gridComponentRef = this.gridContainer.createComponent(this.gridComponent());
-      this.setComponentProperties(this.gridComponentRef);
-    }
-  }
-
-  private setComponentProperties(componentRef: ComponentRef<any>) {
+  private setComponentProperties(componentRef: any, item: any) {
     const props = this.componentProps();
+
+    // Pasar el item como dato al componente hijo
+    (componentRef.instance as any).item = item;
+
+    // Pasar las propiedades adicionales
     if (props) {
       Object.keys(props).forEach(key => {
-        componentRef.instance[key] = props[key];
+        (componentRef.instance as any)[key] = props[key];
       });
     }
   }
 
-  private destroyComponents() {
-    if (this.listComponentRef) {
-      this.listComponentRef.destroy();
-      this.listComponentRef = undefined;
-    }
-    if (this.gridComponentRef) {
-      this.gridComponentRef.destroy();
-      this.gridComponentRef = undefined;
-    }
+  private destroyAllComponents() {
+    this.componentRefs.forEach(ref => {
+      if (ref) {
+        ref.destroy();
+      }
+    });
+    this.componentRefs = [];
   }
 
   onLazyLoad(event: any) {
     // Aquí puedes manejar la carga lazy si es necesaria
-    console.log('Lazy load event:', event);
+  }
+
+  // Método para preparar los inputs de los componentes hijos
+  getComponentInputs(item: any) {
+    return {
+      item: item,
+      ...this.componentProps(),
+    };
+  }
+
+  // Método para crear un componente hijo con datos
+  createChildComponent(container: ViewContainerRef, componentType: any, item: any, props: any = {}) {
+    const componentRef = container.createComponent(componentType);
+
+    // Pasar el item como dato al componente hijo
+    (componentRef.instance as any).item = item;
+
+    // Pasar las propiedades adicionales
+    if (props) {
+      Object.keys(props).forEach(key => {
+        (componentRef.instance as any)[key] = props[key];
+      });
+    }
+
+    return componentRef;
   }
 }

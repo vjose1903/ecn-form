@@ -1,0 +1,21 @@
+<section>
+  <div class="{{ classColumns() }} gap-2.5" [photoGalleryGroup]="photoGalleryOptions">
+    @for (img of galleryImgs(); track img.url) {
+    <div class="img-gallery aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 mb-2.5 relative transition-all ease-in-out animate-in fade-in zoom-in-75 duration-500 cursor-pointer group">
+      <div class="absolute inset-0 z-[-1] flex justify-center items-center bg-blue-100">
+        <span class="custom-loader"></span>
+      </div>
+
+      <img [src]="img.url" [alt]="'foto-' + $index" [photoGallery]="img.url" (load)="img.loaded = true" class="w-full h-full object-cover" />
+
+      <div class="absolute inset-0 z-10 flex justify-center items-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+        <i class="pi pi-eye text-white" style="font-size: 2rem"></i>
+      </div>
+
+      @if (showRemoveImage()) {
+      <p-button [disabled]="disableRemoveImage()" icon="pi pi-times" [rounded]="true" severity="danger" (onClick)="clickRemoveImage.emit($index)" class="absolute top-2 right-2 z-10" styleClass="shadow-md" size="small" />
+      }
+    </div>
+    }
+  </div>
+</section>

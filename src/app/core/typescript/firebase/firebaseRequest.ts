@@ -223,8 +223,9 @@ export class FirebaseRequest<T> {
 
       const refString = this.makeEntityRefString(params);
       const entityRef = doc(Ss.firestore, refString);
-
-      await updateDoc(entityRef, params.data);
+      
+      const { id, ...data } = { ...params.data };
+      await updateDoc(entityRef, data);
       const docSnapshot = await getDoc(entityRef);
 
       return await this.mapDocumentToObject(docSnapshot);
@@ -268,7 +269,8 @@ export class FirebaseRequest<T> {
       const refString = `${params.parentCollection}/${params.parentId}/${this._firebaseCollectionName}/${params.documentId}`;
       const entityRef = doc(Ss.firestore, refString);
 
-      await updateDoc(entityRef, params.data);
+      const { id, ...data } = { ...params.data };
+      await updateDoc(entityRef, data);
       const docSnapshot = await getDoc(entityRef);
 
       return await this.mapDocumentToObject(docSnapshot);

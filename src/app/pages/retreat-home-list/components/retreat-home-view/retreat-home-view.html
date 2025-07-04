@@ -1,0 +1,87 @@
+<div *ngIf="retreatHome">
+  <!-- Información básica -->
+  <div class="grid grid-cols-1 md:grid-cols-12 mb-8">
+    <div class="flex items-center gap-3 col-span-12 md:col-span-6">
+      <div class="flex items-center gap-2">
+        <i class="pi pi-info-circle text-red-600"></i>
+        <span class="text-gray-800 font-medium">Estado:</span>
+      </div>
+      <p-tag [severity]="retreatHome.is_active ? 'success' : 'danger'" [value]="retreatHome.is_active ? 'Activo' : 'Inactivo'" [rounded]="true" />
+    </div>
+
+    <div class="col-span-12 md:hidden">
+      <divider-line separatorClass="my-4" />
+    </div>
+
+    <div class="flex flex-col gap-3 col-span-12 md:col-span-6">
+      <div class="flex items-center gap-2">
+        <i class="pi pi-phone text-red-600"></i>
+        <span class="text-gray-800 font-medium">Teléfono:</span>
+      </div>
+
+      @if (retreatHome.phone){
+      <p class="text-gray-600 m-0">{{ retreatHome.phone }}</p>
+      } @else {
+      <p class="text-gray-600 m-0">Sin teléfono Definido</p>
+      }
+    </div>
+
+    <div class="col-span-12">
+      <divider-line separatorClass="my-4" />
+    </div>
+
+    <!-- Dirección -->
+    <div class="flex flex-col gap-3 col-span-12">
+      <div class="flex items-center gap-2">
+        <i class="pi pi-map-marker text-red-600"></i>
+        <span class="text-gray-800 font-medium">Dirección:</span>
+      </div>
+      <p class="text-gray-600 m-0">{{ retreatHome.address }}</p>
+    </div>
+
+    <div class="col-span-12">
+      <divider-line separatorClass="my-4" />
+    </div>
+
+    <!-- Ubicación -->
+    <div class="flex items-center gap-3 mb-6 col-span-12 md:col-span-6">
+      <div class="flex items-center gap-2">
+        <i class="pi pi-map text-red-600"></i>
+        <span class="text-gray-800 font-medium">Ubicación:</span>
+      </div>
+      <p-button type="button" severity="contrast" variant="text" (onClick)="openOnGoogleMaps()" class="w-auto">
+        <span class="flex items-center justify-center gap-2">
+          <span class="whitespace-nowrap">Ver en Google Maps</span>
+          <img src="icons/google-maps-icon.svg" alt="Google Maps" class="w-6 h-6" />
+        </span>
+      </p-button>
+    </div>
+  </div>
+
+  <!-- Galería de imágenes -->
+  <div class="mb-8" *ngIf="galleryImages.length > 0">
+    <h3 class="text-xl font-semibold text-gray-900 mb-0">Galería de Imágenes</h3>
+    <divider-line separatorClass="py-4" />
+
+    <!-- Vista previa de imágenes -->
+    <div class="min-h-[200px] bg-gray-100/50 rounded-lg p-2 md:p-4 border border-gray-200/50">
+      <gallery classColumns="columns-2 md:columns-3 lg:columns-6" [galleryImgs]="retreatHome.imagesData" />
+    </div>
+  </div>
+
+  <!-- Mensaje cuando no hay imágenes -->
+  <div *ngIf="galleryImages.length === 0" class="relative flex items-center justify-center">
+    <div class="text-center text-gray-500">
+      <div class="text-4xl md:text-6xl mb-2">📷</div>
+      <p class="text-lg font-medium">No hay imágenes seleccionadas</p>
+      <p class="text-sm">Haz clic en "Seleccionar Imágenes" para agregar fotos</p>
+    </div>
+  </div>
+
+  <div class="flex justify-end gap-3 w-full">
+    <p-button type="button" [label]="retreatHome.is_active ? 'Desactivar' : 'Reactivar'" [severity]="retreatHome.is_active ? 'danger' : 'success'" [disabled]="loading()" class="w-auto" (onClick)="confirmToggleStatus()" />
+    @if (retreatHome.is_active) {
+    <p-button type="button" label="Editar" severity="secondary" [disabled]="loading()" class="w-auto" (onClick)="openEditForm()" />
+    }
+  </div>
+</div>

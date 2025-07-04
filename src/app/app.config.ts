@@ -11,7 +11,7 @@ import { getFirestore, provideFirestore } from '@angular/fire/firestore';
 import { getDatabase, provideDatabase } from '@angular/fire/database';
 import { getStorage, provideStorage } from '@angular/fire/storage';
 import { environment } from '../environments/environment';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 import { DialogService } from 'primeng/dynamicdialog';
 
 export const appConfig: ApplicationConfig = {
@@ -22,12 +22,14 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     MessageService,
     DialogService,
+    ConfirmationService,
     providePrimeNG({
+      ripple: true,
       theme: {
         preset: MyPreset,
         options: {
           prefix: 'p',
-          darkModeSelector: false || 'none',
+          darkModeSelector: '.my-app-dark',
           cssLayer: false,
         },
       },

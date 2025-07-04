@@ -78,9 +78,9 @@
           </div>
 
           <!-- Grid de miniaturas -->
-          <div class="grid grid-cols-2 md:grid-cols-6 gap-4 min-h-[200px] bg-gray-100/50 rounded-lg p-2 md:p-4 border border-gray-200/50">
+          <div class="min-h-[200px] bg-gray-100/50 rounded-lg p-2 md:p-4 border border-gray-200/50">
             <!-- Mensaje cuando no hay imágenes -->
-            <div *ngIf="!hasImages" class="col-span-2 md:col-span-6 relative flex items-center justify-center">
+            <div *ngIf="!hasImages" class="relative flex items-center justify-center">
               <div class="text-center text-gray-500">
                 <div class="text-4xl md:text-6xl mb-2">📷</div>
                 <p class="text-lg font-medium">No hay imágenes seleccionadas</p>
@@ -89,14 +89,7 @@
             </div>
 
             <!-- Imágenes seleccionadas -->
-            <div *ngFor="let image of imagesControl.value; let i = index" class="relative group">
-              <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
-                <img [src]="image.url" [alt]="'Imagen ' + (i + 1)" class="w-full h-full object-cover" />
-              </div>
-
-              <!-- Botón de eliminar -->
-              <p-button [disabled]="loading()" icon="pi pi-times" [rounded]="true" severity="danger" (onClick)="removeImage(i)" class="absolute top-2 right-2 z-10" styleClass="shadow-md" size="small" />
-            </div>
+            <gallery classColumns="columns-2 md:columns-3 lg:columns-6" [galleryImgs]="imagesControl.value" [showRemoveImage]="true" (clickRemoveImage)="removeImage($event)" [disableRemoveImage]="loading()" />
           </div>
         </div>
       </div>

@@ -1,11 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal, ChangeDetectorRef, effect } from '@angular/core';
+import { Component, inject, signal, ChangeDetectorRef, effect, OnInit } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { FormControlName, FormFieldId } from './retreat-home-form.model';
 import { FormErrorMsgComponent } from '@core/components/form-error-msg/form-error-msg.component';
-import { DynamicDialogRef } from 'primeng/dynamicdialog';
+import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { DividerLine } from '@core/components/divider-line/divider-line';
 import { InputMaskModule } from 'primeng/inputmask';
@@ -13,26 +13,30 @@ import { TextareaModule } from 'primeng/textarea';
 import { FileI } from '@core/entities/file/file.model';
 import { FileClass } from '@core/entities/file/file.class';
 import { FileService } from '@core/entities/file/file.service';
-import { ToastService } from '@core/services/toast.service';
 import { fun } from '@core/services/functions.service';
 import { UrlValidator } from '@core/typescript/validate-url';
 import { RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
 import { Ss } from '@core/services/singleton.service';
 import { AuthService } from '@core/services/auth.service';
+import { GalleryComponent } from '@core/components/gallery/gallery.component';
+import { RetreatHome } from '@core/entities/retreat-home/retreat-home.class';
 
 @Component({
   selector: 'app-retreat-home-form',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, InputNumberModule, ButtonModule, FormErrorMsgComponent, InputTextModule, InputMaskModule, TextareaModule, DividerLine],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, InputNumberModule, ButtonModule, FormErrorMsgComponent, InputTextModule, InputMaskModule, TextareaModule, DividerLine, GalleryComponent],
   templateUrl: './retreat-home-form.html',
   styleUrl: './retreat-home-form.scss',
 })
-export class RetreatHomeForm {
+export class RetreatHomeForm implements OnInit {
   private fb = inject(FormBuilder);
   private ref = inject(DynamicDialogRef);
+  private config = inject(DynamicDialogConfig);
   private cdr = inject(ChangeDetectorRef);
   private fileService = inject(FileService);
   private retreatHomeService = inject(RetreatHomeService);
   private authService = inject(AuthService);
+
+  retreatHome!: RetreatHome;
 
   FormFieldId = FormFieldId;
   FormControlName = FormControlName;
@@ -63,6 +67,10 @@ export class RetreatHomeForm {
     effect(() => {
       this.loading() ? this.formGroup.disable() : this.formGroup.enable();
     });
+  }
+
+  ngOnInit(): void {
+    this.retreatHome = this.config.data.retreatHome;
   }
 
   openGoogleMaps() {
