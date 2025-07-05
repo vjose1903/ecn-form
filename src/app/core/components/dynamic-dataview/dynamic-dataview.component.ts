@@ -35,23 +35,23 @@ export class DynamicDataviewComponent implements OnInit, AfterViewInit, OnDestro
   // Computed signals para filtros
   readonly hasActiveFilters = computed(() => {
     const filtersConfig = this.filters();
-    
+
     // Si los filtros no están habilitados, no hay filtros activos
     if (!filtersConfig.enabled) {
       return false;
     }
-    
+
     const filterValues = filtersConfig.values;
-    
+
     // Si no hay valores de filtros, no hay filtros activos
     if (!filterValues || Object.keys(filterValues).length === 0) {
       return false;
     }
-    
+
     const hasActive = Object.entries(filterValues).some(([key, value]) => {
       // Buscar la configuración del filtro para determinar su tipo
       const config = filtersConfig.configs.find(c => c.key === key);
-      
+
       // Para filtros de búsqueda, considerar activo si no está vacío
       if (config?.type === 'search') {
         return value !== '' && value !== null && value !== undefined;
@@ -64,11 +64,11 @@ export class DynamicDataviewComponent implements OnInit, AfterViewInit, OnDestro
       else if (config?.type === 'sort') {
         return false;
       }
-      
+
       // Para cualquier otro tipo, usar la lógica por defecto
       return value !== '' && value !== null && value !== undefined && value !== 'all';
     });
-    
+
     return hasActive;
   });
 
@@ -80,7 +80,7 @@ export class DynamicDataviewComponent implements OnInit, AfterViewInit, OnDestro
     Object.entries(filterValues).forEach(([key, value]) => {
       // Buscar la configuración del filtro para determinar su tipo
       const config = filtersConfig.configs.find(c => c.key === key);
-      
+
       // Para filtros de búsqueda, mostrar si no está vacío
       if (config?.type === 'search' && value !== '' && value !== null && value !== undefined) {
         activeFilters.push(`"${value}"`);
@@ -103,6 +103,9 @@ export class DynamicDataviewComponent implements OnInit, AfterViewInit, OnDestro
 
   // Signal para el layout actual
   layout = signal<'list' | 'grid'>('list');
+
+  // Signal para controlar la visibilidad de filtros en móvil
+  showFilters = signal<boolean>(false);
 
   // Signal para controlar cuando intentar cargar componentes
   private loadTrigger = signal(0);
@@ -184,6 +187,11 @@ export class DynamicDataviewComponent implements OnInit, AfterViewInit, OnDestro
 
   onClearFilters() {
     this.config().clearFilters();
+  }
+
+  // Métodos para manejar la visibilidad de filtros en móvil
+  toggleFilters() {
+    this.showFilters.update(show => !show);
   }
 
   // Helpers para filtros
