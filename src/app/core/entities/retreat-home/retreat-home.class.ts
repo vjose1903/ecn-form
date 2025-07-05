@@ -204,27 +204,27 @@ export class RetreatHome {
    */
   openForm(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      const ref = Ss.dialogService.open(RetreatHomeForm, {
+      const dialogService = Ss.dialogService;
+
+      if (!dialogService) {
+        reject(new Error('DialogService no disponible'));
+        return;
+      }
+
+      const ref = dialogService.open(RetreatHomeForm, {
         header: this.id ? 'Editar Casa de Retiro' : 'Nueva Casa de Retiro',
         width: '70%',
-        contentStyle: { overflow: 'auto' },
-        baseZIndex: 10000,
-        maximizable: true,
         modal: true,
+        draggable: false,
+        resizable: false,
+        closable: true,
+        focusOnShow: false,
+        data: { retreatHome: this.id ? this : undefined },
         breakpoints: { '960px': '75vw', '640px': '90vw' },
-        data: { retreatHome: this },
       });
 
-      ref.onClose.subscribe(result => {
-        if (result) {
-          runInInjectionContext(Ss.injector, () => {
-            const retreatHomeService = inject(RetreatHomeService);
-            retreatHomeService.setReload(true);
-            resolve(result);
-          });
-        } else {
-          resolve();
-        }
+      ref.onClose.subscribe((result: RetreatHomeI) => {
+        resolve();
       });
     });
   }
@@ -261,22 +261,8 @@ export class RetreatHome {
 
       retreatHomeService
         .toggleRetreatHomeStatus(retreatHome)
-        .then(() => {
-          Ss.toastService.success({
-            message: 'Estado de la casa de retiro cambiado correctamente',
-            title: 'Estado cambiado',
-          });
-          resolve();
-          retreatHomeService.setReload(true);
-        })
-        .catch(error => {
-          console.error('Error al cambiar estado:', error);
-          Ss.toastService.error({
-            message: 'Error al cambiar el estado de la casa de retiro',
-            title: 'Error',
-          });
-          reject(error);
-        });
+        .then(() => resolve())
+        .catch(error => reject(error));
     });
   }
 

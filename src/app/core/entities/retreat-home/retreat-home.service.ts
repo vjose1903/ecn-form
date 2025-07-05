@@ -16,17 +16,12 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   private userService = inject(UserService);
   private authService = inject(AuthService);
 
-  private _reload: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   private _retreatHomes: BehaviorSubject<RetreatHome[]> = new BehaviorSubject<RetreatHome[]>([]);
   private _loadingRetreatHomeList: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   private _lastFetch: number = 0;
   private readonly CACHE_DURATION = 3 * 60 * 1000; // 3 minutos
 
   // Observables públicos
-  get reload$(): Observable<boolean> {
-    return this._reload.asObservable();
-  }
-
   get retreatHomes$(): Observable<RetreatHome[]> {
     return this._retreatHomes.asObservable();
   }
@@ -50,13 +45,6 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
 
   get collectionName() {
     return this._collectionName;
-  }
-
-  /**
-   * Establece el estado de recarga
-   */
-  setReload(reload: boolean) {
-    this._reload.next(reload);
   }
 
   /**
@@ -145,14 +133,10 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
     }
 
     try {
-      const result = await this.createOneInParentCollection({
-        parentCollection: this.userService.collectionName,
-        parentId: this.authService.current_user()!.id,
-        data: newRetreatHome,
-      });
+      const result = await this._createOne({ data: newRetreatHome });
 
-      // Invalidar caché
-      this.invalidateCache();
+      // Actualizar observable
+      this.updateRetreatHomeInCache(result, 'create');
 
       Ss.toastService.success({ message: 'Casa de retiro creada correctamente', title: 'Éxito' });
 
@@ -179,8 +163,8 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
         data: retreatHome,
       });
 
-      // Actualizar caché
-      this.updateCacheItem(retreatHome.id, new RetreatHome(result));
+      // Actualizar observable
+      this.updateRetreatHomeInCache(result, 'update');
 
       Ss.toastService.success({ message: 'Casa de retiro actualizada correctamente', title: 'Éxito' });
 
@@ -206,12 +190,16 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
         },
       });
 
-      // Actualizar caché
-      this.updateCacheItem(retreatHome.id, new RetreatHome(result));
+      // Actualizar observable
+      this.updateRetreatHomeInCache(result, 'update');
+
+      const action = retreatHome.is_active ? 'desactivada' : 'activada';
+      Ss.toastService.success({ message: `Casa de retiro ${action} correctamente`, title: 'Éxito' });
 
       return result;
     } catch (error) {
       console.error('Error al cambiar estado de casa de retiro:', error);
+      Ss.toastService.error({ message: 'Error al cambiar el estado de la casa de retiro', title: 'Error' });
       throw error;
     }
   }
@@ -227,8 +215,8 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
     try {
       await this._deleteOne({ find_by: 'id', find_value: id });
 
-      // Remover de caché
-      this.removeFromCache(id);
+      // Remover del observable
+      this.removeRetreatHomeFromCache(id);
 
       Ss.toastService.success({ message: 'Casa de retiro eliminada correctamente', title: 'Éxito' });
     } catch (error) {
@@ -238,35 +226,33 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
     }
   }
 
-
   /**
-   * Actualiza un elemento en el caché
+   * Actualiza o agrega una casa de retiro en el observable
    */
-  private updateCacheItem(id: string, retreatHome: RetreatHome): void {
-    const current = this._retreatHomes.value;
-    const index = current.findIndex(rh => rh.id === id);
+  private updateRetreatHomeInCache(retreatHomeData: RetreatHomeI, action: 'create' | 'update'): void {
+    const retreatHomeInstance = new RetreatHome(retreatHomeData);
+    const currentRetreatHomes = this._retreatHomes.value;
 
-    if (index >= 0) {
-      current[index] = retreatHome;
-      this._retreatHomes.next([...current]);
+    if (action === 'create') {
+      // Agregar al final del array
+      this._retreatHomes.next([...currentRetreatHomes, retreatHomeInstance]);
+    } else {
+      // Buscar y actualizar
+      const index = currentRetreatHomes.findIndex(rh => rh.id === retreatHomeData.id);
+      if (index !== -1) {
+        currentRetreatHomes[index] = retreatHomeInstance;
+        this._retreatHomes.next([...currentRetreatHomes]);
+      }
     }
   }
 
   /**
-   * Remueve un elemento del caché
+   * Remueve una casa de retiro del observable
    */
-  private removeFromCache(id: string): void {
-    const current = this._retreatHomes.value;
-    const filtered = current.filter(rh => rh.id !== id);
-    this._retreatHomes.next(filtered);
-  }
-
-  /**
-   * Invalida el caché
-   */
-  private invalidateCache(): void {
-    this._retreatHomes.next([]);
-    this._lastFetch = 0;
+  private removeRetreatHomeFromCache(id: string): void {
+    const currentRetreatHomes = this._retreatHomes.value;
+    const filteredRetreatHomes = currentRetreatHomes.filter(rh => rh.id !== id);
+    this._retreatHomes.next(filteredRetreatHomes);
   }
 
   /**
@@ -278,9 +264,18 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   }
 
   /**
+   * Invalida el caché
+   */
+  private invalidateCache(): void {
+    this._retreatHomes.next([]);
+    this._lastFetch = 0;
+  }
+
+  /**
    * Limpia el caché
    */
   override clearCache(): void {
-    this.invalidateCache();
+    this._retreatHomes.next([]);
+    this._lastFetch = 0;
   }
 }

@@ -290,11 +290,7 @@ export class Retreat {
       });
 
       ref.onClose.subscribe((result: RetreatI) => {
-        // runInInjectionContext(Ss.injector, () => {
-        //   const retreatService = inject(RetreatService);
-        //   retreatService.refresh();
         resolve();
-        // });
       });
     });
   }

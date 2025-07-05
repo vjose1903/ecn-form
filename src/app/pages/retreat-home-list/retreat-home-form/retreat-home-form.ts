@@ -57,8 +57,6 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
   private readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   private readonly MAX_FILES = 10;
 
-
-
   get imagesControl() {
     return this.formGroup()?.get(FormControlName.images) as FormArray;
   }
@@ -96,7 +94,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
       const form = this.formGroup();
       if (form) {
         this.loading() ? form?.disable() : form?.enable();
-        
+
         // Validar formulario en tiempo real
         this.isFormValid.set(form.valid && this.hasValidImages());
       }
@@ -106,15 +104,9 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
     effect(() => {
       const form = this.formGroup();
       if (form) {
-        form.valueChanges
-          .pipe(
-            takeUntil(this.destroy$),
-            debounceTime(300),
-            distinctUntilChanged()
-          )
-          .subscribe(() => {
-            this.isFormValid.set(form.valid && this.hasValidImages());
-          });
+        form.valueChanges.pipe(takeUntil(this.destroy$), debounceTime(300), distinctUntilChanged()).subscribe(() => {
+          this.isFormValid.set(form.valid && this.hasValidImages());
+        });
       }
     });
   }
@@ -137,22 +129,10 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
       this.formGroup.set(
         this.fb.group({
           [FormControlName.id]: [retreatHome?.id ?? null, []],
-          [FormControlName.name]: [
-            retreatHome?.name ?? null, 
-            [Validators.required, Validators.minLength(2), Validators.maxLength(100)]
-          ],
-          [FormControlName.phone]: [
-            retreatHome?.phone ?? null, 
-            [Validators.pattern(/^\(\d{3}\) \d{3}-\d{4}$/)]
-          ],
-          [FormControlName.address]: [
-            retreatHome?.address ?? null, 
-            [Validators.required, Validators.minLength(10), Validators.maxLength(500)]
-          ],
-          [FormControlName.location]: [
-            retreatHome?.location ?? null, 
-            [Validators.required, UrlValidator.validate]
-          ],
+          [FormControlName.name]: [retreatHome?.name ?? null, [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
+          [FormControlName.phone]: [retreatHome?.phone ?? null, [Validators.pattern(/^\(\d{3}\) \d{3}-\d{4}$/)]],
+          [FormControlName.address]: [retreatHome?.address ?? null, [Validators.required, Validators.minLength(10), Validators.maxLength(500)]],
+          [FormControlName.location]: [retreatHome?.location ?? null, [Validators.required, UrlValidator.validate]],
           [FormControlName.city]: [cityRef, []],
           [FormControlName.is_active]: [retreatHome?.is_active ?? true, []],
           [FormControlName.images]: this.fb.array([]),
@@ -170,9 +150,9 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
       }
     } catch (error) {
       console.error('Error al crear formulario:', error);
-      Ss.toastService.error({ 
-        message: 'Error al inicializar el formulario', 
-        title: 'Error' 
+      Ss.toastService.error({
+        message: 'Error al inicializar el formulario',
+        title: 'Error',
       });
     }
   }
@@ -208,7 +188,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
   private hasUnsavedChanges(): boolean {
     const form = this.formGroup();
     if (!form) return false;
-    
+
     return form.dirty || this.filesToDelete().length > 0;
   }
 
@@ -224,7 +204,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      
+
       // Validar tipo de archivo
       if (!file.type.startsWith('image/')) {
         errors.push(`${file.name} no es una imagen válida`);
@@ -248,9 +228,9 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
 
     // Mostrar errores si los hay
     if (errors.length > 0) {
-      Ss.toastService.warning({ 
-        message: errors.join('\n'), 
-        title: 'Archivos inválidos' 
+      Ss.toastService.warning({
+        message: errors.join('\n'),
+        title: 'Archivos inválidos',
       });
     }
 
@@ -260,10 +240,10 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
       reader.onload = (e: any) => {
         // Usar NgZone.run para asegurar que los cambios se detecten correctamente
         this.ngZone.run(() => {
-          this.addImage({ 
-            file: file, 
-            name: file.name, 
-            url: e.target.result
+          this.addImage({
+            file: file,
+            name: file.name,
+            url: e.target.result,
           });
         });
       };
@@ -279,9 +259,9 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
    */
   addImage(image: FileI) {
     if (this.imagesControl.length >= this.MAX_FILES) {
-      Ss.toastService.warning({ 
-        message: `Máximo ${this.MAX_FILES} imágenes permitidas`, 
-        title: 'Límite alcanzado' 
+      Ss.toastService.warning({
+        message: `Máximo ${this.MAX_FILES} imágenes permitidas`,
+        title: 'Límite alcanzado',
       });
       return;
     }
@@ -299,11 +279,11 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
   removeImage(index: number) {
     const fileRemoved = this.imagesControl.length > index ? this.imagesControl.at(index).value : null;
     this.imagesControl.removeAt(index);
-    
+
     if (fileRemoved && fun.hasValue(fileRemoved.id)) {
       this.filesToDelete.set([...this.filesToDelete(), fileRemoved]);
     }
-    
+
     // Actualizar la señal de hasImages
     this.hasImages.set(this.imagesControl.length > 0);
     // Marcar para detección de cambios
@@ -331,9 +311,9 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
   async onSubmit() {
     const form = this.formGroup();
     if (!form || !form.valid) {
-      Ss.toastService.error({ 
-        message: 'Por favor, completa todos los campos requeridos', 
-        title: 'Formulario inválido' 
+      Ss.toastService.error({
+        message: 'Por favor, completa todos los campos requeridos',
+        title: 'Formulario inválido',
       });
       return;
     }
@@ -344,23 +324,18 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
 
       const formData = form.getRawValue();
       const validationErrors = this.validateFormData(formData);
-      
+
       if (validationErrors.length > 0) {
-        Ss.toastService.error({ 
-          message: validationErrors.join('\n'), 
-          title: 'Datos inválidos' 
+        Ss.toastService.error({
+          message: validationErrors.join('\n'),
+          title: 'Datos inválidos',
         });
         return;
       }
 
       const result = await this.processFormSubmission(formData);
-      
-      // Mostrar mensaje de éxito
-      const action = formData.id ? 'editada' : 'creada';
-      Ss.toastService.success({ 
-        message: `Casa de Retiro ${action} correctamente`, 
-        title: 'Éxito' 
-      });
+
+      console.log('RESULTADO', result);
 
       // Cerrar el dialog y devolver los datos
       this.ref.close(result);
@@ -378,23 +353,23 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
    */
   private validateFormData(formData: any): string[] {
     const errors: string[] = [];
-    
+
     if (!formData.name?.trim()) {
       errors.push('El nombre es requerido');
     }
-    
+
     if (!formData.address?.trim()) {
       errors.push('La dirección es requerida');
     }
-    
+
     if (!formData.location?.trim()) {
       errors.push('La ubicación es requerida');
     }
-    
+
     if (formData.phone && !formData.phone.match(/^\(\d{3}\) \d{3}-\d{4}$/)) {
       errors.push('El formato del teléfono debe ser (###) ###-####');
     }
-    
+
     return errors;
   }
 
@@ -402,13 +377,10 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
    * Procesa el envío del formulario
    */
   private async processFormSubmission(formData: any): Promise<RetreatHomeI> {
-    const filesToUpload = formData.images
-      .filter((image: FileI) => !fun.hasValue(image.id))
-      .map((file: FileI) => new FileClass(file));
-    
-    const filesSaved = formData.images
-      .filter((image: FileI) => fun.hasValue(image.id));
-    
+    const filesToUpload = formData.images.filter((image: FileI) => !fun.hasValue(image.id)).map((file: FileI) => new FileClass(file));
+
+    const filesSaved = formData.images.filter((image: FileI) => fun.hasValue(image.id));
+
     const filesToDelete = this.filesToDelete();
 
     // Subir archivos con progreso
@@ -429,6 +401,8 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
     if (formData.id) {
       retreatHome = await this.retreatHomeService.updateRetreatHome(formData);
     } else {
+      console.log('CREAR NUEVO');
+
       retreatHome = await this.retreatHomeService.createRetreatHome(formData);
     }
 
@@ -438,7 +412,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
       const totalCount = filesToUpload.length;
       Ss.toastService.warning({
         message: `Algunos archivos (${failedCount}/${totalCount}) no se subieron correctamente`,
-        title: 'Advertencia'
+        title: 'Advertencia',
       });
     }
 
@@ -448,7 +422,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
   /**
    * Sube archivos con progreso
    */
-  private async uploadFilesWithProgress(files: FileClass[]): Promise<{ successful: FileClass[], failed: FileClass[] }> {
+  private async uploadFilesWithProgress(files: FileClass[]): Promise<{ successful: FileClass[]; failed: FileClass[] }> {
     if (files.length === 0) {
       return { successful: [], failed: [] };
     }
@@ -457,7 +431,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
     const failed: FileClass[] = [];
     let completed = 0;
 
-    const uploadPromises = files.map(async (file) => {
+    const uploadPromises = files.map(async file => {
       try {
         const result = await this.fileService.uploadFile(file);
         successful.push(result);
@@ -491,7 +465,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
    */
   private handleSubmissionError(error: any): void {
     let message = 'Error inesperado al procesar el formulario';
-    
+
     if (error instanceof Error) {
       if (error.message.includes('archivo') || error.message.includes('imagen')) {
         message = 'Error al procesar las imágenes. Intente nuevamente.';
@@ -501,10 +475,10 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
         message = error.message;
       }
     }
-    
-    Ss.toastService.error({ 
-      message, 
-      title: 'Error' 
+
+    Ss.toastService.error({
+      message,
+      title: 'Error',
     });
   }
 }

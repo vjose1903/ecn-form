@@ -274,24 +274,6 @@ export class RetreatList implements OnInit, OnDestroy {
     if (this.loading()) return;
 
     new Retreat().openForm();
-
-    // this.ref = this.dialogService.open(RetreatForm, {
-    //   header: 'Nuevo Retiro',
-    //   width: '70%',
-    //   contentStyle: { overflow: 'auto' },
-    //   baseZIndex: 10000,
-    //   maximizable: true,
-    //   modal: true,
-    //   breakpoints: { '960px': '75vw', '640px': '90vw' },
-    // });
-
-    // this.ref.onClose.subscribe((result: RetreatI) => {
-    //   if (result) {
-    //     // Refrescar datos después de crear
-    //     this.refreshData();
-    //     Ss.toastService.success({ message: 'Retiro creado exitosamente' });
-    //   }
-    // });
   }
 
   /**

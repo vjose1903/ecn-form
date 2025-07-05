@@ -1,9 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { Ss } from '@core/services/singleton.service';
 import { ButtonModule } from 'primeng/button';
-import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
-import { RetreatHomeForm } from './retreat-home-form/retreat-home-form';
+import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { DynamicDataviewComponent, DynamicDataviewConfig, FilterConfig } from '@core/components/dynamic-dataview';
 import { RetreatHomeDataList } from './components/retreat-home-data-list/retreat-home-data-list';
 import { RetreatHomeDataGrid } from './components/retreat-home-data-grid/retreat-home-data-grid';
@@ -19,7 +17,6 @@ import { Subject, takeUntil } from 'rxjs';
 })
 export class RetreatHomeList implements OnInit, OnDestroy {
   private retreatHomeService = inject(RetreatHomeService);
-  private dialogService = inject(DialogService);
   private destroy$ = new Subject<void>();
 
   ref: DynamicDialogRef | undefined;
@@ -45,7 +42,7 @@ export class RetreatHomeList implements OnInit, OnDestroy {
       key: 'search',
       label: 'Buscar',
       placeholder: 'Buscar por nombre, dirección o teléfono...',
-      defaultValue: ''
+      defaultValue: '',
     },
     {
       type: 'select',
@@ -54,7 +51,7 @@ export class RetreatHomeList implements OnInit, OnDestroy {
       placeholder: '...',
       options: this.statusOptions,
       defaultValue: 'all',
-      width: 'w-full md:w-48'
+      width: 'w-full md:w-48',
     },
     {
       type: 'sort',
@@ -62,8 +59,8 @@ export class RetreatHomeList implements OnInit, OnDestroy {
       label: 'Ordenar por',
       placeholder: '...',
       options: this.sortOptions,
-      defaultValue: 'name'
-    }
+      defaultValue: 'name',
+    },
   ];
 
   dataviewConfig = new DynamicDataviewConfig({
@@ -77,18 +74,18 @@ export class RetreatHomeList implements OnInit, OnDestroy {
       values: {
         search: '',
         status: 'all',
-        sort: 'name'
+        sort: 'name',
       },
-      onFilterChange: (filters) => this.onFiltersChanged(filters)
+      onFilterChange: filters => this.onFiltersChanged(filters),
     },
     sorting: {
       enabled: true,
       field: 'name',
       order: 'asc',
       options: this.sortOptions,
-      onSortChange: (sorting) => this.onSortingChanged(sorting)
+      onSortChange: sorting => this.onSortingChanged(sorting),
     },
-    pagination: { enabled: true, rows: 10, totalRecords: 0 }
+    pagination: { enabled: true, rows: 10, totalRecords: 0 },
   });
 
   constructor() {}
@@ -125,14 +122,6 @@ export class RetreatHomeList implements OnInit, OnDestroy {
    * Configura las suscripciones
    */
   private setupSubscriptions(): void {
-    // Suscripción a cambios de recarga
-    this.retreatHomeService.reload$.pipe(takeUntil(this.destroy$)).subscribe(reload => {
-      if (reload) {
-        this.getRetreatHomes();
-        this.retreatHomeService.setReload(false);
-      }
-    });
-
     // Suscripción a cambios en el servicio
     this.retreatHomeService.retreatHomes$.pipe(takeUntil(this.destroy$)).subscribe(retreats => {
       this.updateDataviewData(retreats);
@@ -191,11 +180,7 @@ export class RetreatHomeList implements OnInit, OnDestroy {
     // Aplicar filtro de búsqueda
     if (filters['search']) {
       const search = filters['search'].toLowerCase();
-      filtered = filtered.filter(retreat => 
-        retreat.displayName.toLowerCase().includes(search) || 
-        retreat.displayAddress.toLowerCase().includes(search) || 
-        retreat.phone.toLowerCase().includes(search)
-      );
+      filtered = filtered.filter(retreat => retreat.displayName.toLowerCase().includes(search) || retreat.displayAddress.toLowerCase().includes(search) || retreat.phone.toLowerCase().includes(search));
     }
 
     // Aplicar filtro de estado
@@ -256,24 +241,6 @@ export class RetreatHomeList implements OnInit, OnDestroy {
   showNewRetreatDialog(): void {
     if (this.loading()) return;
 
-    this.ref = this.dialogService.open(RetreatHomeForm, {
-      header: 'Nueva Casa de Retiro',
-      width: '70%',
-      contentStyle: { overflow: 'auto' },
-      baseZIndex: 10000,
-      maximizable: true,
-      modal: true,
-      breakpoints: { '960px': '75vw', '640px': '90vw' },
-      data: { retreatHome: undefined },
-    });
-
-    this.ref.onClose.pipe(takeUntil(this.destroy$)).subscribe(result => {
-      if (result) {
-        this.retreatHomeService.setReload(true);
-      }
-      this.ref = undefined;
-    });
+    new RetreatHome().openForm();
   }
-
-  
 }
