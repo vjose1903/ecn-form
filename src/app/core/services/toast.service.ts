@@ -16,7 +16,7 @@ export class ToastService {
   }
 
   warning(args: { message: string; title?: string; life?: number }) {
-    this.messageService.add({ severity: 'warning', summary: args.title ?? 'Warning', detail: args.message, life: args.life ?? 3000 });
+    this.messageService.add({ severity: 'warn', summary: args.title ?? 'Warning', detail: args.message, life: args.life ?? 3000 });
   }
 
   info(args: { message: string; title?: string; life?: number }) {

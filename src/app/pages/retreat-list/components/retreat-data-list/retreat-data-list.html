@@ -24,9 +24,9 @@
         </div>
 
         <!-- Número de retiro -->
-        <div class="flex items-center gap-x-3 mb-2">
-          <h3 class="text-lg font-semibold text-gray-900 truncate" [title]="item.displayNumber">Retiro No. {{ item.displayNumber }}</h3>
-          <h4 class="text-md text-gray-800 truncate" [title]="item.displayCommunityName">Comunidad: {{ item.displayCommunityName }}</h4>
+        <div class="flex items-center gap-x-3 mb-3 flex-wrap">
+          <h3 class="text-lg font-semibold text-gray-900 whitespace-nowrap" [title]="item.displayNumber">Retiro No. {{ item.displayNumber }}</h3>
+          <h4 class="text-md text-gray-800" [title]="item.displayCommunityName">Comunidad: {{ item.displayCommunityName }}</h4>
         </div>
 
         <!-- Información del retiro -->

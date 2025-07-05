@@ -55,7 +55,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
   private readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-  private readonly MAX_FILES = 10;
+  private readonly MAX_FILES = 6;
 
   get imagesControl() {
     return this.formGroup()?.get(FormControlName.images) as FormArray;
@@ -150,10 +150,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
       }
     } catch (error) {
       console.error('Error al crear formulario:', error);
-      Ss.toastService.error({
-        message: 'Error al inicializar el formulario',
-        title: 'Error',
-      });
+      Ss.toastService.error({ message: 'Error al inicializar el formulario', title: 'Error' });
     }
   }
 
@@ -219,7 +216,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
 
       // Validar cantidad máxima
       if (this.imagesControl.length + validFiles.length >= this.MAX_FILES) {
-        errors.push(`Máximo ${this.MAX_FILES} imágenes permitidas`);
+        errors.push(`Máximo 6 imágenes permitidas`);
         break;
       }
 
@@ -228,10 +225,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
 
     // Mostrar errores si los hay
     if (errors.length > 0) {
-      Ss.toastService.warning({
-        message: errors.join('\n'),
-        title: 'Archivos inválidos',
-      });
+      Ss.toastService.warning({ message: errors.join('\n'), title: 'Archivos inválidos' });
     }
 
     // Procesar archivos válidos
@@ -259,10 +253,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
    */
   addImage(image: FileI) {
     if (this.imagesControl.length >= this.MAX_FILES) {
-      Ss.toastService.warning({
-        message: `Máximo ${this.MAX_FILES} imágenes permitidas`,
-        title: 'Límite alcanzado',
-      });
+      Ss.toastService.warning({ message: `Máximo 6 imágenes permitidas`, title: 'Límite alcanzado' });
       return;
     }
 
@@ -311,10 +302,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
   async onSubmit() {
     const form = this.formGroup();
     if (!form || !form.valid) {
-      Ss.toastService.error({
-        message: 'Por favor, completa todos los campos requeridos',
-        title: 'Formulario inválido',
-      });
+      Ss.toastService.error({ message: 'Por favor, completa todos los campos requeridos', title: 'Formulario inválido' });
       return;
     }
 
@@ -326,10 +314,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
       const validationErrors = this.validateFormData(formData);
 
       if (validationErrors.length > 0) {
-        Ss.toastService.error({
-          message: validationErrors.join('\n'),
-          title: 'Datos inválidos',
-        });
+        Ss.toastService.error({ message: validationErrors.join('\n'), title: 'Datos inválidos' });
         return;
       }
 
@@ -410,10 +395,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
     if (failedFiles.length > 0) {
       const failedCount = failedFiles.length;
       const totalCount = filesToUpload.length;
-      Ss.toastService.warning({
-        message: `Algunos archivos (${failedCount}/${totalCount}) no se subieron correctamente`,
-        title: 'Advertencia',
-      });
+      Ss.toastService.warning({ message: `Algunos archivos (${failedCount}/${totalCount}) no se subieron correctamente`, title: 'Advertencia' });
     }
 
     return retreatHome;
@@ -476,9 +458,6 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
       }
     }
 
-    Ss.toastService.error({
-      message,
-      title: 'Error',
-    });
+    Ss.toastService.error({ message, title: 'Error' });
   }
 }

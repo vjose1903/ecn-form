@@ -70,14 +70,15 @@
 
         <!-- Imágenes -->
         <div class="col-span-1 md:col-span-12 relative" [id]="FormFieldId.images">
-          <div class="flex gap-1 mb-3">
+          <div class="flex items-center gap-2 mb-3">
             <label class="font-bold text-lg md:text-xl">Imágenes</label>
+            <span class="text-sm text-gray-500 ">({{ imagesControl.length }}/6)</span>
           </div>
 
           <!-- Botón para seleccionar imágenes -->
           <div class="mb-4">
             <input type="file" #fileInput multiple accept="image/*" (change)="onFileSelected($event)" class="hidden" />
-            <p-button [disabled]="loading()" type="button" icon="pi pi-upload" label="Seleccionar Imágenes" severity="secondary" (onClick)="fileInput.click()" [disabled]="loading()" class="w-auto" />
+            <p-button [disabled]="loading() || !canAddMoreImages" type="button" icon="pi pi-upload" [label]="!canAddMoreImages ? 'Máximo 6 imágenes' : 'Seleccionar Imágenes'" severity="secondary" (onClick)="fileInput.click()" class="w-auto" />
           </div>
 
           <!-- Grid de miniaturas -->

@@ -41,5 +41,9 @@ export class Menu implements OnInit, OnDestroy {
 
   executeCommand(item: MenuItem) {
     if (item.command) item.command();
+
+    if (this.menuService.visible()) {
+      this.menuService.toggleMenu(false);
+    }
   }
 }

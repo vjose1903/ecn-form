@@ -127,7 +127,8 @@ export class RetreatForm implements OnInit {
   getRetreatHomes() {
     this.retreatHomeService.loadingRetreatHomes$.subscribe(loading => {
       if (!loading) {
-        this.retreatHomes.set(this.retreatHomeService.retreatHomes);
+        const activeRetreatHomes = this.retreatHomeService.retreatHomes.filter(retreatHome => retreatHome.is_active);
+        this.retreatHomes.set(activeRetreatHomes);
       }
     });
   }

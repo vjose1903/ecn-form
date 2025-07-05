@@ -8,7 +8,7 @@
 
     <div class="flex items-center gap-2">
       @if(isAdminRoute() ){
-      <p-button type="button" icon="pi pi-bars" [rounded]="true" severity="danger" class="lg:hidden" styleClass="w-10 h-10 relative" (onClick)="menuService.toggleMenu()"> </p-button>
+      <p-button type="button" icon="pi pi-bars" [rounded]="true" severity="danger" class="lg:hidden" (onClick)="menuService.toggleMenu()"> </p-button>
       }
     </div>
   </div>
