@@ -238,19 +238,6 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
     }
   }
 
-  /**
-   * Obtiene estadísticas básicas
-   */
-  getStats(): { total: number; active: number; inactive: number } {
-    const retreats = this._retreatHomes.value;
-    const active = retreats.filter(r => r.is_active).length;
-
-    return {
-      total: retreats.length,
-      active,
-      inactive: retreats.length - active,
-    };
-  }
 
   /**
    * Actualiza un elemento en el caché

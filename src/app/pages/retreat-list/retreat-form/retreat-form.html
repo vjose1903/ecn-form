@@ -1,8 +1,8 @@
 <div class="grid grid-rows-[1fr_min-content] gap-10 h-full" *ngIf="form">
   <form [formGroup]="form" (ngSubmit)="onSubmit()">
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-7 overflow-y-auto overflow-x-hidden">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-y-7 md:gap-x-5 overflow-y-auto overflow-x-hidden">
       <!-- Casa de Retiro -->
-      <div class="col-span-1 md:col-span-6" [id]="FormFieldId.retreat_home">
+      <div class="{{ isEdit ? 'col-span-1 lg:col-span-12' : 'col-span-1 md:col-span-8' }} md:col-span-6" [id]="FormFieldId.retreat_home">
         <div class="flex gap-1">
           <label class="font-bold" [for]="FormFieldId.retreat_home + '_control'"> Casa de Retiro </label>
           <span class="text-red-500">*</span>
@@ -22,8 +22,22 @@
         </div>
       </div>
 
+      <!-- Nombre de la comunidad -->
+      @if (isEdit) {
+      <div class="col-span-1 md:col-span-6 lg:col-span-8" [id]="FormFieldId.community_name">
+        <div class="flex gap-1">
+          <label class="font-bold" [for]="FormFieldId.community_name + '_control'"> Nombre de la comunidad </label>
+        </div>
+        <div class="flex flex-col">
+          <input type="text" pInputText placeholder="Nombre de la comunidad" [formControlName]="FormControlName.community_name" class="w-full" />
+
+          <form-error-msg [control]="form.get(FormControlName.community_name)" />
+        </div>
+      </div>
+      }
+
       <!-- Numero de Retiro -->
-      <div class="col-span-1 md:col-span-6 relative" [id]="FormFieldId.number">
+      <div class="col-span-1 md:col-span-6 lg:col-span-4 relative" [id]="FormFieldId.number">
         <div class="flex gap-1">
           <label class="font-bold" [for]="FormFieldId.number + '_control'"> Número de Retiro </label>
           <span class="text-red-500">*</span>
@@ -36,7 +50,7 @@
       <!-- Fecha Límite de Solicitudes -->
       <div class="col-span-1 md:col-span-4 relative" [id]="FormFieldId.max_request_date">
         <div class="flex gap-1">
-          <label class="font-bold" [for]="FormFieldId.max_request_date + '_control'"> Fecha Límite de Solicitudes </label>
+          <label class="font-bold" [for]="FormFieldId.max_request_date + '_control'"> Fecha Límite Solicitud </label>
           <span class="text-red-500">*</span>
         </div>
 
@@ -127,24 +141,39 @@
         </div>
       </div>
 
+      <!-- Aceptar solicitudes -->
+      <div class="col-span-1 md:col-span-6 relative" [id]="FormFieldId.accept_requests">
+        <div class="flex gap-1">
+          <label class="font-bold" [for]="FormFieldId.accept_requests + '_control'"> Aceptar solicitudes Nuevas</label>
+          <span class="text-red-500">*</span>
+        </div>
+        <div class="flex flex-col">
+          <p-selectbutton [id]="FormFieldId.accept_requests + '_control'" class="w-fit" [options]="yesNoOptions" optionLabel="label" optionValue="value" [formControlName]="FormControlName.accept_requests" />
+          <form-error-msg [control]="form.get(FormControlName.accept_requests)" />
+        </div>
+      </div>
+
       <!-- Sección de Modalidad Mixta -->
       <div *ngIf="form.get(FormControlName.modality)?.value === 'mixto' && mixedModalityDates().length > 0" class="col-span-1 md:col-span-12">
         <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
           <h3 class="text-lg font-semibold mb-1 text-gray-900">Configuración de Modalidad Mixta</h3>
           <p class="text-sm text-gray-600 mb-4">Selecciona la modalidad para cada día del retiro:</p>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            <div *ngFor="let dateInfo of mixedModalityDates()" class="flex flex-col gap-2">
-              <label class="text-sm font-medium text-gray-700">{{ dateInfo.label | titlecase }}</label>
-              <p-select 
-                [options]="mixedModalityOptions" 
-                optionLabel="label" 
-                optionValue="value" 
-                [ngModel]="mixedModalityData()[dateInfo.date]" 
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div *ngFor="let dateInfo of mixedModalityDates()" class="flex flex-col">
+              <div class="flex gap-1">
+                <label class="text-sm font-medium text-gray-700">{{ dateInfo.label | titlecase }}</label>
+                <span class="text-red-500">*</span>
+              </div>
+              <p-select
+                [options]="mixedModalityOptions"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="mixedModalityData()[dateInfo.date]"
                 (ngModelChange)="updateMixedModalityValue(dateInfo.date, $event)"
                 [ngModelOptions]="{standalone: true}"
-                class="w-full" 
-                appendTo="body" 
+                class="w-full"
+                appendTo="body"
                 [disabled]="form.disabled"
                 placeholder="Seleccionar" />
             </div>

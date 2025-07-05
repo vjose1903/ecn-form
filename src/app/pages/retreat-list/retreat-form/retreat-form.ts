@@ -18,18 +18,27 @@ import { RetreatI, RetreatModality, RetreatModalityType } from '@core/entities/r
 import { SelectModule } from 'primeng/select';
 import { RetreatHome } from '@core/entities/retreat-home/retreat-home.class';
 import { RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
+import { Retreat } from '@core/entities/retreat/retreat.class';
+import { fun } from '@core/services/functions.service';
+import { yesNoOptions } from '@core/typescript/constants';
+import { SelectButtonModule } from 'primeng/selectbutton';
 
 @Component({
   selector: 'app-retreat-form',
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, FormsModule, DatePickerModule, InputNumberModule, TextareaModule, FormErrorMsgComponent, SelectModule, TitleCasePipe],
+  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, FormsModule, DatePickerModule, InputNumberModule, TextareaModule, FormErrorMsgComponent, SelectModule, TitleCasePipe, SelectButtonModule],
   templateUrl: './retreat-form.html',
   styleUrl: './retreat-form.scss',
 })
 export class RetreatForm implements OnInit {
-  deviceDetectorService = inject(DeviceDetectorService);
-  retreatService = inject(RetreatService);
-  retreatHomeService = inject(RetreatHomeService);
-  cdr = inject(ChangeDetectorRef);
+  private deviceDetectorService = inject(DeviceDetectorService);
+  private retreatService = inject(RetreatService);
+  private retreatHomeService = inject(RetreatHomeService);
+  private config = inject(DynamicDialogConfig);
+  private cdr = inject(ChangeDetectorRef);
+  private fb = inject(FormBuilder);
+  private ref = inject(DynamicDialogRef);
+
+  retreat!: Retreat;
 
   formGroup = signal<FormGroup | undefined>(undefined);
   loading = signal(false);
@@ -47,6 +56,8 @@ export class RetreatForm implements OnInit {
     { label: 'Mixto', value: RetreatModality.MIXTO },
   ];
 
+  yesNoOptions = yesNoOptions;
+
   // Opciones para modalidad mixta
   mixedModalityOptions = this.modalityOptions.slice(0, 2);
 
@@ -56,6 +67,10 @@ export class RetreatForm implements OnInit {
 
   get form(): FormGroup | null {
     return this.formGroup() || null;
+  }
+
+  get isEdit(): boolean {
+    return fun.hasValue(this.config?.data?.retreat?.id);
   }
 
   get isFormValid(): boolean {
@@ -73,27 +88,38 @@ export class RetreatForm implements OnInit {
     return true;
   }
 
-  constructor(private fb: FormBuilder, public ref: DynamicDialogRef, public config: DynamicDialogConfig) {
+  constructor() {
     this.setupFormEffects();
   }
 
   ngOnInit() {
-    this.initForm();
+    if (this.config?.data?.retreat) {
+      this.retreat = this.config.data.retreat;
+    }
+
+    this.createForm(this.retreat);
     this.subscribeToForm();
     this.getRetreatHomes();
   }
 
-  initForm() {
+  createForm(retreat: Retreat | undefined) {
+    console.log('%c retreat', 'color: red; font-weight: bold;', retreat);
+
     const form = this.fb.group({
-      [FormControlName.number]: [null, [Validators.required, Validators.min(1)]],
-      [FormControlName.retreat_home]: [null, [Validators.required]],
-      [FormControlName.max_request_date]: [{ value: null, disabled: false }, [Validators.required]],
-      [FormControlName.start_date]: [{ value: null, disabled: true }, [Validators.required]],
-      [FormControlName.end_date]: [{ value: null, disabled: true }, [Validators.required]],
-      [FormControlName.modality]: [{ value: null, disabled: true }, [Validators.required]],
-      [FormControlName.is_active]: [true],
-      [FormControlName.accept_requests]: [true],
+      [FormControlName.id]: [retreat?.id ?? null, []],
+      [FormControlName.number]: [retreat?.number ?? null, [Validators.required, Validators.min(1)]],
+      [FormControlName.retreat_home]: [retreat?.retreatHomeData?.id ?? null, [Validators.required]],
+      [FormControlName.community_name]: [retreat?.community_name ?? null, []],
+      [FormControlName.max_request_date]: [{ value: retreat?.max_request_date ? new Date(retreat.max_request_date) : null, disabled: false }, [Validators.required]],
+      [FormControlName.start_date]: [{ value: retreat?.start_date ? new Date(retreat.start_date) : null, disabled: true }, [Validators.required]],
+      [FormControlName.end_date]: [{ value: retreat?.end_date ? new Date(retreat.end_date) : null, disabled: true }, [Validators.required]],
+      [FormControlName.modality]: [{ value: retreat?.modality ?? null, disabled: true }, [Validators.required]],
+      [FormControlName.is_active]: [retreat?.is_active ?? true],
+      [FormControlName.accept_requests]: [retreat?.accept_requests ?? true],
     });
+
+    console.log('%c retreat', 'color: red; font-weight: bold;', retreat);
+    console.log('%c retreat', 'color: yellow; font-weight: bold;', form.getRawValue());
 
     this.formGroup.set(form);
   }
@@ -125,11 +151,16 @@ export class RetreatForm implements OnInit {
             form.get(controlName)?.disable();
           });
         } else {
-          // Habilitar todos los campos del formulario
-          const allControls = Object.keys(form.controls);
-          allControls.forEach(controlName => {
-            form.get(controlName)?.enable();
-          });
+          // Solo habilitar los campos que deben estar habilitados inicialmente
+          // max_request_date, number, retreat_home, is_active, accept_requests
+          form.get(FormControlName.max_request_date)?.enable();
+          form.get(FormControlName.number)?.enable();
+          form.get(FormControlName.retreat_home)?.enable();
+          form.get(FormControlName.is_active)?.enable();
+          form.get(FormControlName.accept_requests)?.enable();
+
+          // Los campos start_date, end_date, modality permanecen deshabilitados
+          // hasta que se completen las validaciones correspondientes
         }
       }
     });
@@ -138,89 +169,116 @@ export class RetreatForm implements OnInit {
   subscribeToForm() {
     if (!this.form) return;
 
-    // Suscripción a cambios en la fecha límite de solicitudes
-    this.form.get(FormControlName.max_request_date)?.valueChanges.subscribe((maxRequestDate: any) => {
-      const startDateControl = this.form?.get(FormControlName.start_date);
-      const endDateControl = this.form?.get(FormControlName.end_date);
-      const modalityControl = this.form?.get(FormControlName.modality);
+    // Configurar suscripciones a cambios en el formulario
+    this.setupMaxRequestDateSubscription();
+    this.setupStartDateSubscription();
+    this.setupEndDateSubscription();
+    this.setupModalitySubscription();
+
+    // Ejecutar lógica inicial
+    setTimeout(() => {
+      this.form?.get(FormControlName.max_request_date)?.updateValueAndValidity({ emitEvent: false });
+    }, 0);
+  }
+
+  /**
+   * Configura la suscripción a cambios en la fecha límite de solicitudes
+   */
+  private setupMaxRequestDateSubscription(): void {
+    this.form?.get(FormControlName.max_request_date)?.valueChanges.subscribe((maxRequestDate: any) => {
+      const controls = this.getFormControls();
 
       if (maxRequestDate) {
-        startDateControl?.enable();
-        startDateControl?.setValidators([Validators.required]);
+        controls.startDate?.enable();
+        controls.startDate?.setValidators([Validators.required]);
 
-        if (!startDateControl?.value) {
-          endDateControl?.disable();
-          endDateControl?.clearValidators();
-          endDateControl?.setValue(null);
-          modalityControl?.disable();
-          modalityControl?.clearValidators();
+        if (!controls.startDate?.value) {
+          this.resetControls([controls.endDate, controls.modality]);
         }
       } else {
-        startDateControl?.disable();
-        startDateControl?.clearValidators();
-        startDateControl?.setValue(null);
-        endDateControl?.disable();
-        endDateControl?.clearValidators();
-        endDateControl?.setValue(null);
-        modalityControl?.disable();
-        modalityControl?.clearValidators();
-        modalityControl?.setValue(null);
+        this.resetControls([controls.startDate, controls.endDate, controls.modality]);
       }
 
-      startDateControl?.updateValueAndValidity({ emitEvent: false });
-      endDateControl?.updateValueAndValidity({ emitEvent: false });
-      modalityControl?.updateValueAndValidity({ emitEvent: false });
+      this.updateControlsValidity(controls);
     });
+  }
 
-    // Suscripción a cambios en la fecha de inicio
+  /**
+   * Configura la suscripción a cambios en la fecha de inicio
+   */
+  private setupStartDateSubscription(): void {
     this.form?.get(FormControlName.start_date)?.valueChanges.subscribe((startDate: any) => {
-      const endDateControl = this.form?.get(FormControlName.end_date);
-      const modalityControl = this.form?.get(FormControlName.modality);
+      const controls = this.getFormControls();
 
       if (startDate) {
-        endDateControl?.enable();
-        endDateControl?.setValidators([Validators.required]);
+        controls.endDate?.enable();
+        controls.endDate?.setValidators([Validators.required]);
         this.checkAndEnableModality();
       } else {
-        endDateControl?.disable();
-        endDateControl?.clearValidators();
-        endDateControl?.setValue(null);
-        modalityControl?.disable();
-        modalityControl?.clearValidators();
-        modalityControl?.setValue(null);
+        this.resetControls([controls.endDate, controls.modality]);
       }
 
-      endDateControl?.updateValueAndValidity({ emitEvent: false });
-      modalityControl?.updateValueAndValidity({ emitEvent: false });
+      this.updateControlsValidity(controls);
     });
+  }
 
-    // Suscripción a cambios en la fecha de fin
+  /**
+   * Configura la suscripción a cambios en la fecha de fin
+   */
+  private setupEndDateSubscription(): void {
     this.form?.get(FormControlName.end_date)?.valueChanges.subscribe((endDate: any) => {
       if (endDate) {
         this.checkAndEnableModality();
       } else {
-        const modalityControl = this.form?.get(FormControlName.modality);
-        modalityControl?.disable();
-        modalityControl?.clearValidators();
-        modalityControl?.setValue(null);
-        modalityControl?.updateValueAndValidity({ emitEvent: false });
+        this.resetControls([this.form?.get(FormControlName.modality)]);
       }
     });
+  }
 
-    // Suscripción a cambios en la modalidad
+  /**
+   * Configura la suscripción a cambios en la modalidad
+   */
+  private setupModalitySubscription(): void {
     this.form?.get(FormControlName.modality)?.valueChanges.subscribe((modality: any) => {
       if (modality === RetreatModality.MIXTO) {
         this.generateMixedModalityDates();
       } else {
-        this.mixedModalityDates.set([]);
         this.clearMixedModalityData();
       }
     });
+  }
 
-    // Ejecutar lógica inicial
-    setTimeout(() => {
-      this.form?.get(FormControlName.max_request_date)?.updateValueAndValidity();
-    }, 0);
+  /**
+   * Obtiene los controles del formulario para evitar repetición
+   */
+  private getFormControls() {
+    return {
+      startDate: this.form?.get(FormControlName.start_date),
+      endDate: this.form?.get(FormControlName.end_date),
+      modality: this.form?.get(FormControlName.modality),
+    };
+  }
+
+  /**
+   * Resetea múltiples controles del formulario
+   */
+  private resetControls(controls: any[]): void {
+    controls.forEach(control => {
+      if (control) {
+        control.disable();
+        control.clearValidators();
+        control.setValue(null);
+      }
+    });
+  }
+
+  /**
+   * Actualiza la validez de múltiples controles
+   */
+  private updateControlsValidity(controls: any): void {
+    Object.values(controls).forEach((control: any) => {
+      control?.updateValueAndValidity({ emitEvent: false });
+    });
   }
 
   /**
@@ -292,7 +350,7 @@ export class RetreatForm implements OnInit {
 
     dates.forEach(dateInfo => {
       // Preservar el valor existente si existe, sino usar null
-      mixedData[dateInfo.date] = currentData[dateInfo.date] || null as any;
+      mixedData[dateInfo.date] = currentData[dateInfo.date] || (null as any);
     });
 
     this.mixedModalityData.set(mixedData);
@@ -318,69 +376,125 @@ export class RetreatForm implements OnInit {
     window.open('https://www.google.com/maps', '_blank');
   }
 
+  /**
+   * Envía el formulario
+   */
   async onSubmit() {
     const form = this.formGroup();
-    if (!form) return;
-
-    // Verificar que el formulario principal sea válido
-    if (!form.valid) {
-      Ss.toastService.error({ message: 'Por favor, complete todos los campos requeridos' });
+    if (!form || !form.valid) {
+      Ss.toastService.error({ message: 'Por favor, completa todos los campos requeridos', title: 'Formulario inválido' });
       return;
     }
 
-    // Verificar que los campos de modalidad mixta sean válidos si es necesario
-    if (form.get(FormControlName.modality)?.value === RetreatModality.MIXTO) {
+    try {
+      this.loading.set(true);
+
+      const formData = form.getRawValue();
+      const validationErrors = this.validateFormData(formData);
+
+      if (validationErrors.length > 0) {
+        Ss.toastService.error({ message: validationErrors.join('\n'), title: 'Datos inválidos' });
+        return;
+      }
+
+      const result = await this.processFormSubmission(formData);
+
+      // Cerrar el dialog y devolver los datos
+      this.ref.close(result);
+    } catch (error) {
+      console.error('Error al procesar formulario:', error);
+      this.handleSubmissionError(error);
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  /**
+   * Valida los datos del formulario
+   */
+  private validateFormData(formData: any): string[] {
+    const errors: string[] = [];
+
+    if (!formData.number || formData.number < 1) {
+      errors.push('El número del retiro es requerido y debe ser mayor a 0');
+    }
+
+    if (!formData.retreat_home) {
+      errors.push('La casa de retiro es requerida');
+    }
+
+    if (!formData.max_request_date) {
+      errors.push('La fecha límite de solicitudes es requerida');
+    }
+
+    if (!formData.start_date) {
+      errors.push('La fecha de inicio es requerida');
+    }
+
+    if (!formData.end_date) {
+      errors.push('La fecha de fin es requerida');
+    }
+
+    if (!formData.modality) {
+      errors.push('La modalidad es requerida');
+    }
+
+    // Validar modalidad mixta
+    if (formData.modality === RetreatModality.MIXTO) {
       const dates = this.mixedModalityDates();
       const mixedData = this.mixedModalityData();
       const hasInvalidMixedModality = dates.some(dateInfo => !mixedData[dateInfo.date]);
 
       if (hasInvalidMixedModality) {
-        Ss.toastService.error({ message: 'Por favor, selecciona la modalidad para todos los días del retiro' });
-        return;
+        errors.push('Por favor, selecciona la modalidad para todos los días del retiro');
       }
     }
 
-    this.loading.set(true);
+    return errors;
+  }
 
-    // Obtener los datos del formulario
-    const formData = form.getRawValue();
-
+  /**
+   * Procesa el envío del formulario
+   */
+  private async processFormSubmission(formData: any): Promise<RetreatI> {
     // Agregar los datos de modalidad mixta si es necesario
     if (formData.modality === RetreatModality.MIXTO) {
       formData.mixedModalityData = this.mixedModalityData();
     }
 
-    console.log('formData >>>> ', JSON.parse(JSON.stringify(formData)));
-
+    // Obtener referencia de la casa de retiro
     const retreatHome = this.retreatHomes().find(retreatHome => retreatHome.id === formData.retreat_home);
     if (retreatHome) {
-      const retreat = new RetreatHome(retreatHome);
-      formData.retreat_home = await retreat.getRetreatHomeReference();
+      const retreatHomeInstance = new RetreatHome(retreatHome);
+      formData.retreat_home = await retreatHomeInstance.getRetreatHomeReference();
     }
 
-    console.log('formData >>>> ', formData);
-    setTimeout(() => {
-      this.loading.set(false);
-    }, 2000);
+    // Crear o actualizar el retiro
+    let retreat: RetreatI;
+    if (formData.id) {
+      retreat = await this.retreatService.updateRetreat(formData);
+    } else {
+      retreat = await this.retreatService.createRetreat(formData);
+    }
 
-    // Guardar en Firebase usando el servicio actualizado
-    // this.retreatService
-    //   .createRetreat(formData as RetreatI)
-    //   .then(retreat => {
-    //     Ss.toastService.success({ message: 'Retiro creado correctamente' });
-    //     console.log('Retiro creado:', retreat);
+    return retreat;
+  }
 
-    //     // Cerrar el dialog y devolver los datos
-    //     this.ref.close(formData);
-    //   })
-    //   .catch(error => {
-    //     Ss.toastService.error({ message: 'Error al crear el retiro' });
-    //     console.error('Error al crear el retiro:', error);
-    //   })
-    //   .finally(() => {
-    //     this.formGroup.enable();
-    //     this.loading.set(false);
-    //   });
+  /**
+   * Maneja errores de envío
+   */
+  private handleSubmissionError(error: any): void {
+    let message = 'Error inesperado al procesar el formulario';
+
+    if (error instanceof Error) {
+      if (error.message.includes('red') || error.message.includes('conexión')) {
+        message = 'Error de conexión. Verifique su internet e intente nuevamente.';
+      } else {
+        message = error.message;
+      }
+    }
+
+    Ss.toastService.error({ message, title: 'Error' });
   }
 
   onCancel() {

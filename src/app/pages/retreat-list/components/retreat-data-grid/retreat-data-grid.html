@@ -1,5 +1,3 @@
-<p>retreat-data-grid works!</p>
-
 <p-card
   class="overflow-hidden relative cursor-pointer transition-all duration-200 hover:shadow-lg"
   [class]="getLoadingClass()"
@@ -16,14 +14,18 @@
     </div>
 
     <!-- Icono del retiro -->
-    <div class="relative w-full h-48 bg-gray-100 flex items-center justify-center">
-      <i class="pi pi-calendar text-gray-400 text-4xl"></i>
+    <div class="relative w-full h-48 bg-gray-100 flex items-center justify-center flex-col">
+      <h5 class="text-md text-red-500">Retiro No.</h5>
+      <h1 class="text-3xl md:text-4xl font-bold text-red-700">{{ item.displayNumber }}</h1>
     </div>
   </ng-template>
 
   <div>
     <!-- Número de retiro -->
-    <h3 class="text-md md:text-lg font-semibold mb-4 text-gray-900 line-clamp-2" [title]="item.displayNumber">{{ item.displayNumber }}</h3>
+    <div class="flex items-center gap-x-3 mb-2 flex-wrap">
+      <h3 class="text-lg font-semibold text-gray-900 whitespace-nowrap" [title]="item.displayNumber">Retiro No. {{ item.displayNumber }}</h3>
+      <h4 class="text-md text-gray-800" [title]="item.displayCommunityName">Comunidad: {{ item.displayCommunityName }}</h4>
+    </div>
 
     <!-- Información del retiro -->
     <div class="space-y-2 text-xs text-gray-600 mb-3">
@@ -55,19 +57,7 @@
 
   <!-- Acciones -->
   <ng-template #footer>
-    <div *ngIf="showActions" class="flex justify-between items-center w-full">
-      <p-button
-        type="button"
-        icon="pi pi-eye"
-        severity="secondary"
-        variant="text"
-        size="small"
-        [disabled]="loading()"
-        (onClick)="openRetreatView()"
-        pTooltip="Ver detalles"
-        tooltipPosition="top"
-        [attr.aria-label]="'Ver detalles de ' + item.displayNumber" />
-
+    <div *ngIf="showActions" class="flex justify-end items-center w-full">
       <div class="flex items-center gap-1">
         <p-button
           *ngIf="item.is_active"

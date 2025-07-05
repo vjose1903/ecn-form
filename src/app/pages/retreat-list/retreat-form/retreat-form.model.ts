@@ -1,4 +1,5 @@
 export enum FormControlName {
+  id = 'id',
   number = 'number',
   start_date = 'start_date',
   end_date = 'end_date',
@@ -7,6 +8,7 @@ export enum FormControlName {
   modality = 'modality',
   is_active = 'is_active',
   accept_requests = 'accept_requests',
+  community_name = 'community_name',
 }
 
 export enum FormFieldId {
@@ -18,5 +20,6 @@ export enum FormFieldId {
   max_request_date = 'max_request_date_field',
   is_active = 'is_active_field',
   accept_requests = 'accept_requests_field',
+  community_name = 'community_name_field',
 }
 

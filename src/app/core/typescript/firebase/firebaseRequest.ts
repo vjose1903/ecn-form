@@ -195,23 +195,6 @@ export class FirebaseRequest<T> {
     }
   }
 
-  async createOneInParentCollection(params: CreateInParentParams): Promise<T> {
-    try {
-      params = (await this.validateParams(params, 'createInParent')) as CreateInParentParams;
-
-      const refString = `${params.parentCollection}/${params.parentId}/${this._firebaseCollectionName}`;
-      const entityRef = collection(Ss.firestore, refString);
-
-      const { id, ...data } = { ...params.data };
-      const docRef = await addDoc(entityRef, data);
-      const docSnapshot = await getDoc(docRef);
-
-      return await this.mapDocumentToObject(docSnapshot);
-    } catch (error) {
-      throw error;
-    }
-  }
-
   async _updateOne(params: referenceParams): Promise<T> {
     if (fun.isEmpty(params.data.id)) {
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -263,6 +246,24 @@ export class FirebaseRequest<T> {
     }
   }
 
+  // ========== MÉTODOS PARA COLECCIÓN PADRE ==========
+  async createOneInParentCollection(params: CreateInParentParams): Promise<T> {
+    try {
+      params = (await this.validateParams(params, 'createInParent')) as CreateInParentParams;
+
+      const refString = `${params.parentCollection}/${params.parentId}/${this._firebaseCollectionName}`;
+      const entityRef = collection(Ss.firestore, refString);
+
+      const { id, ...data } = { ...params.data };
+      const docRef = await addDoc(entityRef, data);
+      const docSnapshot = await getDoc(docRef);
+
+      return await this.mapDocumentToObject(docSnapshot);
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async updateOneInParentCollection(params: UpdateInParentParams): Promise<T> {
     try {
       params = (await this.validateParams(params, 'updateInParent')) as UpdateInParentParams;
@@ -304,51 +305,26 @@ export class FirebaseRequest<T> {
     }
   }
 
-  // ========== MÉTODOS PARA SUBCOLECCIONES ==========
-  async getAllSubCollection(params: SubCollectionParams): Promise<T[]> {
+  async getAllFromParentCollection(params: GetAllFromParentParams): Promise<T[]> {
     try {
-      const refString = this.makeEntityRefString({
-        find_value: params.parentId,
-        subEntity: params.subCollection,
-      });
-      return await this.getDocumentsByField(refString);
+      const refString = `${params.parentCollection}/${params.parentId}/${this._firebaseCollectionName}`;
+
+      if (params.find_by && params.find_value !== undefined) {
+        return await this.getDocumentsByField(refString, params.find_by, params.find_value);
+      } else {
+        return await this.getDocumentsByField(refString);
+      }
     } catch (error) {
       return [];
     }
   }
 
-  async getOneSubCollection(params: SubCollectionParams): Promise<T | null> {
+  async getOneFromParentCollection(params: GetOneFromParentParams): Promise<T | null> {
     try {
-      // Buscar por ID del documento
-      if (!params.find_by || params.find_by === 'id') {
-        const refString = this.makeEntityRefString({
-          find_value: params.parentId,
-          subEntity: params.subCollection,
-          subEntityId: params.subId,
-        });
-        return await this.getDocumentById(refString);
-      }
-
-      // Buscar por campo específico
-      const refString = this.makeEntityRefString({
-        find_value: params.parentId,
-        subEntity: params.subCollection,
-      });
-      return await this.getDocumentByField(refString, params.find_by, params.find_value);
+      const refString = `${params.parentCollection}/${params.parentId}/${this._firebaseCollectionName}/${params.documentId}`;
+      return await this.getDocumentById(refString);
     } catch (error) {
       return null;
-    }
-  }
-
-  async getAllSubCollectionByField(params: SubCollectionParams): Promise<T[]> {
-    try {
-      const refString = this.makeEntityRefString({
-        find_value: params.parentId,
-        subEntity: params.subCollection,
-      });
-      return await this.getDocumentsByField(refString, params.find_by, params.find_value);
-    } catch (error) {
-      return [];
     }
   }
 
@@ -408,14 +384,6 @@ export interface referenceParams {
   subEntityId?: any;
 }
 
-export interface SubCollectionParams {
-  parentId: string;
-  subCollection: string;
-  subId?: string;
-  find_by?: string;
-  find_value?: any;
-}
-
 export interface CreateInParentParams {
   parentCollection: string;
   parentId: string | number;
@@ -430,6 +398,19 @@ export interface UpdateInParentParams {
 }
 
 export interface DeleteInParentParams {
+  parentCollection: string;
+  parentId: string | number;
+  documentId: string | number;
+}
+
+export interface GetAllFromParentParams {
+  parentCollection: string;
+  parentId: string | number;
+  find_by?: string;
+  find_value?: any;
+}
+
+export interface GetOneFromParentParams {
   parentCollection: string;
   parentId: string | number;
   documentId: string | number;

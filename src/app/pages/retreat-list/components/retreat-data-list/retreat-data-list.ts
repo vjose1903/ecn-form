@@ -4,11 +4,10 @@ import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
 import { TagModule } from 'primeng/tag';
-import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { DialogService } from 'primeng/dynamicdialog';
 import { Retreat } from '@core/entities/retreat/retreat.class';
-import { RetreatView } from '../retreat-view/retreat-view';
 import { RetreatService } from '@core/entities/retreat/retreat.service';
-import { Subject, debounceTime, takeUntil } from 'rxjs';
+import { Subject, debounceTime } from 'rxjs';
 
 @Component({
   selector: 'app-retreat-data-list',
@@ -27,7 +26,6 @@ export class RetreatDataList implements OnInit, OnDestroy {
   @Input() enableSelection: boolean = false;
 
   loading = signal(false);
-  dialogRef: DynamicDialogRef | undefined;
 
   constructor() {}
 
@@ -39,10 +37,6 @@ export class RetreatDataList implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    
-    if (this.dialogRef) {
-      this.dialogRef.close();
-    }
   }
 
   /**
@@ -57,7 +51,7 @@ export class RetreatDataList implements OnInit, OnDestroy {
    */
   onCardClick(event: Event): void {
     if (this.loading()) return;
-    
+
     // Evitar que se ejecute si se hizo click en un botón
     const target = event.target as HTMLElement;
     if (target.closest('button') || target.closest('.p-button')) {
@@ -70,27 +64,17 @@ export class RetreatDataList implements OnInit, OnDestroy {
   /**
    * Abre la vista detallada del retiro
    */
-  openRetreatView(): void {
+  async openRetreatView(): Promise<void> {
     if (this.loading()) return;
 
-    this.dialogRef = this.dialogService.open(RetreatView, {
-      header: this.item.displayNumber,
-      width: '70vw',
-      modal: true,
-      draggable: false,
-      resizable: false,
-      closable: true,
-      focusOnShow: false,
-      data: {
-        retreat: this.item,
-      },
-      breakpoints: { '960px': '75vw', '640px': '90vw' },
-    });
-
-    // Limpiar referencia cuando se cierre
-    this.dialogRef.onClose.pipe(takeUntil(this.destroy$)).subscribe(() => {
-      this.dialogRef = undefined;
-    });
+    try {
+      this.loading.set(true);
+      await this.item.openView();
+    } catch (error) {
+      console.error('Error al abrir vista:', error);
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   /**

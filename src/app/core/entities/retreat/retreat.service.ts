@@ -16,17 +16,12 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   private userService = inject(UserService);
   private authService = inject(AuthService);
 
-  private _reload: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   private _retreats: BehaviorSubject<Retreat[]> = new BehaviorSubject<Retreat[]>([]);
   private _loadingRetreatList: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   private _lastFetch: number = 0;
   private readonly CACHE_DURATION = 3 * 60 * 1000; // 3 minutos
 
   // Observables públicos
-  get reload$(): Observable<boolean> {
-    return this._reload.asObservable();
-  }
-
   get retreats$(): Observable<Retreat[]> {
     return this._retreats.asObservable();
   }
@@ -53,13 +48,6 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   }
 
   /**
-   * Establece el estado de recarga
-   */
-  setReload(reload: boolean) {
-    this._reload.next(reload);
-  }
-
-  /**
    * Obtiene todos los retiros con caché
    */
   async getAll(): Promise<Retreat[]> {
@@ -74,19 +62,23 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   }
 
   /**
-   * Obtiene todos los retiros desde Firebase
+   * Obtiene todos los retiros desde Firebase usando la colección padre
    */
   private async fetchAllRetreats(): Promise<Retreat[]> {
     try {
       this._loadingRetreatList.next(true);
       const currentUser = this.authService.current_user();
-      const cityRef = await currentUser?.cityRef;
 
-      if (!cityRef) {
-        throw new Error('No se pudo obtener la referencia de la ciudad del usuario');
+      if (!currentUser?.id) {
+        throw new Error('Usuario no autenticado');
       }
 
-      const retreats = await this._getAll({ find_by: 'city', find_value: cityRef });
+      // Usar getAllFromParentCollection para obtener retiros desde la subcolección del usuario
+      const retreats = await this.getAllFromParentCollection({
+        parentCollection: this.userService.collectionName,
+        parentId: currentUser.id,
+      });
+
       const retreatList = retreats.map(retreat => new Retreat(retreat));
 
       this._retreats.next(retreatList);
@@ -114,6 +106,17 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
     const cached = this._retreats.value.find(r => r.id === id);
     if (cached) {
       return cached;
+    }
+
+    // Si no está en caché, buscar en la subcolección del usuario actual
+    const currentUser = this.authService.current_user();
+    if (currentUser?.id) {
+      const retreat = await this.getOneFromParentCollection({
+        parentCollection: this.userService.collectionName,
+        parentId: currentUser.id,
+        documentId: id,
+      });
+      return retreat ? new Retreat(retreat) : null;
     }
 
     return this.processGetRetreat(id, 'id');
@@ -151,8 +154,8 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
         data: newRetreat,
       });
 
-      // Invalidar caché
-      this.invalidateCache();
+      // Actualizar observable
+      this.updateRetreatInCache(result, 'create');
 
       Ss.toastService.success({ message: 'Retiro creado correctamente', title: 'Éxito' });
 
@@ -173,14 +176,20 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
     }
 
     try {
-      const result = await this._updateOne({
-        find_by: 'id',
-        find_value: retreat.id,
+      const currentUser = this.authService.current_user();
+      if (!currentUser?.id) {
+        throw new Error('Usuario no autenticado');
+      }
+
+      const result = await this.updateOneInParentCollection({
+        parentCollection: this.userService.collectionName,
+        parentId: currentUser.id,
+        documentId: retreat.id,
         data: retreat,
       });
 
-      // Actualizar caché
-      this.updateCacheItem(retreat.id, new Retreat(result));
+      // Actualizar observable
+      this.updateRetreatInCache(result, 'update');
 
       Ss.toastService.success({ message: 'Retiro actualizado correctamente', title: 'Éxito' });
 
@@ -197,14 +206,20 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
    */
   async toggleRetreatStatus(retreat: Retreat): Promise<RetreatI> {
     try {
-      const result = await this._updateOne({
-        find_by: 'id',
-        find_value: retreat.id,
+      const currentUser = this.authService.current_user();
+      if (!currentUser?.id) {
+        throw new Error('Usuario no autenticado');
+      }
+
+      const result = await this.updateOneInParentCollection({
+        parentCollection: this.userService.collectionName,
+        parentId: currentUser.id,
+        documentId: retreat.id,
         data: { is_active: !retreat.is_active },
       });
 
-      // Actualizar caché
-      this.updateCacheItem(retreat.id, new Retreat(result));
+      // Actualizar observable
+      this.updateRetreatInCache(result, 'update');
 
       const action = retreat.is_active ? 'desactivado' : 'activado';
       Ss.toastService.success({ message: `Retiro ${action} correctamente`, title: 'Éxito' });
@@ -222,10 +237,19 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
    */
   async deleteRetreat(id: string): Promise<void> {
     try {
-      await this._deleteOne({ find_by: 'id', find_value: id });
+      const currentUser = this.authService.current_user();
+      if (!currentUser?.id) {
+        throw new Error('Usuario no autenticado');
+      }
 
-      // Remover del caché
-      this.removeFromCache(id);
+      await this.deleteOneInParentCollection({
+        parentCollection: this.userService.collectionName,
+        parentId: currentUser.id,
+        documentId: id,
+      });
+
+      // Remover del observable
+      this.removeRetreatFromCache(id);
 
       Ss.toastService.success({ message: 'Retiro eliminado correctamente', title: 'Éxito' });
     } catch (error) {
@@ -248,22 +272,29 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   }
 
   /**
-   * Actualiza un elemento en el caché
+   * Actualiza o agrega un retiro en el observable
    */
-  private updateCacheItem(id: string, retreat: Retreat): void {
+  private updateRetreatInCache(retreatData: RetreatI, action: 'create' | 'update'): void {
+    const retreatInstance = new Retreat(retreatData);
     const currentRetreats = this._retreats.value;
-    const index = currentRetreats.findIndex(r => r.id === id);
 
-    if (index !== -1) {
-      currentRetreats[index] = retreat;
-      this._retreats.next([...currentRetreats]);
+    if (action === 'create') {
+      // Agregar al final del array
+      this._retreats.next([...currentRetreats, retreatInstance]);
+    } else {
+      // Buscar y actualizar
+      const index = currentRetreats.findIndex(r => r.id === retreatData.id);
+      if (index !== -1) {
+        currentRetreats[index] = retreatInstance;
+        this._retreats.next([...currentRetreats]);
+      }
     }
   }
 
   /**
-   * Remueve un elemento del caché
+   * Remueve un retiro del observable
    */
-  private removeFromCache(id: string): void {
+  private removeRetreatFromCache(id: string): void {
     const currentRetreats = this._retreats.value;
     const filteredRetreats = currentRetreats.filter(r => r.id !== id);
     this._retreats.next(filteredRetreats);
@@ -291,7 +322,6 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   override clearCache(): void {
     this._retreats.next([]);
     this._loadingRetreatList.next(false);
-    this._reload.next(false);
     this._lastFetch = 0;
   }
 

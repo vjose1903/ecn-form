@@ -45,4 +45,38 @@ export class fun {
   static hasValue(value: any): boolean {
     return !fun.isEmpty(value);
   }
+
+  /**
+   * Nombre: convertFirebaseTimestamp
+   * Descripcion : Esta funcion convierte un objeto Timestamp de Firebase a string de fecha ISO
+   * @param timestamp - The timestamp to convert
+   * @returns string - The converted timestamp
+   */
+  static convertFirebaseTimestamp(timestamp: any): string {
+    if (!timestamp) return '';
+    
+    // Si ya es un string, devolverlo tal como está
+    if (typeof timestamp === 'string') {
+      return timestamp;
+    }
+    
+    // Si es un objeto Timestamp de Firebase con seconds
+    if (timestamp && typeof timestamp === 'object' && timestamp.seconds) {
+      const date = new Date(timestamp.seconds * 1000);
+      return date.toISOString();
+    }
+    
+    // Si es un objeto Date
+    if (timestamp instanceof Date) {
+      return timestamp.toISOString();
+    }
+    
+    // Si es un número (timestamp en milisegundos)
+    if (typeof timestamp === 'number') {
+      const date = new Date(timestamp);
+      return date.toISOString();
+    }
+    
+    return '';
+  }
 }

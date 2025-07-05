@@ -127,7 +127,7 @@ export class AuthService {
               if (!user) {
                 this.toastService.error({ message: 'Este correo no está registrado en el sistema. Contacta al administrador.', title: 'Acceso denegado' });
 
-                await deleteUser(userCredential.user);
+                // await deleteUser(userCredential.user);
 
                 await signOut(this.auth);
                 reject(new Error('Usuario no registrado'));

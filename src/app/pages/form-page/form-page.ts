@@ -16,6 +16,7 @@ import { DeviceE } from '../../core/models/device-detector.model';
 import { Affirmation, FormControlName, FormFieldId, FormGroupFields, IdentityType } from './form-page.model';
 import { FormErrorMsgComponent } from '@core/components/form-error-msg/form-error-msg.component';
 import { CedulaValidator } from '@core/typescript/validate-cedula';
+import { yesNoOptions } from '@core/typescript/constants';
 
 @Component({
   selector: 'app-form-page',
@@ -105,10 +106,7 @@ export class FormPage implements OnInit {
 
   identityTypes = [{ label: 'Cédula' }, { label: 'Pasaporte' }];
 
-  yesNoOptions = [
-    { label: 'Si', value: true },
-    { label: 'No', value: false },
-  ];
+  yesNoOptions = yesNoOptions;
 
   companionOptions = [
     { label: 'Padre' },

@@ -12,6 +12,7 @@ export enum RetreatModalityType {
 export interface RetreatI {
   id?: string;
   number: number;
+  community_name?: string;
   start_date: string;
   end_date: string;
   max_request_date: string;

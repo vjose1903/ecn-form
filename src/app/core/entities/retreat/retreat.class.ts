@@ -3,10 +3,14 @@ import { RetreatI, RetreatModality, RetreatModalityType } from './retreat.model'
 import { Ss } from '@core/services/singleton.service';
 import { RetreatService } from './retreat.service';
 import { RetreatHome } from '../retreat-home/retreat-home.class';
+import { RetreatForm } from 'app/pages/retreat-list/retreat-form/retreat-form';
+import { RetreatView } from 'app/pages/retreat-list/components/retreat-view/retreat-view';
+import { fun } from '@core/services/functions.service';
 
 export class Retreat {
   id: string = '';
   number: number = 0;
+  community_name: string = '';
   start_date: string = '';
   end_date: string = '';
   max_request_date: string = '';
@@ -19,6 +23,7 @@ export class Retreat {
 
   // Propiedades computadas para optimizar el rendimiento
   private _displayNumber: string | null = null;
+  private _displayCommunityName: string | null = null;
   private _displayDateRange: string | null = null;
   private _displayModality: string | null = null;
 
@@ -34,9 +39,10 @@ export class Retreat {
   private initializeFromData(retreat: RetreatI & { retreat_home?: any }): void {
     this.id = retreat.id || '';
     this.number = retreat.number || 0;
-    this.start_date = retreat.start_date || '';
-    this.end_date = retreat.end_date || '';
-    this.max_request_date = retreat.max_request_date || '';
+    this.community_name = retreat.community_name || '';
+    this.start_date = fun.convertFirebaseTimestamp(retreat.start_date);
+    this.end_date = fun.convertFirebaseTimestamp(retreat.end_date);
+    this.max_request_date = fun.convertFirebaseTimestamp(retreat.max_request_date);
     this.modality = retreat.modality || RetreatModality.PRESENCIAL;
     this.mixedModalityData = retreat.mixedModalityData || {};
     this.is_active = retreat.is_active ?? true;
@@ -64,9 +70,19 @@ export class Retreat {
    */
   get displayNumber(): string {
     if (this._displayNumber === null) {
-      this._displayNumber = `Retiro #${this.number}`;
+      this._displayNumber = this.number.toString();
     }
     return this._displayNumber;
+  }
+
+  /**
+   * Obtiene el número formateado para mostrar
+   */
+  get displayCommunityName(): string {
+    if (this._displayCommunityName === null) {
+      this._displayCommunityName = this.community_name || 'Nombre sin definir';
+    }
+    return this._displayCommunityName;
   }
 
   /**
@@ -255,66 +271,80 @@ export class Retreat {
   async openForm(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       const dialogService = Ss.dialogService;
-      
+
       if (!dialogService) {
         reject(new Error('DialogService no disponible'));
         return;
       }
 
-      // Importación dinámica del formulario
-      import('app/pages/retreat-list/retreat-form/retreat-form').then(({ RetreatForm }) => {
-        const ref = dialogService.open(RetreatForm, {
-          header: this.id ? `Editar ${this.displayNumber}` : 'Nuevo Retiro',
-          width: '70vw',
-          modal: true,
-          draggable: false,
-          resizable: false,
-          closable: true,
-          focusOnShow: false,
-          data: {
-            retreat: this,
-            isEdit: !!this.id,
-          },
-          breakpoints: { '960px': '75vw', '640px': '90vw' },
-        });
+      const ref = dialogService.open(RetreatForm, {
+        header: this.id ? 'Editar Retiro' : 'Nuevo Retiro',
+        width: '60vw',
+        modal: true,
+        draggable: false,
+        resizable: false,
+        closable: true,
+        focusOnShow: false,
+        data: { retreat: this.id ? this : undefined },
+        breakpoints: { '960px': '75vw', '640px': '90vw' },
+      });
 
-        ref.onClose.subscribe((result: RetreatI) => {
-          if (result) {
-            this.updateFrom(new Retreat(result));
-            Ss.toastService.success({ message: 'Retiro guardado correctamente' });
-          }
-          resolve();
-        });
-      }).catch(error => {
-        reject(error);
+      ref.onClose.subscribe((result: RetreatI) => {
+        // runInInjectionContext(Ss.injector, () => {
+        //   const retreatService = inject(RetreatService);
+        //   retreatService.refresh();
+        resolve();
+        // });
       });
     });
   }
 
   /**
+   * Abre la vista detallada del retiro
+   */
+  openView(): void {
+    const dialogService = Ss.dialogService;
+
+    if (!dialogService) {
+      console.error('DialogService no disponible');
+      return;
+    }
+
+    const dialogRef = dialogService.open(RetreatView, {
+      header: `Retiro No. ${this.displayNumber}  Comunidad: ${this.displayCommunityName}`,
+      width: '70vw',
+      modal: true,
+      draggable: false,
+      resizable: false,
+      closable: true,
+      focusOnShow: false,
+      data: {
+        retreat: this,
+      },
+      breakpoints: { '960px': '75vw', '640px': '90vw' },
+    });
+
+    // Limpiar referencia cuando se cierre
+    dialogRef.onClose.subscribe();
+  }
+
+  /**
    * Confirma el cambio de estado
    */
-  async confirmToggleStatus(): Promise<void> {
+  confirmToggleStatus(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      const confirmationService = Ss.confirmationService;
-      
-      if (!confirmationService) {
-        reject(new Error('ConfirmationService no disponible'));
-        return;
-      }
-
-      const action = this.is_active ? 'desactivar' : 'activar';
-      
-      confirmationService.confirm({
-        message: `¿Está seguro de que desea ${action} el ${this.displayNumber}?`,
-        header: `Confirmar ${action.charAt(0).toUpperCase() + action.slice(1)}`,
+      Ss.confirmationService.confirm({
+        message: this.is_active ? '¿Estás seguro de querer desactivar este retiro?' : '¿Estás seguro de querer reactivar este retiro?',
+        header: this.is_active ? 'Desactivar Retiro' : 'Activar Retiro',
         icon: 'pi pi-exclamation-triangle',
-        accept: () => {
-          this.toggleStatus(resolve, reject);
-        },
-        reject: () => {
-          resolve();
-        },
+        acceptLabel: 'Si',
+        rejectLabel: 'No',
+        acceptIcon: 'pi pi-check',
+        rejectIcon: 'pi pi-times',
+        acceptButtonStyleClass: this.is_active ? 'p-button-danger' : 'p-button-success',
+        rejectButtonStyleClass: 'p-button-secondary',
+        accept: () => this.toggleStatus(resolve, reject),
+        reject: () => resolve(),
       });
     });
   }
@@ -323,28 +353,14 @@ export class Retreat {
    * Cambia el estado del retiro
    */
   private toggleStatus(resolve: Function, reject: Function): void {
-    const retreatService = runInInjectionContext(Ss.injector, () => inject(RetreatService));
-    
-    if (!retreatService) {
-      reject(new Error('RetreatService no disponible'));
-      return;
-    }
+    runInInjectionContext(Ss.injector, () => {
+      const retreatService = inject(RetreatService);
 
-    const updatedRetreat = new Retreat(this.asJson());
-    updatedRetreat.is_active = !this.is_active;
-
-    retreatService.updateRetreat(updatedRetreat.asJson())
-      .then(() => {
-        this.is_active = updatedRetreat.is_active;
-        const action = this.is_active ? 'activado' : 'desactivado';
-        Ss.toastService.success({ message: `Retiro ${action} correctamente` });
-        resolve();
-      })
-      .catch((error: any) => {
-        console.error('Error al cambiar estado:', error);
-        Ss.toastService.error({ message: 'Error al cambiar el estado del retiro' });
-        reject(error);
-      });
+      retreatService
+        .toggleRetreatStatus(this)
+        .then(() => resolve())
+        .catch(error => reject(error));
+    });
   }
 
   /**

@@ -20,7 +20,6 @@ import { Subject, takeUntil } from 'rxjs';
 })
 export class RetreatList implements OnInit, OnDestroy {
   private retreatService = inject(RetreatService);
-  private dialogService = inject(DialogService);
   private destroy$ = new Subject<void>();
 
   loading = signal(false);
@@ -32,7 +31,7 @@ export class RetreatList implements OnInit, OnDestroy {
       key: 'search',
       label: 'Buscar',
       type: 'search',
-      placeholder: 'Buscar por número, casa de retiro...',
+      placeholder: 'Buscar por número, nombre de la comunidad, casa de retiro...',
       defaultValue: '',
     },
     {
@@ -122,11 +121,14 @@ export class RetreatList implements OnInit, OnDestroy {
    * Configura las suscripciones
    */
   private setupSubscriptions(): void {
-    // Suscribirse a cambios en el servicio
-    this.retreatService.reload$.pipe(takeUntil(this.destroy$)).subscribe(reload => {
-      if (reload) {
-        this.refreshData();
-      }
+    // Suscribirse a cambios en el caché de retiros para actualizar el dataview automáticamente
+    this.retreatService.retreats$.pipe(takeUntil(this.destroy$)).subscribe(retreats => {
+      this.updateDataviewData(retreats);
+    });
+
+    // Suscribirse al estado de carga
+    this.retreatService.loadingRetreats$.pipe(takeUntil(this.destroy$)).subscribe(loading => {
+      this.loading.set(loading);
     });
   }
 
@@ -135,24 +137,11 @@ export class RetreatList implements OnInit, OnDestroy {
    */
   private async initializeData(): Promise<void> {
     try {
-      this.loading.set(true);
-      await this.getRetreats();
+      // El observable retreats$ emitirá automáticamente cuando se carguen los datos
+      // El observable loadingRetreats$ se encargará de mostrar el estado de carga
+      await this.retreatService.getAll();
     } catch (error) {
       console.error('Error al inicializar datos:', error);
-    } finally {
-      this.loading.set(false);
-    }
-  }
-
-  /**
-   * Obtiene los retiros
-   */
-  async getRetreats(): Promise<void> {
-    try {
-      const retreats = await this.retreatService.getAll();
-      this.updateDataviewData(retreats);
-    } catch (error) {
-      console.error('Error al obtener retiros:', error);
     }
   }
 
@@ -191,7 +180,9 @@ export class RetreatList implements OnInit, OnDestroy {
     // Aplicar filtro de búsqueda
     if (filters['search']) {
       const search = filters['search'].toLowerCase();
-      filtered = filtered.filter(retreat => retreat.displayNumber.toLowerCase().includes(search) || retreat.retreatHomeName.toLowerCase().includes(search) || retreat.displayModality.toLowerCase().includes(search));
+      filtered = filtered.filter(
+        retreat => retreat.displayNumber.toLowerCase().includes(search) || retreat.displayCommunityName.toLowerCase().includes(search) || retreat.retreatHomeName.toLowerCase().includes(search) || retreat.displayModality.toLowerCase().includes(search)
+      );
     }
 
     // Aplicar filtro de estado
@@ -255,12 +246,10 @@ export class RetreatList implements OnInit, OnDestroy {
    */
   async refreshData(): Promise<void> {
     try {
-      this.loading.set(true);
+      // El observable loadingRetreats$ se encargará de mostrar el estado de carga
       await this.retreatService.refresh();
     } catch (error) {
       console.error('Error al refrescar datos:', error);
-    } finally {
-      this.loading.set(false);
     }
   }
 
@@ -282,23 +271,27 @@ export class RetreatList implements OnInit, OnDestroy {
    * Muestra el diálogo de nuevo retiro
    */
   showNewRetreatDialog() {
-    this.ref = this.dialogService.open(RetreatForm, {
-      header: 'Nuevo Retiro',
-      width: '70%',
-      contentStyle: { overflow: 'auto' },
-      baseZIndex: 10000,
-      maximizable: true,
-      modal: true,
-      breakpoints: { '960px': '75vw', '640px': '90vw' },
-    });
+    if (this.loading()) return;
 
-    this.ref.onClose.subscribe((result: RetreatI) => {
-      if (result) {
-        // Refrescar datos después de crear
-        this.refreshData();
-        Ss.toastService.success({ message: 'Retiro creado exitosamente' });
-      }
-    });
+    new Retreat().openForm();
+
+    // this.ref = this.dialogService.open(RetreatForm, {
+    //   header: 'Nuevo Retiro',
+    //   width: '70%',
+    //   contentStyle: { overflow: 'auto' },
+    //   baseZIndex: 10000,
+    //   maximizable: true,
+    //   modal: true,
+    //   breakpoints: { '960px': '75vw', '640px': '90vw' },
+    // });
+
+    // this.ref.onClose.subscribe((result: RetreatI) => {
+    //   if (result) {
+    //     // Refrescar datos después de crear
+    //     this.refreshData();
+    //     Ss.toastService.success({ message: 'Retiro creado exitosamente' });
+    //   }
+    // });
   }
 
   /**

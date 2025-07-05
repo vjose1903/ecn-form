@@ -275,10 +275,5 @@ export class RetreatHomeList implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Obtiene estadísticas
-   */
-  getStats(): { total: number; active: number; inactive: number } {
-    return this.retreatHomeService.getStats();
-  }
+  
 }
