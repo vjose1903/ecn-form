@@ -5,6 +5,13 @@
 } @else {
 <router-outlet />
 <p-toast />
-<p-confirmdialog />
-<p-dialog />  
+<p-confirmdialog>
+  <ng-template #message let-message>
+    <div class="flex items-center w-full gap-4">
+      <i [ngClass]="message.icon" class="!text-3xl text-primary-500"></i>
+      <p [innerHTML]="message.message"></p>
+    </div>
+  </ng-template>
+</p-confirmdialog>
+<p-dialog />
 }

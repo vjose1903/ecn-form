@@ -1,4 +1,4 @@
-import { Component, inject, Input, OnInit } from '@angular/core';
+import { Component, inject, Input, OnInit, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { AccordionModule } from 'primeng/accordion';
 import { InputTextModule } from 'primeng/inputtext';
@@ -17,17 +17,50 @@ import { Affirmation, FormControlName, FormFieldId, FormGroupFields, IdentityTyp
 import { FormErrorMsgComponent } from '@core/components/form-error-msg/form-error-msg.component';
 import { CedulaValidator } from '@core/typescript/validate-cedula';
 import { yesNoOptions } from '@core/typescript/constants';
+import { RetreatService } from '@core/entities/retreat/retreat.service';
+import { Retreat } from '@core/entities/retreat/retreat.class';
+import { Ss } from '@core/services/singleton.service';
+import { FormSkeletonComponent } from './components/form-skeleton/form-skeleton.component';
+import { RequestService } from '@core/entities/request/request.service';
+import { RequestI } from '@core/entities/request/request.model';
+import { RequestSend } from './components/request-send/request-send';
+import { City } from '@core/entities/city/city.class';
+import { fun } from '@core/services/functions.service';
+import { UserService } from '@core/entities/user/user.service';
+import { UserC } from '@core/entities/user/user.class';
+import { formDataMuck } from './form-page.muck';
 
 @Component({
   selector: 'app-form-page',
-  imports: [AccordionModule, InputTextModule, FormsModule, ReactiveFormsModule, SelectModule, DatePickerModule, TextareaModule, InputMaskModule, SelectButtonModule, DividerLine, ButtonModule, NgTemplateOutlet, FormErrorMsgComponent],
+  imports: [
+    AccordionModule,
+    InputTextModule,
+    FormsModule,
+    ReactiveFormsModule,
+    SelectModule,
+    DatePickerModule,
+    TextareaModule,
+    InputMaskModule,
+    SelectButtonModule,
+    DividerLine,
+    ButtonModule,
+    NgTemplateOutlet,
+    FormErrorMsgComponent,
+    FormSkeletonComponent,
+    RequestSend,
+  ],
   templateUrl: './form-page.html',
   styleUrl: './form-page.scss',
 })
 export class FormPage implements OnInit {
-  @Input() city: string = '';
+  @Input() user_id: string = '';
+  userData: UserC | null = null;
+  submission_success = signal(false);
 
   deviceDetectorService = inject(DeviceDetectorService);
+  retreatService = inject(RetreatService);
+  userService = inject(UserService);
+  requestService = inject(RequestService);
   fb = inject(FormBuilder);
 
   FormControlName = FormControlName;
@@ -39,14 +72,14 @@ export class FormPage implements OnInit {
   openedAccordionPanel: number[] = [0, 1, 2];
 
   formGroup = this.fb.group({
-    [FormControlName.city]: [this.city],
-    [FormControlName.date_request]: ['', Validators.required],
+    [FormControlName.id]: [''],
+    [FormControlName.retreat]: ['', Validators.required],
     [FormControlName.dating_period]: ['', Validators.required],
     [FormControlName.have_wedding_date]: [null, Validators.required],
     [FormControlName.wedding_date]: [null],
     [FormControlName.how_find_us]: ['', Validators.required],
-    [FormControlName.how_find_us_other]: ['', Validators.required],
-    [FormControlName.who_invited_you]: ['', Validators.required],
+    [FormControlName.how_find_us_other]: [''],
+    [FormControlName.who_invited_you]: [''],
 
     [FormGroupFields.she]: this.fb.group({
       [FormControlName.full_name]: ['', Validators.required],
@@ -98,11 +131,11 @@ export class FormPage implements OnInit {
     }),
   });
 
-  dates = [{ label: '31 de Octubre al 02 de Noviembre 2025' }];
-
+  retreats = signal<Retreat[] | null>(null);
+  loading = signal(true);
   timeRanges = [{ label: '0 a 6 meses' }, { label: '6 a 12 meses' }, { label: '1 a 4 años' }, { label: '4 a 6 años' }, { label: '6 a 8 años' }, { label: '8 a 10 años' }, { label: 'mas de 10 años' }];
 
-  howToKnow = [{ label: 'Redes' }, { label: 'Amigos' }, { label: 'Familia' }, { label: 'Otro' }];
+  howToKnow = [{ label: 'Redes Sociales' }, { label: 'Amigos' }, { label: 'Familia' }, { label: 'Otro' }];
 
   identityTypes = [{ label: 'Cédula' }, { label: 'Pasaporte' }];
 
@@ -138,8 +171,66 @@ export class FormPage implements OnInit {
     return this.formGroup?.get(FormGroupFields.he) as FormGroup;
   }
 
-  ngOnInit(): void {
+  get isFormValid() {
+    return this.formGroup.valid;
+  }
+
+  async ngOnInit(): Promise<void> {
+    await this.getUser();
     this.subscribeToFormChanges();
+    this.patchForm();
+    this.processInitForm();
+  }
+
+  patchForm() {
+    this.formGroup.patchValue(formDataMuck as any, { emitEvent: true });
+  }
+
+  test() {
+    console.log(this.formGroup);
+  }
+
+  processInitForm() {
+    this.loading.set(true);
+
+    const getRequiredInfo = () => new Promise<[UserC | null, Retreat[] | null]>(resolve => resolve([this.userData, this.retreats()]));
+    const reintentarSi = (requiredInfo: [UserC | null, Retreat[] | null]) => requiredInfo.some((info: UserC | Retreat[] | null) => info === null);
+    const noLoadedRequiredInfo = () => Ss.toastService.error({ message: 'Error al obtener la información requerida, Vuelva a intentarlo', title: 'Error' });
+
+    const initializeTable = () => {
+      this.loading.set(false);
+    };
+
+    fun.retryUntil({
+      task: getRequiredInfo,
+      retryWhen: reintentarSi,
+      actionAfterRetry: initializeTable.bind(this),
+      actionIfNoSuccess: noLoadedRequiredInfo,
+    });
+  }
+
+  getUser() {
+    this.userService.getUserById(this.user_id).then(user => {
+      this.userData = user;
+      this.getRetreats();
+    });
+  }
+
+  getRetreats() {
+    if (!this.userData) return;
+
+    this.retreatService
+      .getRetreatByUser(this.userData)
+      .then(retreats => {
+        this.retreats.set(retreats);
+
+        if (retreats?.length === 0) {
+          Ss.toastService.warning({ message: 'No hay retiros disponibles para solicitar', title: 'Error' });
+        }
+      })
+      .catch(error => {
+        Ss.toastService.error({ message: 'Error al obtener los retiros, disponibles para solicitar', title: 'Error' });
+      });
   }
 
   subscribeToFormChanges() {
@@ -364,5 +455,58 @@ export class FormPage implements OnInit {
 
     // Si hay errores que no sean 'required', el control es inválido
     return errorKeys.length > 0;
+  }
+
+  resetForm() {
+    this.formGroup.reset();
+    this.submission_success.set(false);
+  }
+
+  onSubmit() {
+    const formData = this.formGroup.getRawValue() as unknown as RequestI;
+
+    console.log('%c formData', 'color: lime; font-weight: bold;', JSON.stringify(formData, null, 2));
+
+    console.log(formData);
+    Ss.confirmationService.confirm({
+      message:
+        '<span class="text-lg text-red-600 font-semibold">IMPORTANTE: Solo se permite el envío de un formulario por persona.</span> <br> <br> <span class="text-sm">Por favor, revisa cuidadosamente toda la información proporcionada antes de confirmar el envío. Una vez enviado, no podrás realizar cambios.</span> <br> <span class="text-sm">Se enviará un correo de confirmación a la dirección de correo electrónico proporcionada.</span>',
+      header: '¿Estás seguro de querer enviar este formulario?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Enviar',
+      rejectLabel: 'Cancelar',
+      acceptIcon: 'pi pi-send',
+      rejectIcon: 'pi pi-times',
+      acceptButtonStyleClass: 'p-button-success',
+      rejectButtonStyleClass: 'p-button-secondary',
+      accept: () => this.processFormSubmission(formData),
+      reject: () => {},
+    });
+  }
+
+  private async processFormSubmission(formData: RequestI): Promise<RequestI | null> {
+    const retreat = this.retreats()?.find(r => r.id === formData.retreat);
+    if (!retreat) {
+      Ss.toastService.error({ message: 'Retiro no encontrado', title: 'Error' });
+      return null;
+    }
+
+    try {
+      let request: RequestI | null = null;
+      if (formData.id) {
+        // request = await this.requestService.updateRequest(formData, retreat);
+      } else {
+        request = await this.requestService.createRequest(formData, retreat);
+      }
+
+      await retreat.incrementRequestCount();
+
+      this.submission_success.set(true);
+
+      return request;
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
   }
 }

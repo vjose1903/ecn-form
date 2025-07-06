@@ -30,13 +30,9 @@ export class CityService extends FirebaseRequest<CityI> {
     return new Promise<City | null>(resolve => {
       this._getOne({ find_by: by, find_value: value })
         .then(city => {
-          console.log('%c city', 'color: blue; font-weight: bold;', city);
           resolve(city ? new City(city) : null);
         })
-        .catch(error => {
-          console.log(`ℹ️ [CityService] Ciudad no encontrada con ${by}: ${value}`);
-          resolve(null);
-        });
+        .catch(error => resolve(null));
     });
   }
 }

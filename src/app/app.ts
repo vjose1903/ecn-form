@@ -15,10 +15,11 @@ import { DialogModule } from 'primeng/dialog';
 import { ConfirmationService } from 'primeng/api';
 import { DialogService } from 'primeng/dynamicdialog';
 import { FileService } from '@core/entities/file/file.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, LoadingComponent, ToastModule, ConfirmDialogModule, DialogModule],
+  imports: [CommonModule, RouterOutlet, LoadingComponent, ToastModule, ConfirmDialogModule, DialogModule],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
@@ -69,6 +70,7 @@ export class App implements OnInit {
     Ss.injector = this.injector;
     Ss.dialogService = this.dialogService;
     Ss.fileService = this.fileService;
+    Ss.cdRef = this.cdRef;
 
     // Delay mínimo para asegurar que Firebase esté listo
     await new Promise(resolve => setTimeout(resolve, 100));

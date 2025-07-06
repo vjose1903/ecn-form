@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, getDoc, getDocs, updateDoc, deleteDoc, query, where, limit, DocumentReference } from '@angular/fire/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, updateDoc, deleteDoc, query, where, limit, DocumentReference, WhereFilterOp } from '@angular/fire/firestore';
 import { Ss } from '../../services/singleton.service';
 import { fun } from '@core/services/functions.service';
 import { runInInjectionContext, Injector, inject } from '@angular/core';
@@ -6,7 +6,6 @@ import { ReferenceResolver } from './reference-resolver';
 
 export class FirebaseRequest<T> {
   private _firebaseCollectionName!: string;
-  public injector = inject(Injector);
   private referenceResolver = inject(ReferenceResolver);
 
   set firebaseCollectionName(value: string) {
@@ -71,7 +70,8 @@ export class FirebaseRequest<T> {
   }
 
   private makeEntityRefString(params: Partial<referenceParams> = {}): string {
-    let refString = `${this._firebaseCollectionName}`;
+    let refString = this._firebaseCollectionName;
+    if (params.parentCollection) refString = `${params.parentCollection}/${params.parentId}/${this._firebaseCollectionName}`;
 
     if (params.find_value) refString += `/${params.find_value}`;
     if (params.subEntity) refString += `/${params.subEntity}`;
@@ -88,9 +88,26 @@ export class FirebaseRequest<T> {
     return q;
   }
 
+  private createMultiFieldQuery(collectionRef: any, conditions: Array<{ field: string; value: any; operator?: WhereFilterOp }>, limitCount?: number) {
+    let q = collectionRef;
+
+    // Aplicar todas las condiciones where
+    conditions.forEach(condition => {
+      const operator = condition.operator || '==';
+      q = query(q, where(condition.field, operator, condition.value));
+    });
+
+    // Aplicar límite si se especifica
+    if (limitCount) {
+      q = query(q, limit(limitCount));
+    }
+
+    return q;
+  }
+
   // ========== MÉTODOS PARA OBTENER POR ID ==========
   private async getDocumentById(refString: string): Promise<T | null> {
-    return runInInjectionContext(this.injector, async () => {
+    return runInInjectionContext(Ss.injector, async () => {
       const entityRef = doc(Ss.firestore, refString);
       const entitySnapshot = await getDoc(entityRef);
 
@@ -103,8 +120,8 @@ export class FirebaseRequest<T> {
   }
 
   // ========== MÉTODOS PARA OBTENER POR CAMPO ==========
-  private async getDocumentByField(collectionPath: string, fieldName: string, fieldValue: any): Promise<T | null> {
-    return runInInjectionContext(this.injector, async () => {
+  private async getOneDocumentByField(collectionPath: string, fieldName: string, fieldValue: any): Promise<T | null> {
+    return runInInjectionContext(Ss.injector, async () => {
       const entityRef = collection(Ss.firestore, collectionPath);
       const q = this.createQuery(entityRef, fieldName, fieldValue, 1);
       const entitySnapshot = await getDocs(q);
@@ -118,7 +135,7 @@ export class FirebaseRequest<T> {
   }
 
   private async getDocumentsByField(collectionPath: string, fieldName?: string, fieldValue?: any): Promise<T[]> {
-    return runInInjectionContext(this.injector, async () => {
+    return runInInjectionContext(Ss.injector, async () => {
       const entityRef = collection(Ss.firestore, collectionPath);
 
       let q;
@@ -131,6 +148,31 @@ export class FirebaseRequest<T> {
       const entitySnapshot = await getDocs(q);
 
       return await this.mapDocumentsToArray(entitySnapshot.docs);
+    });
+  }
+
+  private async getDocumentsByMultipleFields(collectionPath: string, conditions: Array<{ field: string; value: any; operator?: WhereFilterOp }>): Promise<T[]> {
+    return runInInjectionContext(Ss.injector, async () => {
+      const entityRef = collection(Ss.firestore, collectionPath);
+      const q = this.createMultiFieldQuery(entityRef, conditions);
+
+      const entitySnapshot = await getDocs(q);
+
+      return await this.mapDocumentsToArray(entitySnapshot.docs);
+    });
+  }
+
+  private async getOneDocumentByMultipleFields(collectionPath: string, conditions: Array<{ field: string; value: any; operator?: WhereFilterOp }>): Promise<T | null> {
+    return runInInjectionContext(Ss.injector, async () => {
+      const entityRef = collection(Ss.firestore, collectionPath);
+      const q = this.createMultiFieldQuery(entityRef, conditions, 1);
+      const entitySnapshot = await getDocs(q);
+
+      if (entitySnapshot.empty) {
+        return null;
+      }
+
+      return await this.mapDocumentToObject(entitySnapshot.docs[0]);
     });
   }
 
@@ -173,7 +215,7 @@ export class FirebaseRequest<T> {
         subEntity: params.subEntity,
         subEntityId: params.subEntityId,
       });
-      return await this.getDocumentByField(refString, params.find_by, params.find_value);
+      return await this.getOneDocumentByField(refString, params.find_by, params.find_value);
     } catch (error) {
       return null;
     }
@@ -182,7 +224,7 @@ export class FirebaseRequest<T> {
   async _createOne(params: referenceParams): Promise<T> {
     try {
       params = (await this.validateParams(params, 'create')) as referenceParams;
-      const refString = this.makeEntityRefString(params);
+      const refString = params?.refString ? params.refString : this.makeEntityRefString(params);
       const entityRef = collection(Ss.firestore, refString);
 
       const { id, ...data } = { ...params.data };
@@ -268,7 +310,8 @@ export class FirebaseRequest<T> {
     try {
       params = (await this.validateParams(params, 'updateInParent')) as UpdateInParentParams;
 
-      const refString = `${params.parentCollection}/${params.parentId}/${this._firebaseCollectionName}/${params.documentId}`;
+      const refString = params?.refString ? params.refString : `${this.makeEntityRefString(params)}/${params.documentId}`;
+      // const refString = `${params.parentCollection}/${params.parentId}/${this._firebaseCollectionName}/${params.documentId}`;
       const entityRef = doc(Ss.firestore, refString);
 
       const { id, ...data } = { ...params.data };
@@ -332,7 +375,7 @@ export class FirebaseRequest<T> {
   async _getByField(fieldName: string, fieldValue: any, params: Partial<referenceParams> = {}): Promise<T | null> {
     try {
       const refString = this.makeEntityRefString(params);
-      return await this.getDocumentByField(refString, fieldName, fieldValue);
+      return await this.getOneDocumentByField(refString, fieldName, fieldValue);
     } catch (error) {
       return null;
     }
@@ -344,6 +387,24 @@ export class FirebaseRequest<T> {
       return await this.getDocumentsByField(refString, fieldName, fieldValue);
     } catch (error) {
       return [];
+    }
+  }
+
+  async _getAllByMultipleFields(conditions: Array<{ field: string; value: any; operator?: WhereFilterOp }>, params: Partial<referenceParams> = {}): Promise<T[]> {
+    try {
+      const refString = params?.refString ? params.refString : this.makeEntityRefString(params);
+      return await this.getDocumentsByMultipleFields(refString, conditions);
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async _getOneByMultipleFields(conditions: Array<{ field: string; value: any; operator?: WhereFilterOp }>, params: Partial<referenceParams> = {}): Promise<T | null> {
+    try {
+      const refString = this.makeEntityRefString(params);
+      return await this.getOneDocumentByMultipleFields(refString, conditions);
+    } catch (error) {
+      return null;
     }
   }
 
@@ -382,6 +443,10 @@ export interface referenceParams {
   subEntity?: string;
   subInterface?: any;
   subEntityId?: any;
+  parentCollection?: string;
+  parentId?: string | number;
+  documentId?: string | number;
+  refString?: string;
 }
 
 export interface CreateInParentParams {
@@ -395,6 +460,7 @@ export interface UpdateInParentParams {
   parentId: string | number;
   documentId: string | number;
   data: any;
+  refString?: string;
 }
 
 export interface DeleteInParentParams {

@@ -1,10 +1,12 @@
+import { inject, runInInjectionContext } from '@angular/core';
 import { CityI } from './city.model';
+import { Ss } from '@core/services/singleton.service';
+import { CityService } from './city.service';
 
 export class City {
   id: string = '';
   key: string = '';
   label: string = '';
-  
 
   constructor(city: CityI) {
     this.id = city.id;
@@ -19,4 +21,12 @@ export class City {
       label: this.label,
     };
   }
-} 
+
+  getCityRef() {
+    return runInInjectionContext(Ss.injector, () => {
+      const cityService = inject(CityService);
+
+      return cityService.getDocumentRef({ id: this.key });
+    });
+  }
+}

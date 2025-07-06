@@ -9,7 +9,7 @@ export const layoutRoutes: Routes = [
     pathMatch: 'full',
   },
   {
-    path: 'formulario/:city',
+    path: 'formulario/:user_id',
     loadComponent: () => import('../pages/form-page/form-page').then(m => m.FormPage),
   },
   {

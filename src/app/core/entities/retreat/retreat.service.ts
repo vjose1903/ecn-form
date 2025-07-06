@@ -7,6 +7,8 @@ import { fun } from '@core/services/functions.service';
 import { AuthService } from '@core/services/auth.service';
 import { Ss } from '@core/services/singleton.service';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { City } from '../city/city.class';
+import { UserC } from '../user/user.class';
 
 @Injectable({
   providedIn: 'root',
@@ -50,7 +52,26 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   /**
    * Obtiene todos los retiros con caché
    */
-  async getAll(): Promise<Retreat[]> {
+  async getRetreatByUser(user: UserC): Promise<Retreat[] | null> {
+    const retreats = await this._getAllByMultipleFields(
+      [
+        { field: 'is_active', value: true },
+        { field: 'accept_requests', value: true },
+      ],
+      {
+        refString: `${user.getRefString}/retreat`,
+      }
+    );
+
+    console.log('%c retreats', 'color: blue; font-weight: bold;', retreats);
+
+    return retreats.map(retreat => new Retreat(retreat as RetreatI));
+  }
+
+  /**
+   * Obtiene todos los retiros con caché
+   */
+  async getAll(args: { onlyActive?: boolean } = {}): Promise<Retreat[]> {
     const now = Date.now();
 
     // Verificar si el caché es válido
@@ -58,13 +79,14 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
       return this._retreats.value;
     }
 
-    return this.fetchAllRetreats();
+    return this.fetchAllRetreats(args);
   }
 
   /**
    * Obtiene todos los retiros desde Firebase usando la colección padre
    */
-  private async fetchAllRetreats(): Promise<Retreat[]> {
+  private async fetchAllRetreats(args: { onlyActive?: boolean } = {}): Promise<Retreat[]> {
+    const { onlyActive } = args;
     try {
       this._loadingRetreatList.next(true);
       const currentUser = this.authService.current_user();
@@ -73,11 +95,25 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
         throw new Error('Usuario no autenticado');
       }
 
-      // Usar getAllFromParentCollection para obtener retiros desde la subcolección del usuario
-      const retreats = await this.getAllFromParentCollection({
-        parentCollection: this.userService.collectionName,
-        parentId: currentUser.id,
-      });
+      let retreats: RetreatI[] = [];
+
+      if (onlyActive) {
+        retreats = await this._getAllByMultipleFields(
+          [
+            { field: 'is_active', value: true },
+            { field: 'accept_requests', value: true },
+          ],
+          {
+            parentCollection: this.userService.collectionName,
+            parentId: currentUser.id,
+          }
+        );
+      } else {
+        retreats = await this.getAllFromParentCollection({
+          parentCollection: this.userService.collectionName,
+          parentId: currentUser.id,
+        });
+      }
 
       const retreatList = retreats.map(retreat => new Retreat(retreat));
 
@@ -233,6 +269,37 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   }
 
   /**
+   * Cambia el estado de un retiro
+   */
+  async incrementRequestCount(retreat: Retreat): Promise<RetreatI> {
+    try {
+      const currentUser = this.authService.current_user();
+      if (!currentUser?.id) {
+        throw new Error('Usuario no autenticado');
+      }
+
+      const result = await this.updateOneInParentCollection({
+        parentCollection: this.userService.collectionName,
+        parentId: currentUser.id,
+        documentId: retreat.id,
+        data: { request_count: retreat.request_count + 1 },
+      });
+
+      // Actualizar observable
+      this.updateRetreatInCache(result, 'update');
+
+      const action = retreat.is_active ? 'desactivado' : 'activado';
+      Ss.toastService.success({ message: `Retiro ${action} correctamente`, title: 'Éxito' });
+
+      return result;
+    } catch (error) {
+      console.error('Error al cambiar estado del retiro:', error);
+      Ss.toastService.error({ message: 'Error al cambiar el estado del retiro', title: 'Error' });
+      throw error;
+    }
+  }
+
+  /**
    * Elimina un retiro
    */
   async deleteRetreat(id: string): Promise<void> {
@@ -323,10 +390,5 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
     this._retreats.next([]);
     this._loadingRetreatList.next(false);
     this._lastFetch = 0;
-  }
-
-  // Método legacy para compatibilidad
-  create(newRetreat: RetreatI) {
-    return this.createRetreat(newRetreat);
   }
 }

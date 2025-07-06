@@ -6,6 +6,7 @@ import { UserService } from '../user/user.service';
 import { fun } from '@core/services/functions.service';
 import { AuthService } from '@core/services/auth.service';
 import { Storage, ref, uploadBytes, getDownloadURL, deleteObject } from '@angular/fire/storage';
+import { Ss } from '@core/services/singleton.service';
 
 @Injectable({
   providedIn: 'root',
@@ -37,7 +38,7 @@ export class FileService extends FirebaseRequest<FileI> {
     }
 
     try {
-      return await runInInjectionContext(this.injector, async () => {
+      return await runInInjectionContext(Ss.injector, async () => {
         const storageRef = ref(this.storage, filePayload.fileStoragePath);
 
         await uploadBytes(storageRef, file);

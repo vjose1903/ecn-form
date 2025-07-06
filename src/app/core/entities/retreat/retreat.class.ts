@@ -20,11 +20,13 @@ export class Retreat {
   mixedModalityData: { [date: string]: RetreatModalityType } = {};
   is_active: boolean = true;
   accept_requests: boolean = true;
+  request_count: number = 0;
 
   // Propiedades computadas para optimizar el rendimiento
   private _displayNumber: string | null = null;
   private _displayCommunityName: string | null = null;
   private _displayDateRange: string | null = null;
+  private _displayDateRangeForForm: string | null = null;
   private _displayModality: string | null = null;
 
   constructor(retreat?: RetreatI & { retreat_home?: any }) {
@@ -47,6 +49,7 @@ export class Retreat {
     this.mixedModalityData = retreat.mixedModalityData || {};
     this.is_active = retreat.is_active ?? true;
     this.accept_requests = retreat.accept_requests ?? true;
+    this.request_count = retreat.request_count || 0;
 
     this.initializeRetreatHome(retreat.retreat_home);
   }
@@ -99,6 +102,33 @@ export class Retreat {
       }
     }
     return this._displayDateRange;
+  }
+
+  /**
+   * Obtiene el rango de fechas formateado para el formulario de solicitud
+   */
+  get displayDateRangeForForm(): string {
+    if (this._displayDateRangeForForm === null) {
+      if (this.start_date && this.end_date) {
+        const startDate = new Date(this.start_date);
+        const startYear = startDate.getFullYear();
+        const endDate = new Date(this.end_date);
+        const endYear = endDate.getFullYear();
+
+        const start_day = startDate.getDate().toString().padStart(2, '0');
+        const start_month = startDate.toLocaleDateString('es-ES', { month: 'long' });
+        let label = `${start_day} de ${start_month}${startYear == endYear ? '' : ` ${startYear}`}`;
+
+        const end_day = endDate.getDate().toString().padStart(2, '0');
+        const end_month = endDate.toLocaleDateString('es-ES', { month: 'long' });
+        label += ` al ${end_day} de ${end_month} ${endYear}`;
+
+        this._displayDateRangeForForm = label;
+      } else {
+        this._displayDateRangeForForm = 'Fechas no definidas';
+      }
+    }
+    return this._displayDateRangeForForm;
   }
 
   /**
@@ -187,6 +217,13 @@ export class Retreat {
   }
 
   /**
+   * Obtiene el número de solicitudes
+   */
+  get requestCount(): number {
+    return this.request_count || 0;
+  }
+
+  /**
    * Obtiene las fechas para modalidad mixta
    */
   get mixedModalityDates(): { date: string; label: string; modality: RetreatModalityType }[] {
@@ -209,6 +246,10 @@ export class Retreat {
     }
 
     return dates;
+  }
+
+  completeRefString(): string {
+    return `user/${Ss.authService.current_user()?.id}/retreat/${this.id}`;
   }
 
   /**
@@ -356,6 +397,19 @@ export class Retreat {
         .toggleRetreatStatus(this)
         .then(() => resolve())
         .catch(error => reject(error));
+    });
+  }
+
+  incrementRequestCount(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      runInInjectionContext(Ss.injector, () => {
+        const retreatService = inject(RetreatService);
+
+        retreatService
+          .incrementRequestCount(this)
+          .then(() => resolve())
+          .catch(error => reject(error));
+      });
     });
   }
 

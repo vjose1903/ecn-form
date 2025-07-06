@@ -1,6 +1,6 @@
 export enum FormControlName {
-  city = 'city',
-  date_request = 'date_request',
+  id = 'id',
+  retreat = 'retreat',
   dating_period = 'dating_period',
   have_wedding_date = 'have_wedding_date',
   wedding_date = 'wedding_date',
@@ -39,7 +39,7 @@ export enum FormGroupFields {
 }
 
 export enum FormFieldId {
-  date_request = 'date_request_field',
+  retreat = 'date_request_field',
   dating_period = 'dating_period_field',
   have_wedding_date = 'have_wedding_date_field',
   wedding_date = 'wedding_date_field',

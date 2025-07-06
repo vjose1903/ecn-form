@@ -12,7 +12,7 @@ import { FileService } from '@core/entities/file/file.service';
 })
 export class Ss {
   public static firestore: Firestore;
-
+  public static cdRef: ChangeDetectorRef;
   public static ngZone: NgZone;
   public static toastService: ToastService;
   public static copyToClipboardService: CopyToClipboardService;

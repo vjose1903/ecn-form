@@ -18,9 +18,10 @@ export interface RetreatI {
   max_request_date: string;
   retreat_home: string;
   modality?: RetreatModality;
+  is_active?: boolean;
+  accept_requests?: boolean;
+  request_count?: number;
   mixedModalityData?: {
     [date: string]: RetreatModalityType;
   };
-  is_active?: boolean;
-  accept_requests?: boolean;
 }

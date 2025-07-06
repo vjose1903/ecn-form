@@ -1,3 +1,8 @@
+@if (loading()) {
+<app-form-skeleton />
+} @else if (submission_success()) {
+<request-send (close)="resetForm()" />
+} @else {
 <div class="m-auto w-[92vw] md:w-3/4 lg:w-1/2 py-10 flex flex-col gap-1">
   <p>
     Esta es la ficha de solicitud para vivir el retiro del
@@ -10,7 +15,7 @@
   <p class="font-bold">El llenado del formulario no garantiza la aprobación del retiro.</p>
   <p class="font-bold">Debe de completar el formulario para enviarlo, no se guardan los datos hasta que se envíe.</p>
 
-  <span class="bg-red-500/10 text-red-800 p-2 my-5 rounded-md shadow-md"> Los campos marcados con * son <span class="font-bold">obligatorios</span> </span>
+  <span class="bg-red-500/10 text-red-800 p-2 my-5 rounded-md shadow-md" (click)="test()"> Los campos marcados con * son <span class="font-bold">obligatorios</span> </span>
   <div [formGroup]="formGroup" class="w-full">
     <div class="shadow-lg rounded-[6px]">
       <p-accordion [value]="openedAccordionPanel" (onClose)="changeAccordionPanelIndex($event.index, 'close')" (onOpen)="changeAccordionPanelIndex($event.index, 'open')" [multiple]="true">
@@ -20,23 +25,23 @@
             <ng-container *ngTemplateOutlet="accordionHeader; context: { title: 'Informaciónes Generales', isCompleted: areRequiredFieldsComplete(FormGroupFields.general), invalid: areInvalidFields(FormGroupFields.general) }"></ng-container>
           </p-accordion-header>
           <p-accordion-content class="{{ openedAccordionPanel.includes(0) ? '!py-2 md:!py-4' : '' }}">
-            <div class="flex flex-col gap-5">
-              <div class="flex flex-col gap-1" [id]="FormFieldId.date_request">
+            <div class="flex flex-col gap-5 overflow-hidden">
+              <div class="flex flex-col gap-1" [id]="FormFieldId.retreat">
                 <div class="flex gap-1">
-                  <label class="font-bold" class="font-bold" [for]="FormFieldId.date_request + '_control'"> Fecha de Retiro Deseada </label>
+                  <label class="font-bold" class="font-bold" [for]="FormFieldId.retreat + '_control'"> Fecha de Retiro Deseada </label>
                   <span class="text-red-500">*</span>
                 </div>
-                <div class="flex flex-col">
+                <div class="flex flex-col relative">
                   <p-select
-                    [inputId]="FormFieldId.date_request + '_control'"
-                    [options]="dates"
-                    optionLabel="label"
-                    optionValue="label"
+                    [inputId]="FormFieldId.retreat + '_control'"
+                    [options]="retreats() ?? []"
+                    optionLabel="displayDateRangeForForm"
+                    optionValue="id"
                     placeholder="Seleccione una fecha"
                     class="w-full"
                     appendTo="body"
-                    [formControlName]="FormControlName.date_request" />
-                  <form-error-msg [control]="formGroup.get(FormControlName.date_request)" />
+                    [formControlName]="FormControlName.retreat" />
+                  <form-error-msg [control]="formGroup.get(FormControlName.retreat)" />
                 </div>
               </div>
 
@@ -46,7 +51,7 @@
                   <span class="text-red-500">*</span>
                 </div>
 
-                <div class="flex flex-col">
+                <div class="flex flex-col relative">
                   <p-select [inputId]="FormFieldId.dating_period + '_control'" [options]="timeRanges" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" [formControlName]="FormControlName.dating_period" />
                   <form-error-msg [control]="formGroup.get(FormControlName.dating_period)" />
                 </div>
@@ -59,7 +64,7 @@
                     <span class="text-red-500">*</span>
                   </div>
 
-                  <div class="flex flex-col">
+                  <div class="flex flex-col relative">
                     <p-selectbutton [id]="FormFieldId.have_wedding_date + '_control'" class="w-fit" [options]="yesNoOptions" optionLabel="label" optionValue="value" aria-labelledby="basic" [formControlName]="FormControlName.have_wedding_date" />
                     <form-error-msg [control]="formGroup.get(FormControlName.have_wedding_date)" />
                   </div>
@@ -72,7 +77,7 @@
                     <span class="text-red-500">*</span>
                   </div>
 
-                  <div class="flex flex-col">
+                  <div class="flex flex-col relative">
                     <p-datepicker
                       [inputId]="FormFieldId.wedding_date + '_control'"
                       class="w-full"
@@ -92,17 +97,17 @@
 
               <div class="flex flex-col gap-1" [id]="FormFieldId.how_find_us">
                 <div class="flex gap-1">
-                  <label class="font-bold" [for]="FormFieldId.how_find_us + '_control'">Como te enteraste del Retiro?</label>
+                  <label class="font-bold" [for]="FormFieldId.how_find_us + '_control'">Como se enteraron del Retiro?</label>
                   <span class="text-red-500">*</span>
                 </div>
 
-                <div class="flex flex-col">
+                <div class="flex flex-col relative">
                   <p-select [inputId]="FormFieldId.how_find_us + '_control'" [options]="howToKnow" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" [formControlName]="FormControlName.how_find_us" />
                   <form-error-msg [control]="formGroup.get(FormControlName.how_find_us)" />
                 </div>
 
                 @if (formGroup.get(FormControlName.how_find_us)?.value === 'Otro') {
-                <div class="flex flex-col">
+                <div class="flex flex-col relative">
                   <textarea rows="5" cols="30" pTextarea class="w-full" placeholder="Escribe aquí como te enteraste del Retiro" [formControlName]="FormControlName.how_find_us_other"></textarea>
                   <form-error-msg [control]="formGroup.get(FormControlName.how_find_us_other)" />
                 </div>
@@ -111,11 +116,10 @@
 
               <div class="flex flex-col gap-1" [id]="FormFieldId.who_invited_you">
                 <div class="flex gap-1">
-                  <label class="font-bold" [for]="FormFieldId.who_invited_you + '_control'">Quien te invito al Retiro?</label>
-                  <span class="text-red-500">*</span>
+                  <label class="font-bold" [for]="FormFieldId.who_invited_you + '_control'">Quien los invito al Retiro?</label>
                 </div>
-                <div class="flex flex-col">
-                  <input type="text" pInputText placeholder="Nombre de la persona que te invito" [formControlName]="FormControlName.who_invited_you" class="w-full" />
+                <div class="flex flex-col relative">
+                  <input type="text" pInputText placeholder="Ej: María González, Padre Juan, etc." [formControlName]="FormControlName.who_invited_you" class="w-full" />
                   <form-error-msg [control]="formGroup.get(FormControlName.who_invited_you)" />
                 </div>
               </div>
@@ -129,22 +133,22 @@
             <ng-container *ngTemplateOutlet="accordionHeader; context: { title: 'Información de la Novia', isCompleted: areRequiredFieldsComplete(FormGroupFields.she), invalid: areInvalidFields(FormGroupFields.she) }"></ng-container>
           </p-accordion-header>
           <p-accordion-content class="{{ openedAccordionPanel.includes(1) ? '!py-2 md:!py-4' : '' }}">
-            <div class="flex flex-col gap-5" [formGroupName]="FormGroupFields.she">
+            <div class="flex flex-col gap-5 overflow-hidden" [formGroupName]="FormGroupFields.she">
               <div class="flex flex-col gap-1" [id]="FormFieldId.she_full_name">
                 <div class="flex gap-1">
                   <label class="font-bold" [for]="FormFieldId.she_full_name + '_control'">Nombre y Apellido</label>
                   <span class="text-red-500">*</span>
                 </div>
-                <div class="flex flex-col">
-                  <input type="text" pInputText class="w-full" [formControlName]="FormControlName.full_name" />
+                <div class="flex flex-col relative">
+                  <input type="text" pInputText placeholder="Ej: María José González Pérez" class="w-full" [formControlName]="FormControlName.full_name" />
                   <form-error-msg [control]="sheGroup.get(FormControlName.full_name)" />
                 </div>
               </div>
 
               <div class="flex flex-col gap-1" [id]="FormFieldId.she_nickname">
                 <label class="font-bold" [for]="FormFieldId.she_nickname + '_control'">Apodo</label>
-                <div class="flex flex-col">
-                  <input type="text" pInputText [formControlName]="FormControlName.nickname" />
+                <div class="flex flex-col relative">
+                  <input type="text" pInputText placeholder="Ej: Mari, Josie, etc. (opcional)" [formControlName]="FormControlName.nickname" />
                   <form-error-msg [control]="sheGroup.get(FormControlName.nickname)" />
                 </div>
               </div>
@@ -155,7 +159,7 @@
                   <span class="text-red-500">*</span>
                 </div>
 
-                <div class="flex flex-col">
+                <div class="flex flex-col relative">
                   <p-datepicker
                     [inputId]="FormFieldId.she_birth_date + '_control'"
                     class="w-full"
@@ -182,7 +186,7 @@
                       <span class="text-red-500">*</span>
                     </div>
 
-                    <div class="flex flex-col">
+                    <div class="flex flex-col relative">
                       <p-select
                         [inputId]="FormFieldId.she_identity_type + '_control'"
                         [options]="identityTypes"
@@ -202,9 +206,9 @@
                       <span class="text-red-500">*</span>
                     </div>
 
-                    <div class="flex flex-col">
+                    <div class="flex flex-col relative">
                       @if (sheGroup.get(FormControlName.identity_type)?.value === IdentityType.cedula) {
-                      <p-inputmask [inputId]="FormFieldId.she_identity_number + '_control'" mask="999-9999999-9" placeholder="000-0000000-0" class="w-full" [formControlName]="FormControlName.identity_number" />
+                      <p-inputmask [inputId]="FormFieldId.she_identity_number + '_control'" mask="999-9999999-9" placeholder="###-#######-#" class="w-full" [formControlName]="FormControlName.identity_number" />
                       } @else if (sheGroup.get(FormControlName.identity_type)?.value === IdentityType.pasaporte) {
                       <input [id]="FormFieldId.she_identity_number + '_control'" type="text" pInputText placeholder="Número de pasaporte" class="w-full" [formControlName]="FormControlName.identity_number" />
                       }
@@ -221,7 +225,7 @@
                   <label class="font-bold" [for]="FormFieldId.she_are_you_married + '_control'">Ha Estado Alguna Vez Casada Por La Iglesia?</label>
                   <span class="text-red-500">*</span>
                 </div>
-                <div class="flex flex-col">
+                <div class="flex flex-col relative">
                   <p-selectbutton [id]="FormFieldId.she_are_you_married + '_control'" class="w-fit" [options]="yesNoOptions" optionLabel="label" optionValue="value" aria-labelledby="basic" [formControlName]="FormControlName.are_you_married" />
                   <form-error-msg [control]="sheGroup.get(FormControlName.are_you_married)" />
                 </div>
@@ -232,7 +236,7 @@
                   <label class="font-bold" [for]="FormFieldId.she_have_children + '_control'">Tiene Hijos?</label>
                   <span class="text-red-500">*</span>
                 </div>
-                <div class="flex flex-col">
+                <div class="flex flex-col relative">
                   <p-selectbutton [id]="FormFieldId.she_have_children + '_control'" class="w-fit" [options]="yesNoOptions" optionLabel="label" optionValue="value" aria-labelledby="basic" [formControlName]="FormControlName.have_children" />
                   <form-error-msg [control]="sheGroup.get(FormControlName.have_children)" />
                 </div>
@@ -245,8 +249,8 @@
                   <label class="font-bold" [for]="FormFieldId.she_city_of_residence + '_control'">Ciudad</label>
                   <span class="text-red-500">*</span>
                 </div>
-                <div class="flex flex-col">
-                  <input [id]="FormFieldId.she_city_of_residence + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.city_of_residence" />
+                <div class="flex flex-col relative">
+                  <input [id]="FormFieldId.she_city_of_residence + '_control'" type="text" pInputText placeholder="Ej: La Vega, Santiago, Santo Domingo" class="w-full" [formControlName]="FormControlName.city_of_residence" />
                   <form-error-msg [control]="sheGroup.get(FormControlName.city_of_residence)" />
                 </div>
               </div>
@@ -256,8 +260,8 @@
                   <label class="font-bold" [for]="FormFieldId.she_address + '_control'">Dirección actual</label>
                   <span class="text-red-500">*</span>
                 </div>
-                <div class="flex flex-col">
-                  <textarea [id]="FormFieldId.she_address + '_control'" rows="5" cols="30" pTextarea class="w-full" [formControlName]="FormControlName.address"></textarea>
+                <div class="flex flex-col relative">
+                  <textarea [id]="FormFieldId.she_address + '_control'" rows="5" cols="30" pTextarea placeholder="Ej: Calle Principal #123, Sector Los Jardines, La Vega" class="w-full" [formControlName]="FormControlName.address"></textarea>
                   <form-error-msg [control]="sheGroup.get(FormControlName.address)" />
                 </div>
               </div>
@@ -269,8 +273,8 @@
                   <label class="font-bold" [for]="FormFieldId.she_email + '_control'">Correo Electronico</label>
                   <span class="text-red-500">*</span>
                 </div>
-                <div class="flex flex-col">
-                  <input [id]="FormFieldId.she_email + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.email" />
+                <div class="flex flex-col relative">
+                  <input [id]="FormFieldId.she_email + '_control'" type="email" pInputText placeholder="Ej: maria.gonzalez@email.com" class="w-full" [formControlName]="FormControlName.email" />
                   <form-error-msg [control]="sheGroup.get(FormControlName.email)" />
                 </div>
               </div>
@@ -281,7 +285,7 @@
                     <label class="font-bold" [for]="FormFieldId.she_cell_phone + '_control'">Teléfono celular</label>
                     <span class="text-red-500">*</span>
                   </div>
-                  <div class="flex flex-col">
+                  <div class="flex flex-col relative">
                     <p-inputmask [inputId]="FormFieldId.she_cell_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" [formControlName]="FormControlName.cell_phone" />
                     <form-error-msg [control]="sheGroup.get(FormControlName.cell_phone)" />
                   </div>
@@ -291,7 +295,7 @@
                   <div class="flex gap-1">
                     <label class="font-bold" [for]="FormFieldId.she_home_phone + '_control'">Teléfono casa</label>
                   </div>
-                  <div class="flex flex-col">
+                  <div class="flex flex-col relative">
                     <p-inputmask [inputId]="FormFieldId.she_home_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" [formControlName]="FormControlName.home_phone" />
                     <form-error-msg [control]="sheGroup.get(FormControlName.home_phone)" />
                   </div>
@@ -301,7 +305,7 @@
                   <div class="flex gap-1">
                     <label class="font-bold" [for]="FormFieldId.she_work_phone + '_control'">Teléfono trabajo</label>
                   </div>
-                  <div class="flex flex-col">
+                  <div class="flex flex-col relative">
                     <p-inputmask [inputId]="FormFieldId.she_work_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" [formControlName]="FormControlName.work_phone" />
                     <form-error-msg [control]="sheGroup.get(FormControlName.work_phone)" />
                   </div>
@@ -316,7 +320,7 @@
                   <span class="text-red-500">*</span>
                 </div>
 
-                <div class="flex flex-col">
+                <div class="flex flex-col relative">
                   <p-selectbutton [id]="FormFieldId.she_live_accompanied + '_control'" class="w-fit" [options]="yesNoOptions" optionLabel="label" optionValue="value" aria-labelledby="basic" [formControlName]="FormControlName.live_accompanied" />
                   <form-error-msg [control]="sheGroup.get(FormControlName.live_accompanied)" />
                 </div>
@@ -332,8 +336,8 @@
                       <label class="font-medium" [for]="FormFieldId.she_companion_full_name + '_control'">Nombre y apellido</label>
                       <span class="text-red-500">*</span>
                     </div>
-                    <div class="flex flex-col">
-                      <input [id]="FormFieldId.she_companion_full_name + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.companion_full_name" />
+                    <div class="flex flex-col relative">
+                      <input [id]="FormFieldId.she_companion_full_name + '_control'" type="text" pInputText placeholder="Ej: Ana María González" class="w-full" [formControlName]="FormControlName.companion_full_name" />
                       <form-error-msg [control]="sheGroup.get(FormControlName.companion_full_name)" />
                     </div>
                   </div>
@@ -343,7 +347,7 @@
                       <label class="font-medium" [for]="FormFieldId.she_companion_phone + '_control'">Teléfono </label>
                       <span class="text-red-500">*</span>
                     </div>
-                    <div class="flex flex-col">
+                    <div class="flex flex-col relative">
                       <p-inputmask [inputId]="FormFieldId.she_companion_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" [formControlName]="FormControlName.companion_phone" />
                       <form-error-msg [control]="sheGroup.get(FormControlName.companion_phone)" />
                     </div>
@@ -355,7 +359,7 @@
                     <label class="font-medium" [for]="FormFieldId.she_companion_relationship + '_control'">Parentesco</label>
                     <span class="text-red-500">*</span>
                   </div>
-                  <div class="flex flex-col">
+                  <div class="flex flex-col relative">
                     <p-select
                       [inputId]="FormFieldId.she_companion_relationship + '_control'"
                       [options]="companionOptions"
@@ -382,8 +386,8 @@
                       <label class="font-medium" [for]="FormFieldId.she_emergency_full_name + '_control'">Nombre y Apellido</label>
                       <span class="text-red-500">*</span>
                     </div>
-                    <div class="flex flex-col">
-                      <input [id]="FormFieldId.she_emergency_full_name + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.emergency_full_name" />
+                    <div class="flex flex-col relative">
+                      <input [id]="FormFieldId.she_emergency_full_name + '_control'" type="text" pInputText placeholder="Ej: José González Pérez" class="w-full" [formControlName]="FormControlName.emergency_full_name" />
                       <form-error-msg [control]="sheGroup.get(FormControlName.emergency_full_name)" />
                     </div>
                   </div>
@@ -393,7 +397,7 @@
                       <label class="font-medium" [for]="FormFieldId.she_emergency_phone + '_control'">Teléfono </label>
                       <span class="text-red-500">*</span>
                     </div>
-                    <div class="flex flex-col">
+                    <div class="flex flex-col relative">
                       <p-inputmask [inputId]="FormFieldId.she_emergency_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" [formControlName]="FormControlName.emergency_phone" />
                       <form-error-msg [control]="sheGroup.get(FormControlName.emergency_phone)" />
                     </div>
@@ -405,7 +409,7 @@
                     <label class="font-medium" [for]="FormFieldId.she_emergency_relationship + '_control'">Parentesco</label>
                     <span class="text-red-500">*</span>
                   </div>
-                  <div class="flex flex-col">
+                  <div class="flex flex-col relative">
                     <p-select
                       [inputId]="FormFieldId.she_emergency_relationship + '_control'"
                       [options]="companionOptions"
@@ -428,8 +432,8 @@
                     <label class="font-bold" [for]="FormFieldId.she_religion + '_control'">Religión</label>
                     <span class="text-red-500">*</span>
                   </div>
-                  <div class="flex flex-col">
-                    <input [id]="FormFieldId.she_religion + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.religion" />
+                  <div class="flex flex-col relative">
+                    <input [id]="FormFieldId.she_religion + '_control'" type="text" pInputText placeholder="Ej: Católica" class="w-full" [formControlName]="FormControlName.religion" />
                     <form-error-msg [control]="sheGroup.get(FormControlName.religion)" />
                   </div>
                 </div>
@@ -439,8 +443,8 @@
                     <label class="font-bold" [for]="FormFieldId.she_church_name + '_control'">Parroquia A Que Pertenece</label>
                     <span class="text-red-500">*</span>
                   </div>
-                  <div class="flex flex-col">
-                    <input [id]="FormFieldId.she_church_name + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.church_name" />
+                  <div class="flex flex-col relative">
+                    <input [id]="FormFieldId.she_church_name + '_control'" type="text" pInputText placeholder="Ej: Parroquia San José, Iglesia Nuestra Señora de la Altagracia" class="w-full" [formControlName]="FormControlName.church_name" />
                     <form-error-msg [control]="sheGroup.get(FormControlName.church_name)" />
                   </div>
                 </div>
@@ -455,22 +459,22 @@
             <ng-container *ngTemplateOutlet="accordionHeader; context: { title: 'Información del Novio', isCompleted: areRequiredFieldsComplete(FormGroupFields.he), invalid: areInvalidFields(FormGroupFields.he) }"></ng-container>
           </p-accordion-header>
           <p-accordion-content class="{{ openedAccordionPanel.includes(2) ? '!py-2 md:!py-4' : '' }}">
-            <div class="flex flex-col gap-5" [formGroupName]="FormGroupFields.he">
+            <div class="flex flex-col gap-5 overflow-hidden" [formGroupName]="FormGroupFields.he">
               <div class="flex flex-col gap-1" [id]="FormFieldId.he_full_name">
                 <div class="flex gap-1">
                   <label class="font-bold" [for]="FormFieldId.he_full_name + '_control'">Nombre y Apellido</label>
                   <span class="text-red-500">*</span>
                 </div>
-                <div class="flex flex-col">
-                  <input type="text" pInputText class="w-full" [formControlName]="FormControlName.full_name" />
+                <div class="flex flex-col relative">
+                  <input type="text" pInputText placeholder="Ej: Juan Carlos Rodríguez López" class="w-full" [formControlName]="FormControlName.full_name" />
                   <form-error-msg [control]="heGroup.get(FormControlName.full_name)" />
                 </div>
               </div>
 
               <div class="flex flex-col gap-1" [id]="FormFieldId.he_nickname">
                 <label class="font-bold" [for]="FormFieldId.he_nickname + '_control'">Apodo</label>
-                <div class="flex flex-col">
-                  <input type="text" pInputText [formControlName]="FormControlName.nickname" />
+                <div class="flex flex-col relative">
+                  <input type="text" pInputText placeholder="Ej: Juancho, Carlitos, etc. (opcional)" [formControlName]="FormControlName.nickname" />
                   <form-error-msg [control]="heGroup.get(FormControlName.nickname)" />
                 </div>
               </div>
@@ -481,7 +485,7 @@
                   <span class="text-red-500">*</span>
                 </div>
 
-                <div class="flex flex-col">
+                <div class="flex flex-col relative">
                   <p-datepicker
                     [inputId]="FormFieldId.he_birth_date + '_control'"
                     class="w-full"
@@ -508,7 +512,7 @@
                       <span class="text-red-500">*</span>
                     </div>
 
-                    <div class="flex flex-col">
+                    <div class="flex flex-col relative">
                       <p-select
                         [inputId]="FormFieldId.he_identity_type + '_control'"
                         [options]="identityTypes"
@@ -528,9 +532,9 @@
                       <span class="text-red-500">*</span>
                     </div>
 
-                    <div class="flex flex-col">
+                    <div class="flex flex-col relative">
                       @if (heGroup.get(FormControlName.identity_type)?.value === IdentityType.cedula) {
-                      <p-inputmask [inputId]="FormFieldId.he_identity_number + '_control'" mask="999-9999999-9" placeholder="000-0000000-0" class="w-full" [formControlName]="FormControlName.identity_number" />
+                      <p-inputmask [inputId]="FormFieldId.he_identity_number + '_control'" mask="999-9999999-9" placeholder="###-#######-#" class="w-full" [formControlName]="FormControlName.identity_number" />
                       } @else if (heGroup.get(FormControlName.identity_type)?.value === IdentityType.pasaporte) {
                       <input [id]="FormFieldId.he_identity_number + '_control'" type="text" pInputText placeholder="Número de pasaporte" class="w-full" [formControlName]="FormControlName.identity_number" />
                       }
@@ -547,7 +551,7 @@
                   <label class="font-bold" [for]="FormFieldId.he_are_you_married + '_control'">Ha Estado Alguna Vez Casada Por La Iglesia?</label>
                   <span class="text-red-500">*</span>
                 </div>
-                <div class="flex flex-col">
+                <div class="flex flex-col relative">
                   <p-selectbutton [id]="FormFieldId.he_are_you_married + '_control'" class="w-fit" [options]="yesNoOptions" optionLabel="label" optionValue="value" aria-labelledby="basic" [formControlName]="FormControlName.are_you_married" />
                   <form-error-msg [control]="heGroup.get(FormControlName.are_you_married)" />
                 </div>
@@ -558,7 +562,7 @@
                   <label class="font-bold" [for]="FormFieldId.he_have_children + '_control'">Tiene Hijos?</label>
                   <span class="text-red-500">*</span>
                 </div>
-                <div class="flex flex-col">
+                <div class="flex flex-col relative">
                   <p-selectbutton [id]="FormFieldId.he_have_children + '_control'" class="w-fit" [options]="yesNoOptions" optionLabel="label" optionValue="value" aria-labelledby="basic" [formControlName]="FormControlName.have_children" />
                   <form-error-msg [control]="heGroup.get(FormControlName.have_children)" />
                 </div>
@@ -571,8 +575,8 @@
                   <label class="font-bold" [for]="FormFieldId.he_city_of_residence + '_control'">Ciudad</label>
                   <span class="text-red-500">*</span>
                 </div>
-                <div class="flex flex-col">
-                  <input [id]="FormFieldId.he_city_of_residence + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.city_of_residence" />
+                <div class="flex flex-col relative">
+                  <input [id]="FormFieldId.he_city_of_residence + '_control'" type="text" pInputText placeholder="Ej: La Vega, Santiago, Santo Domingo" class="w-full" [formControlName]="FormControlName.city_of_residence" />
                   <form-error-msg [control]="heGroup.get(FormControlName.city_of_residence)" />
                 </div>
               </div>
@@ -582,8 +586,8 @@
                   <label class="font-bold" [for]="FormFieldId.he_address + '_control'">Dirección actual</label>
                   <span class="text-red-500">*</span>
                 </div>
-                <div class="flex flex-col">
-                  <textarea [id]="FormFieldId.he_address + '_control'" rows="5" cols="30" pTextarea class="w-full" [formControlName]="FormControlName.address"></textarea>
+                <div class="flex flex-col relative">
+                  <textarea [id]="FormFieldId.he_address + '_control'" rows="5" cols="30" pTextarea placeholder="Ej: Avenida Libertad #456, Sector Centro, La Vega" class="w-full" [formControlName]="FormControlName.address"></textarea>
                   <form-error-msg [control]="heGroup.get(FormControlName.address)" />
                 </div>
               </div>
@@ -595,8 +599,8 @@
                   <label class="font-bold" [for]="FormFieldId.he_email + '_control'">Correo Electronico</label>
                   <span class="text-red-500">*</span>
                 </div>
-                <div class="flex flex-col">
-                  <input [id]="FormFieldId.he_email + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.email" />
+                <div class="flex flex-col relative">
+                  <input [id]="FormFieldId.he_email + '_control'" type="email" pInputText placeholder="Ej: juan.rodriguez@email.com" class="w-full" [formControlName]="FormControlName.email" />
                   <form-error-msg [control]="heGroup.get(FormControlName.email)" />
                 </div>
               </div>
@@ -607,7 +611,7 @@
                     <label class="font-bold" [for]="FormFieldId.he_cell_phone + '_control'">Teléfono celular</label>
                     <span class="text-red-500">*</span>
                   </div>
-                  <div class="flex flex-col">
+                  <div class="flex flex-col relative">
                     <p-inputmask [inputId]="FormFieldId.he_cell_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" [formControlName]="FormControlName.cell_phone" />
                     <form-error-msg [control]="heGroup.get(FormControlName.cell_phone)" />
                   </div>
@@ -617,7 +621,7 @@
                   <div class="flex gap-1">
                     <label class="font-bold" [for]="FormFieldId.he_home_phone + '_control'">Teléfono casa</label>
                   </div>
-                  <div class="flex flex-col">
+                  <div class="flex flex-col relative">
                     <p-inputmask [inputId]="FormFieldId.he_home_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" [formControlName]="FormControlName.home_phone" />
                     <form-error-msg [control]="heGroup.get(FormControlName.home_phone)" />
                   </div>
@@ -627,7 +631,7 @@
                   <div class="flex gap-1">
                     <label class="font-bold" [for]="FormFieldId.he_work_phone + '_control'">Teléfono trabajo</label>
                   </div>
-                  <div class="flex flex-col">
+                  <div class="flex flex-col relative">
                     <p-inputmask [inputId]="FormFieldId.he_work_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" [formControlName]="FormControlName.work_phone" />
                     <form-error-msg [control]="heGroup.get(FormControlName.work_phone)" />
                   </div>
@@ -642,7 +646,7 @@
                   <span class="text-red-500">*</span>
                 </div>
 
-                <div class="flex flex-col">
+                <div class="flex flex-col relative">
                   <p-selectbutton [id]="FormFieldId.he_live_accompanied + '_control'" class="w-fit" [options]="yesNoOptions" optionLabel="label" optionValue="value" aria-labelledby="basic" [formControlName]="FormControlName.live_accompanied" />
                   <form-error-msg [control]="heGroup.get(FormControlName.live_accompanied)" />
                 </div>
@@ -658,8 +662,8 @@
                       <label class="font-medium" [for]="FormFieldId.he_companion_full_name + '_control'">Nombre y apellido</label>
                       <span class="text-red-500">*</span>
                     </div>
-                    <div class="flex flex-col">
-                      <input [id]="FormFieldId.he_companion_full_name + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.companion_full_name" />
+                    <div class="flex flex-col relative">
+                      <input [id]="FormFieldId.he_companion_full_name + '_control'" type="text" pInputText placeholder="Ej: Pedro Rodríguez López" class="w-full" [formControlName]="FormControlName.companion_full_name" />
                       <form-error-msg [control]="heGroup.get(FormControlName.companion_full_name)" />
                     </div>
                   </div>
@@ -669,7 +673,7 @@
                       <label class="font-medium" [for]="FormFieldId.he_companion_phone + '_control'">Teléfono </label>
                       <span class="text-red-500">*</span>
                     </div>
-                    <div class="flex flex-col">
+                    <div class="flex flex-col relative">
                       <p-inputmask [inputId]="FormFieldId.he_companion_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" [formControlName]="FormControlName.companion_phone" />
                       <form-error-msg [control]="heGroup.get(FormControlName.companion_phone)" />
                     </div>
@@ -681,7 +685,7 @@
                     <label class="font-medium" [for]="FormFieldId.he_companion_relationship + '_control'">Parentesco</label>
                     <span class="text-red-500">*</span>
                   </div>
-                  <div class="flex flex-col">
+                  <div class="flex flex-col relative">
                     <p-select
                       [inputId]="FormFieldId.he_companion_relationship + '_control'"
                       [options]="companionOptions"
@@ -708,8 +712,8 @@
                       <label class="font-medium" [for]="FormFieldId.he_emergency_full_name + '_control'">Nombre y Apellido</label>
                       <span class="text-red-500">*</span>
                     </div>
-                    <div class="flex flex-col">
-                      <input [id]="FormFieldId.he_emergency_full_name + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.emergency_full_name" />
+                    <div class="flex flex-col relative">
+                      <input [id]="FormFieldId.he_emergency_full_name + '_control'" type="text" pInputText placeholder="Ej: Carlos Rodríguez López" class="w-full" [formControlName]="FormControlName.emergency_full_name" />
                       <form-error-msg [control]="heGroup.get(FormControlName.emergency_full_name)" />
                     </div>
                   </div>
@@ -719,7 +723,7 @@
                       <label class="font-medium" [for]="FormFieldId.he_emergency_phone + '_control'">Teléfono </label>
                       <span class="text-red-500">*</span>
                     </div>
-                    <div class="flex flex-col">
+                    <div class="flex flex-col relative">
                       <p-inputmask [inputId]="FormFieldId.he_emergency_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" [formControlName]="FormControlName.emergency_phone" />
                       <form-error-msg [control]="heGroup.get(FormControlName.emergency_phone)" />
                     </div>
@@ -731,7 +735,7 @@
                     <label class="font-medium" [for]="FormFieldId.he_emergency_relationship + '_control'">Parentesco</label>
                     <span class="text-red-500">*</span>
                   </div>
-                  <div class="flex flex-col">
+                  <div class="flex flex-col relative">
                     <p-select
                       [inputId]="FormFieldId.he_emergency_relationship + '_control'"
                       [options]="companionOptions"
@@ -754,8 +758,8 @@
                     <label class="font-bold" [for]="FormFieldId.he_religion + '_control'">Religión</label>
                     <span class="text-red-500">*</span>
                   </div>
-                  <div class="flex flex-col">
-                    <input [id]="FormFieldId.he_religion + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.religion" />
+                  <div class="flex flex-col relative">
+                    <input [id]="FormFieldId.he_religion + '_control'" type="text" pInputText placeholder="Ej: Católica" class="w-full" [formControlName]="FormControlName.religion" />
                     <form-error-msg [control]="heGroup.get(FormControlName.religion)" />
                   </div>
                 </div>
@@ -765,8 +769,8 @@
                     <label class="font-bold" [for]="FormFieldId.he_church_name + '_control'">Parroquia A Que Pertenece</label>
                     <span class="text-red-500">*</span>
                   </div>
-                  <div class="flex flex-col">
-                    <input [id]="FormFieldId.he_church_name + '_control'" type="text" pInputText class="w-full" [formControlName]="FormControlName.church_name" />
+                  <div class="flex flex-col relative">
+                    <input [id]="FormFieldId.he_church_name + '_control'" type="text" pInputText placeholder="Ej: Parroquia San José, Iglesia Nuestra Señora de la Altagracia" class="w-full" [formControlName]="FormControlName.church_name" />
                     <form-error-msg [control]="heGroup.get(FormControlName.church_name)" />
                   </div>
                 </div>
@@ -778,10 +782,12 @@
     </div>
 
     <div class="flex justify-end my-10">
-      <p-button label="Enviar" />
+      <p-button label="Enviar" (onClick)="onSubmit()" />
+      <!-- <p-button label="Enviar" [disabled]="!isFormValid" (onClick)="onSubmit()" /> -->
     </div>
   </div>
 </div>
+}
 
 <ng-template #accordionHeader let-title="title" let-isCompleted="isCompleted" let-invalid="invalid">
   <span class="flex flex-wrap justify-between items-center gap-2 w-full pr-4">

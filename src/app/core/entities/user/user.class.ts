@@ -1,13 +1,12 @@
 import { UserI } from './user.model';
 import { City } from '../city/city.class';
-import { inject } from '@angular/core';
+import { inject, runInInjectionContext } from '@angular/core';
 import { ToastService } from '@core/services/toast.service';
 import { CopyToClipboardService } from '@core/services/copy-to-clipboard.service';
 import { Ss } from '@core/services/singleton.service';
 import { CityService } from '../city/city.service';
 
 export class UserC {
-  private cityService = inject(CityService);
   email: string = '';
   uid: string = '';
   city: string = '';
@@ -47,7 +46,15 @@ export class UserC {
   }
 
   get cityRef() {
-    return this.cityService.getDocumentRef({ id: this.city });
+    return runInInjectionContext(Ss.injector, () => {
+      const cityService = inject(CityService);
+
+      return cityService.getDocumentRef({ id: this.city });
+    });
+  }
+
+  get getRefString() {
+    return `user/${this.id}`;
   }
 
   copyFormLink() {
