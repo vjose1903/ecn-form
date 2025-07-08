@@ -9,6 +9,9 @@ import { Ss } from '@core/services/singleton.service';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { City } from '../city/city.class';
 import { UserC } from '../user/user.class';
+import { RequestClass } from '../request/request.class';
+import { RequestI } from '../request/request.model';
+import { RequestService } from '../request/request.service';
 
 @Injectable({
   providedIn: 'root',
@@ -17,6 +20,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   private _collectionName = 'retreat';
   private userService = inject(UserService);
   private authService = inject(AuthService);
+  private requestService = inject(RequestService);
 
   private _retreats: BehaviorSubject<Retreat[]> = new BehaviorSubject<Retreat[]>([]);
   private _loadingRetreatList: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
@@ -62,8 +66,6 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
         refString: `${user.getRefString}/retreat`,
       }
     );
-
-    console.log('%c retreats', 'color: blue; font-weight: bold;', retreats);
 
     return retreats.map(retreat => new Retreat(retreat as RetreatI));
   }
@@ -288,15 +290,23 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
       // Actualizar observable
       this.updateRetreatInCache(result, 'update');
 
-      const action = retreat.is_active ? 'desactivado' : 'activado';
-      Ss.toastService.success({ message: `Retiro ${action} correctamente`, title: 'Éxito' });
-
       return result;
     } catch (error) {
       console.error('Error al cambiar estado del retiro:', error);
       Ss.toastService.error({ message: 'Error al cambiar el estado del retiro', title: 'Error' });
       throw error;
     }
+  }
+
+  async getRequests(retreat: Retreat): Promise<RequestClass[]> {
+    const refString = `user/${retreat.user_id}/retreat/${retreat.id}/request`;
+
+    return this._getAll<RequestI>({ find_value: retreat.id, refString }).then((res: RetreatI[] | RequestI[]) => {
+      if (res.length > 0 && 'retreat' in res[0]) {
+        return (res as RequestI[]).map((request: RequestI) => new RequestClass(request));
+      }
+      return [];
+    });
   }
 
   /**

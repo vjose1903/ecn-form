@@ -177,13 +177,13 @@ export class FirebaseRequest<T> {
   }
 
   // ========== MÉTODOS PÚBLICOS PRINCIPALES ==========
-  async _getAll(params: referenceParams = {}): Promise<T[]> {
+  async _getAll<K = T>(params: referenceParams = {}): Promise<T[] | K[]> {
     try {
       params = (await this.validateParams(params, 'getAll')) as referenceParams;
 
       // Si no hay filtros específicos, usar la ruta completa
       if (!params.find_by || params.find_by === 'id') {
-        const refString = this.makeEntityRefString(params);
+        const refString = params?.refString ? params.refString : this.makeEntityRefString(params);
 
         return await this.getDocumentsByField(refString);
       }
@@ -350,7 +350,7 @@ export class FirebaseRequest<T> {
 
   async getAllFromParentCollection(params: GetAllFromParentParams): Promise<T[]> {
     try {
-      const refString = `${params.parentCollection}/${params.parentId}/${this._firebaseCollectionName}`;
+      const refString = params?.refString ? params.refString : this.makeEntityRefString(params);
 
       if (params.find_by && params.find_value !== undefined) {
         return await this.getDocumentsByField(refString, params.find_by, params.find_value);
@@ -474,6 +474,8 @@ export interface GetAllFromParentParams {
   parentId: string | number;
   find_by?: string;
   find_value?: any;
+  refString?: string;
+  documentId?: string | number;
 }
 
 export interface GetOneFromParentParams {

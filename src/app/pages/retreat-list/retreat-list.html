@@ -4,11 +4,11 @@
     <!-- <p-button pButton type="button" label="Nuevo Retiro" icon="pi pi-plus" class="p-button-success" /> -->
     <div class="flex items-center gap-3 ml-auto">
       <p-button type="button" icon="pi pi-refresh" severity="secondary" [text]="true" [loading]="loading()" pTooltip="Refrescar datos" (onClick)="refreshData()" [attr.aria-label]="'Refrescar datos'"> </p-button>
-      <p-button type="button" icon="pi pi-share-alt" label="Link de Formulario" severity="info" variant="text" styleClass="relative" (onClick)="copyLink()" > </p-button>
+      <p-button type="button" icon="pi pi-share-alt" label="Link de Formulario" severity="info" variant="text" styleClass="relative" (onClick)="copyLink()"> </p-button>
       <p-button type="button" icon="pi pi-plus" label="Agregar" severity="success" styleClass="relative" (onClick)="showNewRetreatDialog()"> </p-button>
     </div>
   </div>
-  
+
   <div class="overflow-y-auto overflow-x-hidden">
     <dynamic-dataview [config]="dataviewConfig" />
   </div>

@@ -1,6 +1,8 @@
 export enum FormControlName {
   id = 'id',
   retreat = 'retreat',
+  is_active = 'is_active',
+  is_accepted = 'is_accepted',
   dating_period = 'dating_period',
   have_wedding_date = 'have_wedding_date',
   wedding_date = 'wedding_date',

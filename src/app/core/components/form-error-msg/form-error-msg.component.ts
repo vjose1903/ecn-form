@@ -58,6 +58,7 @@ export class FormErrorMsgComponent implements OnInit, OnDestroy, AfterViewInit {
     pattern: 'Formato inválido.',
     maxlength: (error: any) => `Máximo ${error.requiredLength} caracteres.`,
     invalidUrl: 'Ingrese una URL válida.',
+    previousRequestExists: (error: any) => error.message || 'Ya existe una solicitud anterior con este valor.',
   };
 
   constructor(private elementRef: ElementRef) {}

@@ -40,6 +40,7 @@
                     placeholder="Seleccione una fecha"
                     class="w-full"
                     appendTo="body"
+                    (onChange)="onRetreatChange()"
                     [formControlName]="FormControlName.retreat" />
                   <form-error-msg [control]="formGroup.get(FormControlName.retreat)" />
                 </div>
@@ -782,8 +783,7 @@
     </div>
 
     <div class="flex justify-end my-10">
-      <p-button label="Enviar" (onClick)="onSubmit()" />
-      <!-- <p-button label="Enviar" [disabled]="!isFormValid" (onClick)="onSubmit()" /> -->
+      <p-button label="Enviar" [disabled]="!isFormValid" (onClick)="onSubmit()" />
     </div>
   </div>
 </div>

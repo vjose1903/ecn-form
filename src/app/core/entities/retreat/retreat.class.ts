@@ -6,9 +6,12 @@ import { RetreatHome } from '../retreat-home/retreat-home.class';
 import { RetreatForm } from 'app/pages/retreat-list/retreat-form/retreat-form';
 import { RetreatView } from 'app/pages/retreat-list/components/retreat-view/retreat-view';
 import { fun } from '@core/services/functions.service';
+import { RequestClass } from '../request/request.class';
 
 export class Retreat {
   id: string = '';
+  user_id: string = '';
+  is_active: boolean = true;
   number: number = 0;
   community_name: string = '';
   start_date: string = '';
@@ -18,7 +21,6 @@ export class Retreat {
   retreatHomeData?: RetreatHome;
   modality: RetreatModality = RetreatModality.PRESENCIAL;
   mixedModalityData: { [date: string]: RetreatModalityType } = {};
-  is_active: boolean = true;
   accept_requests: boolean = true;
   request_count: number = 0;
 
@@ -40,6 +42,7 @@ export class Retreat {
    */
   private initializeFromData(retreat: RetreatI & { retreat_home?: any }): void {
     this.id = retreat.id || '';
+    this.user_id = retreat.user_id || '';
     this.number = retreat.number || 0;
     this.community_name = retreat.community_name || '';
     this.start_date = fun.convertFirebaseTimestamp(retreat.start_date);
@@ -293,6 +296,7 @@ export class Retreat {
   asJson() {
     return {
       id: this.id,
+      user_id: this.user_id,
       number: this.number,
       start_date: this.start_date,
       end_date: this.end_date,
@@ -413,6 +417,13 @@ export class Retreat {
     });
   }
 
+  getRequests(): Promise<RequestClass[]> {
+    return runInInjectionContext(Ss.injector, () => {
+      const retreatService = inject(RetreatService);
+      return retreatService.getRequests(this);
+    });
+  }
+
   /**
    * Obtiene la referencia del documento en Firebase
    */
@@ -445,6 +456,7 @@ export class Retreat {
    */
   updateFrom(other: Retreat): void {
     this.id = other.id;
+    this.user_id = other.user_id;
     this.number = other.number;
     this.start_date = other.start_date;
     this.end_date = other.end_date;

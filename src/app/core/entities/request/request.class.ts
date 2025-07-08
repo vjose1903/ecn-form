@@ -1,15 +1,24 @@
 import { inject, runInInjectionContext } from '@angular/core';
-import { RequestI } from './request.model';
+import { RequestI, CoupleI, BirthDate } from './request.model';
 import { Ss } from '@core/services/singleton.service';
 import { RequestService } from './request.service';
 import { RetreatView } from 'app/pages/retreat-list/components/retreat-view/retreat-view';
 import { Retreat } from '../retreat/retreat.class';
 
-export class Request {
+export class RequestClass {
   id: string = '';
+  is_active: boolean = true;
+  is_accepted: boolean | null = null;
+  how_find_us: string = '';
   retreat: string = '';
   retreatData?: Retreat;
-  is_active: boolean = true;
+  have_wedding_date: boolean = false;
+  who_invited_you: string = '';
+  wedding_date: Date | null = null;
+  dating_period: string = '';
+  how_find_us_other: string = '';
+  she: CoupleI = this.getDefaultCouple();
+  he: CoupleI = this.getDefaultCouple();
   accept_requests: boolean = true;
 
   // Propiedades computadas para optimizar el rendimiento
@@ -22,12 +31,78 @@ export class Request {
   }
 
   /**
+   * Obtiene un objeto CoupleI con valores por defecto
+   */
+  private getDefaultCouple(): CoupleI {
+    return {
+      full_name: '',
+      city_of_residence: '',
+      are_you_married: false,
+      live_accompanied: false,
+      religion: '',
+      emergency_full_name: '',
+      have_children: false,
+      identity_type: '',
+      birth_date: new Date(),
+      church_name: '',
+      home_phone: '',
+      companion_phone: '',
+      email: '',
+      nickname: '',
+      address: '',
+      emergency_relationship: '',
+      cell_phone: '',
+      identity_number: '',
+      work_phone: '',
+      companion_relationship: '',
+      companion_full_name: '',
+      emergency_phone: '',
+    };
+  }
+
+  /**
    * Inicializa la instancia desde datos externos
    */
   private initializeFromData(request: RequestI & { retreat?: any }): void {
     this.id = request.id || '';
+    this.is_accepted = request.is_accepted || null;
+    this.how_find_us = request.how_find_us || '';
+    this.have_wedding_date = request.have_wedding_date || false;
+    this.who_invited_you = request.who_invited_you || '';
+    this.wedding_date = request.wedding_date || null;
+    this.dating_period = request.dating_period || '';
+    this.how_find_us_other = request.how_find_us_other || '';
+    this.she = this.initializeCouple(request.she);
+    this.he = this.initializeCouple(request.he);
 
     this.initializeRetreat(request.retreat);
+  }
+
+  private initializeCouple(couple: CoupleI): CoupleI {
+    return {
+      full_name: couple.full_name || '',
+      city_of_residence: couple.city_of_residence || '',
+      are_you_married: couple.are_you_married || false,
+      live_accompanied: couple.live_accompanied || false,
+      religion: couple.religion || '',
+      emergency_full_name: couple.emergency_full_name || '',
+      have_children: couple.have_children || false,
+      identity_type: couple.identity_type || '',
+      birth_date: couple.birth_date || new Date(),
+      church_name: couple.church_name || '',
+      home_phone: couple.home_phone || '',
+      companion_phone: couple.companion_phone || '',
+      email: couple.email || '',
+      nickname: couple.nickname || '',
+      address: couple.address || '',
+      emergency_relationship: couple.emergency_relationship || '',
+      cell_phone: couple.cell_phone || '',
+      identity_number: couple.identity_number || '',
+      work_phone: couple.work_phone || '',
+      companion_relationship: couple.companion_relationship || '',
+      companion_full_name: couple.companion_full_name || '',
+      emergency_phone: couple.emergency_phone || '',
+    };
   }
 
   /**
@@ -50,8 +125,16 @@ export class Request {
   asJson() {
     return {
       id: this.id,
+      how_find_us: this.how_find_us,
       retreat: this.retreat,
       retreatData: this.retreatData?.asJson(),
+      have_wedding_date: this.have_wedding_date,
+      who_invited_you: this.who_invited_you,
+      wedding_date: this.wedding_date,
+      dating_period: this.dating_period,
+      how_find_us_other: this.how_find_us_other,
+      she: this.she,
+      he: this.he,
       is_active: this.is_active,
     };
   }
@@ -133,20 +216,28 @@ export class Request {
   /**
    * Clona la instancia
    */
-  clone(): Request {
+  clone(): RequestClass {
     const request = this.asJson();
     request.id = '';
 
-    return new Request(request);
+    return new RequestClass(request as any);
   }
 
   /**
    * Actualiza desde otra instancia
    */
-  updateFrom(other: Request): void {
+  updateFrom(other: RequestClass): void {
     this.id = other.id;
+    this.how_find_us = other.how_find_us;
     this.retreat = other.retreat;
     this.retreatData = other.retreatData;
+    this.have_wedding_date = other.have_wedding_date;
+    this.who_invited_you = other.who_invited_you;
+    this.wedding_date = other.wedding_date;
+    this.dating_period = other.dating_period;
+    this.how_find_us_other = other.how_find_us_other;
+    this.she = other.she;
+    this.he = other.he;
     this.is_active = other.is_active;
 
     // Limpiar caché de propiedades computadas

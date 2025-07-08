@@ -22,6 +22,7 @@ import { Retreat } from '@core/entities/retreat/retreat.class';
 import { fun } from '@core/services/functions.service';
 import { yesNoOptions } from '@core/typescript/constants';
 import { SelectButtonModule } from 'primeng/selectbutton';
+import { UserService } from '@core/entities/user/user.service';
 
 @Component({
   selector: 'app-retreat-form',
@@ -33,6 +34,7 @@ export class RetreatForm implements OnInit {
   private deviceDetectorService = inject(DeviceDetectorService);
   private retreatService = inject(RetreatService);
   private retreatHomeService = inject(RetreatHomeService);
+  private userService = inject(UserService);
   private config = inject(DynamicDialogConfig);
   private cdr = inject(ChangeDetectorRef);
   private fb = inject(FormBuilder);
@@ -103,10 +105,9 @@ export class RetreatForm implements OnInit {
   }
 
   createForm(retreat: Retreat | undefined) {
-    console.log('%c retreat', 'color: red; font-weight: bold;', retreat);
-
     const form = this.fb.group({
       [FormControlName.id]: [retreat?.id ?? null, []],
+      [FormControlName.user_id]: [retreat?.user_id ?? Ss.authService.current_user()?.id ?? null, []],
       [FormControlName.number]: [retreat?.number ?? null, [Validators.required, Validators.min(1)]],
       [FormControlName.retreat_home]: [retreat?.retreatHomeData?.id ?? null, [Validators.required]],
       [FormControlName.community_name]: [retreat?.community_name ?? null, []],
@@ -117,9 +118,6 @@ export class RetreatForm implements OnInit {
       [FormControlName.is_active]: [retreat?.is_active ?? true],
       [FormControlName.accept_requests]: [retreat?.accept_requests ?? true],
     });
-
-    console.log('%c retreat', 'color: red; font-weight: bold;', retreat);
-    console.log('%c retreat', 'color: yellow; font-weight: bold;', form.getRawValue());
 
     this.formGroup.set(form);
   }

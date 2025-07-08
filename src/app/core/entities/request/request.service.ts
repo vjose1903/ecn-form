@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { FirebaseRequest } from '@core/typescript/firebase/firebaseRequest';
 import { RequestI } from './request.model';
-import { Request } from './request.class';
+import { RequestClass } from './request.class';
 import { UserService } from '../user/user.service';
 import { fun } from '@core/services/functions.service';
 import { AuthService } from '@core/services/auth.service';
@@ -17,13 +17,13 @@ export class RequestService extends FirebaseRequest<RequestI> {
   private userService = inject(UserService);
   private authService = inject(AuthService);
 
-  private _requests: BehaviorSubject<Request[]> = new BehaviorSubject<Request[]>([]);
+  private _requests: BehaviorSubject<RequestClass[]> = new BehaviorSubject<RequestClass[]>([]);
   private _loadingRequestsList: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   private _lastFetch: number = 0;
   private readonly CACHE_DURATION = 3 * 60 * 1000; // 3 minutos
 
   // Observables públicos
-  get requests$(): Observable<Request[]> {
+  get requests$(): Observable<RequestClass[]> {
     return this._requests.asObservable();
   }
 
@@ -31,7 +31,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
     return this._loadingRequestsList.asObservable();
   }
 
-  get requests(): Request[] {
+  get requests(): RequestClass[] {
     return this._requests.value;
   }
 
@@ -51,7 +51,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
   /**
    * Obtiene todos los retiros por retiro
    */
-  async getAll(args: { onlyActive?: boolean } = {}): Promise<Request[]> {
+  async getAll(args: { onlyActive?: boolean } = {}): Promise<RequestClass[]> {
     const now = Date.now();
 
     // Verificar si el caché es válido
@@ -65,7 +65,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
   /**
    * Obtiene todos los retiros desde Firebase usando la colección padre
    */
-  private async fetchAllRequests(args: { onlyActive?: boolean } = {}): Promise<Request[]> {
+  private async fetchAllRequests(args: { onlyActive?: boolean } = {}): Promise<RequestClass[]> {
     const { onlyActive } = args;
     try {
       this._loadingRequestsList.next(true);
@@ -95,7 +95,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
         });
       }
 
-      const retreatList = requests.map(retreat => new Request(retreat));
+      const retreatList = requests.map(retreat => new RequestClass(retreat));
 
       this._requests.next(retreatList);
       this._lastFetch = Date.now();
@@ -113,7 +113,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
   /**
    * Obtiene un retiro por ID
    */
-  async getRetreatById(id: string): Promise<Request | null> {
+  async getRetreatById(id: string): Promise<RequestClass | null> {
     if (!id) {
       return null;
     }
@@ -132,7 +132,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
         parentId: currentUser.id,
         documentId: id,
       });
-      return retreat ? new Request(retreat) : null;
+      return retreat ? new RequestClass(retreat) : null;
     }
 
     return this.processGetRetreat(id, 'id');
@@ -141,11 +141,11 @@ export class RequestService extends FirebaseRequest<RequestI> {
   /**
    * Procesa la obtención de un retiro
    */
-  private processGetRetreat(value: string, by: string): Promise<Request | null> {
-    return new Promise<Request | null>((resolve, reject) => {
+  private processGetRetreat(value: string, by: string): Promise<RequestClass | null> {
+    return new Promise<RequestClass | null>((resolve, reject) => {
       this._getOne({ find_by: by, find_value: value })
         .then(retreat => {
-          const retreatObj = retreat ? new Request(retreat) : null;
+          const retreatObj = retreat ? new RequestClass(retreat) : null;
           resolve(retreatObj);
         })
         .catch(error => {
@@ -168,8 +168,6 @@ export class RequestService extends FirebaseRequest<RequestI> {
 
       // Actualizar observable
       this.updateRequestInCache(result, 'create');
-
-      Ss.toastService.success({ message: 'Retiro creado correctamente', title: 'Éxito' });
 
       return result;
     } catch (error) {
@@ -203,8 +201,6 @@ export class RequestService extends FirebaseRequest<RequestI> {
       // Actualizar observable
       this.updateRequestInCache(result, 'update');
 
-      Ss.toastService.success({ message: 'Retiro actualizado correctamente', title: 'Éxito' });
-
       return result;
     } catch (error) {
       console.error('Error al actualizar retiro:', error);
@@ -216,7 +212,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
   /**
    * Cambia el estado de un retiro
    */
-  async toggleRequeststatus(retreat: Request): Promise<RequestI> {
+  async toggleRequeststatus(retreat: RequestClass): Promise<RequestI> {
     try {
       const currentUser = this.authService.current_user();
 
@@ -288,7 +284,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
    * Actualiza o agrega un retiro en el observable
    */
   private updateRequestInCache(requestData: RequestI, action: 'create' | 'update'): void {
-    const requestInstance = new Request(requestData);
+    const requestInstance = new RequestClass(requestData);
     const currentRequests = this._requests.value;
 
     if (action === 'create') {

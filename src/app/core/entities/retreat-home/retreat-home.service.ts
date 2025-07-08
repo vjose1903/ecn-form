@@ -7,6 +7,7 @@ import { fun } from '@core/services/functions.service';
 import { AuthService } from '@core/services/auth.service';
 import { Ss } from '@core/services/singleton.service';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { RetreatI } from '../retreat/retreat.model';
 
 @Injectable({
   providedIn: 'root',
@@ -75,7 +76,7 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
       }
 
       const retreats = await this._getAll({ find_by: 'city', find_value: cityRef });
-      const retreatHomes = retreats.map(retreat => new RetreatHome(retreat));
+      const retreatHomes = retreats.map((retreat: RetreatHomeI) => new RetreatHome(retreat));
 
       this._retreatHomes.next(retreatHomes);
       this._lastFetch = Date.now();
