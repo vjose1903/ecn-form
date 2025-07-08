@@ -4,6 +4,7 @@ import { Ss } from '@core/services/singleton.service';
 import { RequestService } from './request.service';
 import { RetreatView } from 'app/pages/retreat-list/components/retreat-view/retreat-view';
 import { Retreat } from '../retreat/retreat.class';
+import { fun } from '@core/services/functions.service';
 
 export class RequestClass {
   id: string = '';
@@ -14,7 +15,7 @@ export class RequestClass {
   retreatData?: Retreat;
   have_wedding_date: boolean = false;
   who_invited_you: string = '';
-  wedding_date: Date | null = null;
+  wedding_date: Date | string | null = null;
   dating_period: string = '';
   how_find_us_other: string = '';
   she: CoupleI = this.getDefaultCouple();
@@ -36,6 +37,7 @@ export class RequestClass {
   private getDefaultCouple(): CoupleI {
     return {
       full_name: '',
+      age: 0,
       city_of_residence: '',
       are_you_married: false,
       live_accompanied: false,
@@ -69,7 +71,7 @@ export class RequestClass {
     this.how_find_us = request.how_find_us || '';
     this.have_wedding_date = request.have_wedding_date || false;
     this.who_invited_you = request.who_invited_you || '';
-    this.wedding_date = request.wedding_date || null;
+    this.wedding_date = fun.convertFirebaseTimestamp(request.wedding_date) || null;
     this.dating_period = request.dating_period || '';
     this.how_find_us_other = request.how_find_us_other || '';
     this.she = this.initializeCouple(request.she);
@@ -81,6 +83,7 @@ export class RequestClass {
   private initializeCouple(couple: CoupleI): CoupleI {
     return {
       full_name: couple.full_name || '',
+      age: fun.calculateAge(couple.birth_date) || 0,
       city_of_residence: couple.city_of_residence || '',
       are_you_married: couple.are_you_married || false,
       live_accompanied: couple.live_accompanied || false,
@@ -88,7 +91,7 @@ export class RequestClass {
       emergency_full_name: couple.emergency_full_name || '',
       have_children: couple.have_children || false,
       identity_type: couple.identity_type || '',
-      birth_date: couple.birth_date || new Date(),
+      birth_date: fun.convertFirebaseTimestamp(couple.birth_date) || new Date(),
       church_name: couple.church_name || '',
       home_phone: couple.home_phone || '',
       companion_phone: couple.companion_phone || '',

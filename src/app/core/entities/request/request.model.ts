@@ -5,7 +5,7 @@ export interface RequestI {
   retreatData: any;
   have_wedding_date: boolean;
   who_invited_you: string;
-  wedding_date: null;
+  wedding_date: Date | string | null;
   dating_period: string;
   how_find_us_other: string;
   she: CoupleI;
@@ -16,6 +16,7 @@ export interface RequestI {
 
 export interface CoupleI {
   full_name: string;
+  age: number;
   city_of_residence: string;
   are_you_married: boolean;
   live_accompanied: boolean;
@@ -23,7 +24,7 @@ export interface CoupleI {
   emergency_full_name: string;
   have_children: boolean;
   identity_type: string;
-  birth_date: BirthDate | Date;
+  birth_date: BirthDate | Date | string;
   church_name: string;
   home_phone: string;
   companion_phone: string;

@@ -1,5 +1,6 @@
 import { RetryOptions } from '@core/interfaces/retry-until';
 import { Ss } from './singleton.service';
+import { BirthDate } from '@core/entities/request/request.model';
 
 export class fun {
   /**
@@ -81,6 +82,43 @@ export class fun {
     }
 
     return '';
+  }
+
+  /**
+   * Calcula la edad a partir de una fecha de nacimiento
+   * @param birthDate - Fecha de nacimiento (puede ser Date, string, o BirthDate de Firebase)
+   * @returns La edad en años
+   */
+  static calculateAge(birthDate: Date | string | BirthDate | null | undefined): number {
+    if (!birthDate) return 0;
+
+    let date: Date;
+
+    // Convertir diferentes tipos de fecha a Date
+    if (typeof birthDate === 'string') {
+      date = new Date(birthDate);
+    } else if (birthDate instanceof Date) {
+      date = birthDate;
+    } else if (typeof birthDate === 'object' && 'seconds' in birthDate) {
+      // Es un timestamp de Firebase
+      date = new Date(birthDate.seconds * 1000);
+    } else {
+      return 0;
+    }
+
+    // Verificar que la fecha sea válida
+    if (isNaN(date.getTime())) return 0;
+
+    const today = new Date();
+    let age = today.getFullYear() - date.getFullYear();
+    const monthDiff = today.getMonth() - date.getMonth();
+
+    // Si aún no ha cumplido años este año, restar 1
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+      age--;
+    }
+
+    return Math.max(0, age);
   }
 
   /**
