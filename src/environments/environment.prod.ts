@@ -2,7 +2,7 @@
 export const environment = {
   production: true,
   firebaseConfig: {
-    apiKey: 'AIzaSyChCaLlE1a4VbuM6fLR9xcopZmJnznJTRI',
+    apiKey: import.meta.env['NG_APP_FIREBASE_API_KEY'],
     authDomain: 'ecn-platform.firebaseapp.com',
     projectId: 'ecn-platform',
     storageBucket: 'ecn-platform.firebasestorage.app',
