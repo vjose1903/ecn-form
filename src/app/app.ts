@@ -1,13 +1,10 @@
 import { ChangeDetectorRef, Component, inject, Injector, NgZone, OnInit, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { Ss } from '@core/services/singleton.service';
-import { fun } from '@core/services/functions.service';
 import { LoadingComponent } from '@core/components/loading-component/loading-component';
 import { ToastModule } from 'primeng/toast';
 import { AuthService } from '@core/services/auth.service';
 import { Firestore } from '@angular/fire/firestore';
-import { environment } from 'environments/environment';
-import { UserService } from '@core/entities/user/user.service';
 import { ToastService } from '@core/services/toast.service';
 import { CopyToClipboardService } from '@core/services/copy-to-clipboard.service';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -54,7 +51,7 @@ export class App implements OnInit {
 
       this.isReady.set(true);
       this.cdRef.detectChanges();
-      
+
       console.log('✅ [App] Aplicación inicializada correctamente');
     } catch (error) {
       console.error('❌ [App] Error durante la inicialización:', error);
