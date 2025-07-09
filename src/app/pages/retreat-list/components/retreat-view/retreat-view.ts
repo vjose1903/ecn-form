@@ -1,6 +1,7 @@
-import { Component, inject, Input, OnInit, signal, OnDestroy } from '@angular/core';
+import { Ss } from '@core/services/singleton.service';
+import { Component, inject, Input, OnInit, signal, OnDestroy, computed } from '@angular/core';
 import { Retreat } from '@core/entities/retreat/retreat.class';
-import { CommonModule } from '@angular/common';
+import { CommonModule, LowerCasePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
@@ -11,31 +12,106 @@ import { ConfirmationService } from 'primeng/api';
 import { RetreatService } from '@core/entities/retreat/retreat.service';
 import { ToastService } from '@core/services/toast.service';
 import { Subject, takeUntil } from 'rxjs';
+import { BadgeModule } from 'primeng/badge';
+import { RequestClass } from '@core/entities/request/request.class';
+import { RequestStats, RequestStatus, RequestStatusInfo } from '@core/entities/request/request.model';
+import { RequestCard } from './requests/request-card/request-card';
+import { SelectModule } from 'primeng/select';
+import { FormsModule } from '@angular/forms';
+import { InputTextModule } from 'primeng/inputtext';
 
 @Component({
   selector: 'app-retreat-view',
-  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, DividerLine],
+  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, DividerLine, BadgeModule, RequestCard, SelectModule, FormsModule, LowerCasePipe, InputTextModule],
   templateUrl: './retreat-view.html',
   styleUrl: './retreat-view.scss',
 })
 export class RetreatView implements OnInit, OnDestroy {
-  private retreatService = inject(RetreatService);
-  private confirmationService = inject(ConfirmationService);
-  private toastService = inject(ToastService);
-  private destroy$ = new Subject<void>();
+  requests = signal<RequestClass[]>([]);
+  requestFiltered = computed(() => {
+    const word = this.filterWord();
+    const status = this.selectedRequestStatus();
+
+    // Primero filtrar por palabra de búsqueda en los nombres completos
+    let filteredRequests = this.requests();
+    
+    if (word) {
+      filteredRequests = filteredRequests.filter(request => {
+        const sheName = request.she.full_name.toLowerCase();
+        const heName = request.he.full_name.toLowerCase();
+        const searchWord = word.toLowerCase();
+        
+        return sheName.includes(searchWord) || heName.includes(searchWord);
+      });
+    }
+
+    // Luego filtrar por estado seleccionado
+    if (status === RequestStatus.ALL) {
+      return filteredRequests;
+    }
+    
+    return filteredRequests.filter(request => request.status === status);
+  });
+
+  selectedRequestStatus = signal<RequestStatus>(RequestStatus.ALL);
+  filterWord = signal<string>('');
+  requestStatusOptions = [
+    { label: 'Todas', value: RequestStatus.ALL },
+    { label: 'Pendientes', value: RequestStatus.PENDING },
+    { label: 'Aceptadas', value: RequestStatus.ACCEPTED },
+    { label: 'Rechazadas', value: RequestStatus.REJECTED },
+  ];
+
+  requestStats = signal<RequestStats>({
+    [RequestStatus.PENDING]: { amount: 0, tooltip: 'Pendientes', severity: 'secondary' as const, label: 'Pendiente', labelPlural: 'Pendientes' },
+    [RequestStatus.ACCEPTED]: { amount: 0, tooltip: 'Aceptadas', severity: 'success' as const, label: 'Aceptada', labelPlural: 'Aceptadas' },
+    [RequestStatus.REJECTED]: { amount: 0, tooltip: 'Rechazadas', severity: 'danger' as const, label: 'Rechazada', labelPlural: 'Rechazadas' },
+  });
+
+  RequestStatus = RequestStatus;
 
   retreat!: Retreat;
   loading = signal(false);
+
+  private destroy$ = new Subject<void>();
+
+  get keys() {
+    return Object.keys;
+  }
 
   constructor(public ref: DynamicDialogRef, public config: DynamicDialogConfig) {}
 
   ngOnInit(): void {
     this.retreat = this.config.data.retreat;
+    this.getRequests();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  async getRequests(): Promise<void> {
+    try {
+      const requests = await this.retreat.getRequests();
+      this.requests.set(requests);
+
+      requests
+        .filter(request => request.status !== RequestStatus.ALL)
+        .forEach(request => {
+          const status = request.status as Exclude<RequestStatus, RequestStatus.ALL>;
+          this.requestStats.update(prev => ({ ...prev, [status]: { ...prev[status], amount: prev[status].amount + 1 } }));
+        });
+    } catch (error) {
+      Ss.toastService.error({ message: 'Error al obtener las solicitudes', title: 'Error' });
+    }
+  }
+
+  getRequestStatusInfo(status: string): RequestStatusInfo {
+    const stats = this.requestStats();
+    const statusInfo = stats[status as keyof typeof stats];
+
+    return statusInfo;
   }
 
   /**
@@ -99,7 +175,7 @@ export class RetreatView implements OnInit, OnDestroy {
     try {
       this.loading.set(true);
       await this.retreat.openForm();
-      
+
       // Cerrar la vista después de editar
       this.ref.close();
     } catch (error) {
@@ -125,4 +201,4 @@ export class RetreatView implements OnInit, OnDestroy {
   closeView(): void {
     this.ref.close();
   }
-} 
+}

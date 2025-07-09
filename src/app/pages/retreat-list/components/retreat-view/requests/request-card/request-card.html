@@ -1,0 +1,11 @@
+<p-card class="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-102" (click)="onCardClick()">
+  <div class="flex flex-col gap-2">
+    <div class="w-fit">
+      <p-tag [severity]="status().severity" [value]="status().label" [rounded]="true" />
+    </div>
+    <div>
+      <small class="text-gray-500">Pareja</small>
+      <h1 class="text-black font-bold text-lg">{{ request().displayCoupleNames }}</h1>
+    </div>
+  </div>
+</p-card>

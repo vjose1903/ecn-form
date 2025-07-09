@@ -1,5 +1,5 @@
 import { inject, runInInjectionContext } from '@angular/core';
-import { RequestI, CoupleI, BirthDate } from './request.model';
+import { RequestI, CoupleI, BirthDate, RequestStatus } from './request.model';
 import { Ss } from '@core/services/singleton.service';
 import { RequestService } from './request.service';
 import { RetreatView } from 'app/pages/retreat-list/components/retreat-view/retreat-view';
@@ -20,7 +20,11 @@ export class RequestClass {
   how_find_us_other: string = '';
   she: CoupleI = this.getDefaultCouple();
   he: CoupleI = this.getDefaultCouple();
-  accept_requests: boolean = true;
+  status: RequestStatus = RequestStatus.PENDING;
+
+  get displayCoupleNames(): string {
+    return fun.joinWords([this.she.full_name, this.he.full_name]);
+  }
 
   // Propiedades computadas para optimizar el rendimiento
   private _displayDateRange: string | null = null;
@@ -76,6 +80,7 @@ export class RequestClass {
     this.how_find_us_other = request.how_find_us_other || '';
     this.she = this.initializeCouple(request.she);
     this.he = this.initializeCouple(request.he);
+    this.status = request.status || RequestStatus.PENDING;
 
     this.initializeRetreat(request.retreat);
   }

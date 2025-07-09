@@ -121,6 +121,12 @@ export class fun {
     return Math.max(0, age);
   }
 
+  static joinWords(words: string[]): string {
+    const formatter = new Intl.ListFormat('es', { style: 'long', type: 'conjunction' });
+
+    return formatter.format(words);
+  }
+
   /**
    * Nombre: retryUntil
    * Descripcion : Esta funcion recibe una tarea y la repite hasta que las condiciones establecidas se cumplan

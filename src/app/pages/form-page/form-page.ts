@@ -23,7 +23,7 @@ import { Retreat } from '@core/entities/retreat/retreat.class';
 import { Ss } from '@core/services/singleton.service';
 import { FormSkeletonComponent } from './components/form-skeleton/form-skeleton.component';
 import { RequestService } from '@core/entities/request/request.service';
-import { RequestI } from '@core/entities/request/request.model';
+import { RequestI, RequestStatus } from '@core/entities/request/request.model';
 import { RequestSend } from './components/request-send/request-send';
 import { City } from '@core/entities/city/city.class';
 import { fun } from '@core/services/functions.service';
@@ -78,6 +78,7 @@ export class FormPage implements OnInit {
     [FormControlName.id]: [''],
     [FormControlName.is_active]: [true],
     [FormControlName.is_accepted]: [null],
+    [FormControlName.status]: [RequestStatus.PENDING],
     [FormControlName.retreat]: ['', Validators.required],
     [FormControlName.dating_period]: ['', Validators.required],
     [FormControlName.have_wedding_date]: [null, Validators.required],

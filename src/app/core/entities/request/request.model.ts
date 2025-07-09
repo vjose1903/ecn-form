@@ -12,6 +12,7 @@ export interface RequestI {
   he: CoupleI;
   is_active?: boolean;
   is_accepted: boolean | null;
+  status: RequestStatus;
 }
 
 export interface CoupleI {
@@ -42,4 +43,23 @@ export interface CoupleI {
 export interface BirthDate {
   seconds: number;
   nanoseconds: number;
+}
+
+export enum RequestStatus {
+  ALL = 'all',
+  PENDING = 'pending',
+  ACCEPTED = 'accepted',
+  REJECTED = 'rejected',
+}
+
+export interface RequestStatusInfo {
+  amount: number;
+  tooltip: string;
+  severity: 'secondary' | 'success' | 'danger';
+  label: string;
+  labelPlural: string;
+}
+
+export interface RequestStats {
+  [prop: string]: RequestStatusInfo;
 }

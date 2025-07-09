@@ -9,6 +9,7 @@ export enum FormControlName {
   how_find_us = 'how_find_us',
   how_find_us_other = 'how_find_us_other',
   who_invited_you = 'who_invited_you',
+  status = 'status',
 
   full_name = 'full_name',
   nickname = 'nickname',

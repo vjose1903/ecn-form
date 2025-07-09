@@ -157,6 +157,7 @@ export class PreviousRequestValidator {
       [FormControlName.emergency_relationship]: 'Relación con contacto de emergencia',
       [FormControlName.religion]: 'Religión',
       [FormControlName.church_name]: 'Nombre de la iglesia',
+      [FormControlName.status]: 'Estado de la solicitud',
     };
 
     return fieldNames[fieldName] || fieldName;
