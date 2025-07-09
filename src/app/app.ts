@@ -47,10 +47,16 @@ export class App implements OnInit {
     try {
       await this.initializeSingletonServices();
 
-      await this.checkUser();
+      // El AuthService ahora maneja automáticamente la verificación de usuarios
+      // Solo necesitamos esperar a que termine de inicializar
+      while (this.authService.isLoading()) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
 
       this.isReady.set(true);
       this.cdRef.detectChanges();
+      
+      console.log('✅ [App] Aplicación inicializada correctamente');
     } catch (error) {
       console.error('❌ [App] Error durante la inicialización:', error);
       // Aún marcar como lista para que la app funcione
@@ -74,33 +80,5 @@ export class App implements OnInit {
 
     // Delay mínimo para asegurar que Firebase esté listo
     await new Promise(resolve => setTimeout(resolve, 100));
-  }
-
-  private async checkUser(): Promise<void> {
-    const email = localStorage.getItem(environment.X_EMAIL);
-    const token = localStorage.getItem(environment.X_TOKEN);
-
-    // Si no hay credenciales, no hacer nada
-    if (!email || !token) return;
-
-    // Si ya hay usuario autenticado, no verificar de nuevo
-    if (this.authService.current_user()) {
-      return;
-    }
-
-    try {
-      const user = await this.userService.getUserByEmail(email);
-
-      if (user) {
-        this.authService.current_user.set(user);
-      } else {
-        console.warn('⚠️ [App] Usuario no encontrado, cerrando sesión');
-        await this.authService.logout();
-      }
-    } catch (error) {
-      console.error('❌ [App] Error verificando usuario:', error);
-      await this.authService.logout();
-      throw error;
-    }
   }
 }

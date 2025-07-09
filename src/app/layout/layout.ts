@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { NavigationCancel, NavigationEnd, NavigationError, Router, RouterOutlet } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
 import { CopyToClipboardService } from '@core/services/copy-to-clipboard.service';
@@ -46,9 +46,16 @@ export class Layout implements OnInit {
 
   private onDestroy$ = new Subject<void>();
 
+  constructor() {
+    effect(() => {
+      if (Ss.authService.isAuthenticated()) {
+        this.retreatHomeService.refresh();
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.setupRouterListener();
-    this.retreatHomeService.refresh();
   }
 
   ngOnDestroy(): void {

@@ -1,19 +1,27 @@
 import { inject } from '@angular/core';
 import { Router, type CanActivateFn } from '@angular/router';
-import { environment } from '../../../environments/environment';
+import { AuthService } from '@core/services/auth.service';
 
-export const loginGuard: CanActivateFn = (route, state) => {
+export const loginGuard: CanActivateFn = async (route, state) => {
   const router = inject(Router);
+  const authService = inject(AuthService);
 
-  // Verificar si existe el token en localStorage
-  const token = localStorage.getItem(environment.X_TOKEN);
+  // Esperar a que el AuthService termine de inicializar
+  while (authService.isLoading()) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
 
-  if (token) {
-    // Si hay token, redirigir al listado de retiros
+  // Verificar si el usuario está autenticado usando el AuthService
+  const isAuthenticated = await authService.isUserAuthenticated();
+
+  if (isAuthenticated) {
+    // Si está autenticado, redirigir al listado de retiros
+    console.log('🔄 [LoginGuard] Usuario ya autenticado, redirigiendo a retiros');
     router.navigateByUrl('/retiros');
     return false;
   }
 
-  // Si hay token, permitir acceso
+  // Si no está autenticado, permitir acceso al login
+  console.log('✅ [LoginGuard] Usuario no autenticado, permitiendo acceso al login');
   return true;
 };

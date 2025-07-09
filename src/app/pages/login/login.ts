@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal, OnInit } from '@angular/core';
+import { Component, effect, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
@@ -10,6 +10,7 @@ import { AuthService } from '@core/services/auth.service';
 import { AuthPayload } from '@core/models/auth.model';
 import { fun } from '@core/services/functions.service';
 import { Router } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-login',
@@ -17,7 +18,7 @@ import { Router } from '@angular/router';
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })
-export class Login implements OnInit {
+export class Login implements OnInit, OnDestroy {
   fb = inject(FormBuilder);
   auth = inject(AuthService);
   FormControlName = FormControlName;
@@ -28,45 +29,83 @@ export class Login implements OnInit {
     password: ['', [Validators.required]],
   });
 
-  isLoading = signal(false);
+  // Usar el signal de loading del AuthService
+  isLoading = this.auth.isLoading;
   isGoogleLoading = signal(false);
+  isSubmitting = signal(false);
+
+  private destroy$ = new Subject<void>();
 
   constructor() {
-    // this.isLoading = true;
-
+    // Efecto para manejar el estado de loading del AuthService
     effect(() => {
-      this.changeFormStatus(this.isLoading() ? 'disable' : 'enable');
+      const loading = this.isLoading();
+      this.changeFormStatus(loading ? 'disable' : 'enable');
+    });
+
+    // Efecto para redirigir cuando el usuario se autentique
+    effect(() => {
+      const isAuthenticated = this.auth.isAuthenticated();
+      if (isAuthenticated) {
+        console.log('✅ [Login] Usuario autenticado, redirigiendo...');
+        this.router.navigateByUrl('/retiros');
+      }
     });
   }
 
   ngOnInit() {}
 
-  onSubmit() {
-    if (this.formGroup.valid) {
-      this.isLoading.set(true);
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  async onSubmit() {
+    if (this.formGroup.valid && !this.isSubmitting()) {
+      this.isSubmitting.set(true);
       const payload: AuthPayload = this.formGroup.value as AuthPayload;
 
-      this.auth.login(payload).finally(() => {
-        this.isLoading.set(false);
-      });
+      try {
+        await this.auth.login(payload);
+        // El efecto se encargará de la redirección
+      } catch (error) {
+        console.error('❌ [Login] Error en login:', error);
+        // El error ya se maneja en el AuthService
+      } finally {
+        this.isSubmitting.set(false);
+      }
     }
   }
 
-  onGoogleLogin() {
-    this.isLoading.set(true);
+  async onGoogleLogin() {
+    if (this.isSubmitting()) return;
+    
+    this.isSubmitting.set(true);
     this.isGoogleLoading.set(true);
 
-    this.auth.loginWithGooglePopup().finally(() => {
-      this.isLoading.set(false);
+    try {
+      await this.auth.loginWithGooglePopup();
+      // El efecto se encargará de la redirección
+    } catch (error) {
+      console.error('❌ [Login] Error en login con Google:', error);
+      // El error ya se maneja en el AuthService
+    } finally {
+      this.isSubmitting.set(false);
       this.isGoogleLoading.set(false);
-    });
+    }
   }
 
   changeFormStatus(status: 'disable' | 'enable') {
-    this.formGroup.get('email')?.[status]();
-    this.formGroup.get('password')?.[status]();
+    if (status === 'disable') {
+      this.formGroup.get('email')?.disable();
+      this.formGroup.get('password')?.disable();
+    } else {
+      this.formGroup.get('email')?.enable();
+      this.formGroup.get('password')?.enable();
+    }
   }
 
+  // Método para testing (mantener por compatibilidad)
   onTest() {
     this.router.navigateByUrl('/retiros');
   }
