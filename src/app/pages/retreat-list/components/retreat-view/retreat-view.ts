@@ -34,13 +34,13 @@ export class RetreatView implements OnInit, OnDestroy {
 
     // Primero filtrar por palabra de búsqueda en los nombres completos
     let filteredRequests = this.requests();
-    
+
     if (word) {
       filteredRequests = filteredRequests.filter(request => {
         const sheName = request.she.full_name.toLowerCase();
         const heName = request.he.full_name.toLowerCase();
         const searchWord = word.toLowerCase();
-        
+
         return sheName.includes(searchWord) || heName.includes(searchWord);
       });
     }
@@ -49,9 +49,11 @@ export class RetreatView implements OnInit, OnDestroy {
     if (status === RequestStatus.ALL) {
       return filteredRequests;
     }
-    
+
     return filteredRequests.filter(request => request.status === status);
   });
+
+  fetchingRequests = signal(true);
 
   selectedRequestStatus = signal<RequestStatus>(RequestStatus.ALL);
   filterWord = signal<string>('');
@@ -102,6 +104,8 @@ export class RetreatView implements OnInit, OnDestroy {
           const status = request.status as Exclude<RequestStatus, RequestStatus.ALL>;
           this.requestStats.update(prev => ({ ...prev, [status]: { ...prev[status], amount: prev[status].amount + 1 } }));
         });
+
+      this.fetchingRequests.set(false);
     } catch (error) {
       Ss.toastService.error({ message: 'Error al obtener las solicitudes', title: 'Error' });
     }
@@ -173,11 +177,10 @@ export class RetreatView implements OnInit, OnDestroy {
    */
   async openEditForm(): Promise<void> {
     try {
+      this.ref.close();
+
       this.loading.set(true);
       await this.retreat.openForm();
-
-      // Cerrar la vista después de editar
-      this.ref.close();
     } catch (error) {
       console.error('Error al abrir formulario:', error);
     } finally {
