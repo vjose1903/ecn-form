@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { FirebaseRequest } from '@core/typescript/firebase/firebaseRequest';
 import { CityI } from './city.model';
-import { City } from './city.class';
+import { CityClass } from './city.class';
 
 @Injectable({
   providedIn: 'root',
@@ -18,19 +18,19 @@ export class CityService extends FirebaseRequest<CityI> {
     return this._collectionName;
   }
 
-  async getCityById(id: string): Promise<City | null> {
+  async getCityById(id: string): Promise<CityClass | null> {
     return this.processGetCity(id, 'id');
   }
 
-  async getCityByName(name: string): Promise<City | null> {
+  async getCityByName(name: string): Promise<CityClass | null> {
     return this.processGetCity(name, 'name');
   }
 
-  private processGetCity(value: string, by: string): Promise<City | null> {
-    return new Promise<City | null>(resolve => {
+  private processGetCity(value: string, by: string): Promise<CityClass | null> {
+    return new Promise<CityClass | null>(resolve => {
       this._getOne({ find_by: by, find_value: value })
         .then(city => {
-          resolve(city ? new City(city) : null);
+          resolve(city ? new CityClass(city) : null);
         })
         .catch(error => resolve(null));
     });

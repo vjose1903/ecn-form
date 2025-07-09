@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { FirebaseRequest } from '@core/typescript/firebase/firebaseRequest';
 import { UserI } from './user.model';
 import { UserC } from './user.class';
-import { City } from '../city/city.class';
+import { CityClass } from '../city/city.class';
 import { DocumentReference } from '@angular/fire/firestore';
 
 @Injectable({

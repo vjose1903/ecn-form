@@ -1,6 +1,6 @@
 import { FileClass } from '../file/file.class';
 import { RetreatHomeI } from './retreat-home.model';
-import { City } from '../city/city.class';
+import { CityClass } from '../city/city.class';
 import { inject, runInInjectionContext, WritableSignal } from '@angular/core';
 import { ConfirmationService } from 'primeng/api';
 import { RetreatHomeService } from './retreat-home.service';
@@ -15,7 +15,7 @@ export class RetreatHome {
   address: string = '';
   location: string = '';
   city: string = '';
-  cityData?: City;
+  cityData?: CityClass;
   is_active: boolean = true;
   images: Array<FileClass | string> = [];
   imagesData: Array<FileClass> = [];
@@ -55,7 +55,7 @@ export class RetreatHome {
       this.city = city;
     } else if (city && typeof city === 'object' && city.id) {
       this.city = city.id;
-      this.cityData = new City(city);
+      this.cityData = new CityClass(city);
     } else {
       this.city = '';
     }

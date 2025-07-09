@@ -1,5 +1,5 @@
 import { UserI } from './user.model';
-import { City } from '../city/city.class';
+import { CityClass } from '../city/city.class';
 import { inject, runInInjectionContext } from '@angular/core';
 import { ToastService } from '@core/services/toast.service';
 import { CopyToClipboardService } from '@core/services/copy-to-clipboard.service';
@@ -11,7 +11,7 @@ export class UserC {
   uid: string = '';
   city: string = '';
   id: string = '';
-  cityData?: City;
+  cityData?: CityClass;
 
   constructor(user: UserI & { city?: any }) {
     this.email = user.email;
@@ -24,7 +24,7 @@ export class UserC {
     } else if (user.city && typeof user.city === 'object' && user.city.id) {
       // Si city es un objeto (referencia resuelta), extraer el ID y crear cityData
       this.city = user.city.id;
-      this.cityData = new City(user.city);
+      this.cityData = new CityClass(user.city);
     } else {
       this.city = '';
     }

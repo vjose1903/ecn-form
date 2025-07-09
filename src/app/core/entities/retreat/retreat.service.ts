@@ -7,7 +7,7 @@ import { fun } from '@core/services/functions.service';
 import { AuthService } from '@core/services/auth.service';
 import { Ss } from '@core/services/singleton.service';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { City } from '../city/city.class';
+import { CityClass } from '../city/city.class';
 import { UserC } from '../user/user.class';
 import { RequestClass } from '../request/request.class';
 import { RequestI } from '../request/request.model';
