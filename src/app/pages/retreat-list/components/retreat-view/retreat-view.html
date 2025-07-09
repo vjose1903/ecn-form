@@ -68,11 +68,13 @@
     <div class="col-span-12">
       <div class="grid grid-rows-[min-content_1fr] gap-4">
         <div class="flex items-center justify-between gap-x-4 gap-y-2 flex-wrap">
-          <div class="flex items-center gap-4">
-            <h1 class="text-gray-800 font-bold text-lg">Solicitudes</h1>
-            <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <div class="flex items-center gap-4">
+              <h1 class="text-gray-800 font-bold text-lg">Solicitudes</h1>
               <p-tag [severity]="retreat.requestsStatusSeverity" [value]="retreat.requestsStatusText" [rounded]="true" [attr.aria-label]="'Estado de solicitudes: ' + retreat.requestsStatusText" />
+            </div>
 
+            <div class="flex items-center gap-1">
               @for (status of keys(requestStats()); track status) { @if (getRequestStatusInfo(status).amount > 0) {
               <p-badge [value]="getRequestStatusInfo(status).amount" [severity]="getRequestStatusInfo(status).severity" pTooltip="{{ getRequestStatusInfo(status).tooltip }}" />
               } }
