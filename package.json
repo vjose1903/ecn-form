@@ -5,7 +5,8 @@
     "ng": "ng",
     "start": "ng serve --port 4201",
     "start:external": "ng serve --port 4201 --host 0.0.0.0",
-    "build": "ng build",
+    "build:dev": "ng build --configuration development",
+    "build": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
