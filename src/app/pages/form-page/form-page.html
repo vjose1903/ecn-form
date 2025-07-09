@@ -1,13 +1,15 @@
-@if (loading()) {
+@if (!initialized()) {
 <app-form-skeleton />
 } @else if (submission_success()) {
 <request-send (close)="resetForm()" />
+} @else if (error()) {
+<error-message (retry)="onRetry()" />
 } @else {
 <div class="m-auto w-[92vw] md:w-3/4 lg:w-1/2 py-10 flex flex-col gap-1">
   <p>
     Esta es la ficha de solicitud para vivir el retiro del
     <span class="font-bold">Encuentro Católico Para Novios</span>
-    en la Diócesis de La Vega.
+    en {{city()?.definite_article}} {{ city()?.large_label }}.
   </p>
 
   <p>Una vez llenada, el Equipo la evaluará y le indicará si fue aprobada y le indicarán el día de la información.</p>
@@ -783,7 +785,7 @@
     </div>
 
     <div class="flex justify-end my-10">
-      <p-button label="Enviar" [disabled]="!isFormValid" (onClick)="onSubmit()" />
+      <p-button label="Enviar" [disabled]="!isFormValid || loading()" (onClick)="onSubmit()" />
     </div>
   </div>
 </div>

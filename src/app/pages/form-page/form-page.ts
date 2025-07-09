@@ -25,10 +25,12 @@ import { FormSkeletonComponent } from './components/form-skeleton/form-skeleton.
 import { RequestService } from '@core/entities/request/request.service';
 import { RequestI, RequestStatus } from '@core/entities/request/request.model';
 import { RequestSend } from './components/request-send/request-send';
+import { ErrorMessage } from './components/error-message/error-message';
 import { fun } from '@core/services/functions.service';
 import { UserService } from '@core/entities/user/user.service';
 import { UserC } from '@core/entities/user/user.class';
 import { RequestClass } from '@core/entities/request/request.class';
+import { CityClass } from '@core/entities/city/city.class';
 
 @Component({
   selector: 'app-form-page',
@@ -48,6 +50,7 @@ import { RequestClass } from '@core/entities/request/request.class';
     FormErrorMsgComponent,
     FormSkeletonComponent,
     RequestSend,
+    ErrorMessage,
   ],
   templateUrl: './form-page.html',
   styleUrl: './form-page.scss',
@@ -56,6 +59,7 @@ export class FormPage implements OnInit {
   @Input() user_id: string = '';
   userData: UserC | null = null;
   submission_success = signal(false);
+  city = signal<CityClass | null>(null);
 
   deviceDetectorService = inject(DeviceDetectorService);
   retreatService = inject(RetreatService);
@@ -135,6 +139,8 @@ export class FormPage implements OnInit {
   });
 
   retreats = signal<Retreat[] | null>(null);
+  initialized = signal(true);
+  error = signal(false);
   loading = signal(true);
   timeRanges = [{ label: '0 a 6 meses' }, { label: '6 a 12 meses' }, { label: '1 a 4 años' }, { label: '4 a 6 años' }, { label: '6 a 8 años' }, { label: '8 a 10 años' }, { label: 'mas de 10 años' }];
 
@@ -192,21 +198,28 @@ export class FormPage implements OnInit {
 
   test() {}
 
+  onRetry() {
+    window.location.reload();
+  }
+
   processInitForm() {
-    this.loading.set(true);
+    this.initialized.set(false);
 
     const getRequiredInfo = () => new Promise<[UserC | null, Retreat[] | null]>(resolve => resolve([this.userData, this.retreats()]));
     const reintentarSi = (requiredInfo: [UserC | null, Retreat[] | null]) => requiredInfo.some((info: UserC | Retreat[] | null) => info === null);
-    const noLoadedRequiredInfo = () => Ss.toastService.error({ message: 'Error al obtener la información requerida, Vuelva a intentarlo', title: 'Error' });
+    const noLoadedRequiredInfo = () => {
+      this.error.set(true);
+      this.initialized.set(true);
+    };
 
-    const initializeTable = () => {
-      this.loading.set(false);
+    const initializeForm = () => {
+      this.initialized.set(true);
     };
 
     fun.retryUntil({
       task: getRequiredInfo,
       retryWhen: reintentarSi,
-      actionAfterRetry: initializeTable.bind(this),
+      actionAfterRetry: initializeForm.bind(this),
       actionIfNoSuccess: noLoadedRequiredInfo,
     });
   }
@@ -214,6 +227,7 @@ export class FormPage implements OnInit {
   getUser() {
     this.userService.getUserById(this.user_id).then(user => {
       this.userData = user;
+      this.city.set(user?.cityData ?? null);
       this.getRetreats();
     });
   }
@@ -541,6 +555,7 @@ export class FormPage implements OnInit {
   }
 
   onSubmit() {
+    this.loading.set(true);
     const formData = this.formGroup.getRawValue() as unknown as RequestI;
 
     Ss.confirmationService.confirm({
@@ -555,7 +570,9 @@ export class FormPage implements OnInit {
       acceptButtonStyleClass: 'p-button-success',
       rejectButtonStyleClass: 'p-button-secondary',
       accept: () => this.processFormSubmission(formData),
-      reject: () => {},
+      reject: () => {
+        this.loading.set(false);
+      },
     });
   }
 
@@ -575,10 +592,12 @@ export class FormPage implements OnInit {
       }
 
       this.submission_success.set(true);
+      this.loading.set(false);
 
       return request;
     } catch (error) {
       console.error(error);
+      this.loading.set(false);
       return null;
     }
   }
