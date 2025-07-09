@@ -1,0 +1,9 @@
+<div class="flex {{isRow() ? 'flex-row' : 'flex-col'}} gap-x-3 gap-y-1 flex-wrap">
+  <div class="flex items-center gap-2">
+    <i class="{{icon()}} text-red-600" aria-hidden="true"></i>
+    <span class="text-gray-800 font-medium">{{ title() }}</span>
+  </div>
+  <ng-content>
+    <p class="text-gray-600 m-0" [title]="content()">{{ content() }}</p>
+  </ng-content>
+</div>

@@ -23,6 +23,7 @@ export class RetreatHome {
   // Propiedades computadas para optimizar el rendimiento
   private _displayName: string | null = null;
   private _displayAddress: string | null = null;
+  private _displayPhone: string | null = null;
   private _mainImage: FileClass | null = null;
 
   constructor(retreatHome?: RetreatHomeI & { city?: any; images?: any[] }) {
@@ -104,6 +105,16 @@ export class RetreatHome {
       this._displayAddress = this.address || 'Sin dirección definida';
     }
     return this._displayAddress;
+  }
+
+  /**
+   * Obtiene la dirección para mostrar (con fallback)
+   */
+  get displayPhone(): string {
+    if (this._displayPhone === null) {
+      this._displayPhone = this.phone || 'Sin teléfono definido';
+    }
+    return this._displayPhone;
   }
 
   /**

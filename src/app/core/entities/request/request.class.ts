@@ -1,10 +1,11 @@
-import { inject, runInInjectionContext } from '@angular/core';
-import { RequestI, CoupleI, BirthDate, RequestStatus } from './request.model';
+import { RequestI, CoupleI, RequestStatus, RequestStatusInfo } from './request.model';
 import { Ss } from '@core/services/singleton.service';
 import { RequestService } from './request.service';
-import { RetreatView } from 'app/pages/retreat-list/components/retreat-view/retreat-view';
 import { Retreat } from '../retreat/retreat.class';
 import { fun } from '@core/services/functions.service';
+import { RequestView } from 'app/pages/retreat-list/components/retreat-view/requests/request-view/request-view';
+import { RetreatService } from '../retreat/retreat.service';
+import { inject, runInInjectionContext } from '@angular/core';
 
 export class RequestClass {
   id: string = '';
@@ -12,7 +13,6 @@ export class RequestClass {
   is_accepted: boolean | null = null;
   how_find_us: string = '';
   retreat: string = '';
-  retreatData?: Retreat;
   have_wedding_date: boolean = false;
   who_invited_you: string = '';
   wedding_date: Date | string | null = null;
@@ -22,12 +22,63 @@ export class RequestClass {
   he: CoupleI = this.getDefaultCouple();
   status: RequestStatus = RequestStatus.PENDING;
 
+  // Propiedades computadas para optimizar el rendimiento
+  private _displayDatingPeriod: string | null = null;
+  private _displayWeddingDate: string | null = null;
+  private _displayHowFindUs: string | null = null;
+  private _retreatData: Retreat | null = null;
+
   get displayCoupleNames(): string {
     return fun.joinWords([this.she.full_name, this.he.full_name]);
   }
 
-  // Propiedades computadas para optimizar el rendimiento
-  private _displayDateRange: string | null = null;
+  get statusInfo(): RequestStatusInfo {
+    const statusConfig = {
+      [RequestStatus.PENDING]: { amount: 0, tooltip: 'Pendientes', severity: 'secondary' as const, label: 'Pendiente', labelPlural: 'Pendientes' },
+      [RequestStatus.ACCEPTED]: { amount: 0, tooltip: 'Aceptadas', severity: 'success' as const, label: 'Aceptada', labelPlural: 'Aceptadas' },
+      [RequestStatus.REJECTED]: { amount: 0, tooltip: 'Rechazadas', severity: 'danger' as const, label: 'Rechazada', labelPlural: 'Rechazadas' },
+    };
+
+    return statusConfig[this.status as keyof typeof statusConfig];
+  }
+
+  /**
+   * Obtiene el rango de fechas formateado
+   */
+  get displayDatingPeriod(): string {
+    if (this._displayDatingPeriod === null) {
+      this._displayDatingPeriod = this.dating_period || '';
+    }
+    return this._displayDatingPeriod;
+  }
+
+  get displayWeddingDate(): string {
+    if (this._displayWeddingDate === null) {
+      const weddingDate = new Date(this.wedding_date as string);
+      this._displayWeddingDate = weddingDate.toLocaleDateString();
+    }
+    return this._displayWeddingDate;
+  }
+
+  get displayHowFindUs(): string {
+    if (this._displayHowFindUs === null) {
+      const howFindUs = this.how_find_us || '';
+      const howFindUsOther = this.how_find_us_other || '';
+      this._displayHowFindUs = howFindUs === 'Otro' ? howFindUsOther : howFindUs;
+    }
+    return this._displayHowFindUs;
+  }
+
+  get retreatData(): Retreat | null {
+    if (this._retreatData === null) {
+      runInInjectionContext(Ss.injector, () => {
+        const retreatService = inject(RetreatService);
+        const retreat = retreatService.retreats.find((retreat: Retreat) => retreat.id === this.retreat);
+        this._retreatData = retreat || null;
+      });
+    }
+    return this._retreatData;
+  }
 
   constructor(request?: RequestI & { retreat?: any }) {
     if (request) {
@@ -50,6 +101,7 @@ export class RequestClass {
       have_children: false,
       identity_type: '',
       birth_date: new Date(),
+      birth_date_display: '',
       church_name: '',
       home_phone: '',
       companion_phone: '',
@@ -76,16 +128,17 @@ export class RequestClass {
     this.have_wedding_date = request.have_wedding_date || false;
     this.who_invited_you = request.who_invited_you || '';
     this.wedding_date = fun.convertFirebaseTimestamp(request.wedding_date) || null;
+    this.retreat = request.retreat || '';
     this.dating_period = request.dating_period || '';
     this.how_find_us_other = request.how_find_us_other || '';
     this.she = this.initializeCouple(request.she);
     this.he = this.initializeCouple(request.he);
     this.status = request.status || RequestStatus.PENDING;
-
-    this.initializeRetreat(request.retreat);
   }
 
   private initializeCouple(couple: CoupleI): CoupleI {
+    const birthDate = new Date(fun.convertFirebaseTimestamp(couple.birth_date) as string);
+
     return {
       full_name: couple.full_name || '',
       age: fun.calculateAge(couple.birth_date) || 0,
@@ -96,7 +149,8 @@ export class RequestClass {
       emergency_full_name: couple.emergency_full_name || '',
       have_children: couple.have_children || false,
       identity_type: couple.identity_type || '',
-      birth_date: fun.convertFirebaseTimestamp(couple.birth_date) || new Date(),
+      birth_date: birthDate || new Date(),
+      birth_date_display: birthDate.toLocaleDateString() || '',
       church_name: couple.church_name || '',
       home_phone: couple.home_phone || '',
       companion_phone: couple.companion_phone || '',
@@ -111,20 +165,6 @@ export class RequestClass {
       companion_full_name: couple.companion_full_name || '',
       emergency_phone: couple.emergency_phone || '',
     };
-  }
-
-  /**
-   * Inicializa los datos de la casa de retiro
-   */
-  private initializeRetreat(retreat: any): void {
-    if (typeof retreat === 'string') {
-      this.retreat = retreat;
-    } else if (retreat && typeof retreat === 'object' && retreat.id) {
-      this.retreat = retreat.id;
-      this.retreatData = new Retreat(retreat);
-    } else {
-      this.retreat = '';
-    }
   }
 
   /**
@@ -150,30 +190,33 @@ export class RequestClass {
   /**
    * Abre la vista detallada del retiro
    */
-  openView(): void {
-    const dialogService = Ss.dialogService;
+  openView(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const dialogService = Ss.dialogService;
 
-    if (!dialogService) {
-      console.error('DialogService no disponible');
-      return;
-    }
+      if (!dialogService) {
+        console.error('DialogService no disponible');
+        return;
+      }
 
-    const dialogRef = dialogService.open(RetreatView, {
-      header: `Ficha de solicitud`,
-      width: '70vw',
-      modal: true,
-      draggable: false,
-      resizable: false,
-      closable: true,
-      focusOnShow: false,
-      data: {
-        retreat: this,
-      },
-      breakpoints: { '960px': '75vw', '640px': '90vw' },
+      const dialogRef = dialogService.open(RequestView, {
+        header: `Solicitud para el Retiro No. ${this.retreatData?.displayNumber} - ${this.displayCoupleNames}`,
+        width: '90vw',
+        modal: true,
+        draggable: false,
+        resizable: false,
+        closable: true,
+        focusOnShow: false,
+        data: {
+          request: this,
+          retreat: this.retreatData,
+        },
+        breakpoints: { '960px': '75vw', '640px': '90vw' },
+      });
+
+      // Limpiar referencia cuando se cierre
+      dialogRef.onClose.subscribe();
     });
-
-    // Limpiar referencia cuando se cierre
-    dialogRef.onClose.subscribe();
   }
 
   /**
@@ -238,7 +281,6 @@ export class RequestClass {
     this.id = other.id;
     this.how_find_us = other.how_find_us;
     this.retreat = other.retreat;
-    this.retreatData = other.retreatData;
     this.have_wedding_date = other.have_wedding_date;
     this.who_invited_you = other.who_invited_you;
     this.wedding_date = other.wedding_date;
@@ -248,7 +290,6 @@ export class RequestClass {
     this.he = other.he;
     this.is_active = other.is_active;
 
-    // Limpiar caché de propiedades computadas
-    this._displayDateRange = null;
+    this._displayDatingPeriod = null;
   }
 }

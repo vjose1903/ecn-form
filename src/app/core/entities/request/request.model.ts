@@ -15,6 +15,11 @@ export interface RequestI {
   status: RequestStatus;
 }
 
+export enum CoupleType {
+  SHE = 'she',
+  HE = 'he',
+}
+
 export interface CoupleI {
   full_name: string;
   age: number;
@@ -26,6 +31,7 @@ export interface CoupleI {
   have_children: boolean;
   identity_type: string;
   birth_date: BirthDate | Date | string;
+  birth_date_display: string;
   church_name: string;
   home_phone: string;
   companion_phone: string;

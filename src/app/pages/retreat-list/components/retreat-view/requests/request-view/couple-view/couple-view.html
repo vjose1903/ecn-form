@@ -1,0 +1,108 @@
+<div class="flex flex-col gap-2">
+  <div class="flex items-center gap-y-1 gap-x-2">
+    <div class="{{ coupleIconBg() }} rounded-full p-2 w-fit">
+      <svg-icon [src]="coupleIcon()" [name]="coupleIconName()" [svgStyle]="{ 'width.px':30, 'height.px':30, fill: coupleIconColor() }" />
+    </div>
+    <h1 class="text-gray-800 font-medium">{{ coupleLabel() }}</h1>
+  </div>
+
+  <divider-line separatorClass="my-0 mx-4" color="bg-gray-100" />
+
+  <div class="ml-4 flex flex-col gap-y-2">
+    <!-- nombre completo -->
+    <div class="flex items-center gap-2">
+      <h1 class="text-gray-800 font-bold mb-0 text-lg">{{ couple().full_name }}</h1>
+      @if(couple().nickname){
+      <!-- apodo -->
+      <small class="text-black/50 font-medium mb-0">({{ couple().nickname }})</small>
+      }
+      <!-- edad -->
+      <p-badge value="{{ couple().age }} años" severity="secondary" />
+    </div>
+
+    <!-- fecha de nacimiento -->
+    <view-item title="Fecha de nacimiento:" icon="pi pi-calendar" [isRow]="true" [content]="couple().birth_date_display"> </view-item>
+
+    <!-- documento de identidad -->
+    <view-item title="Documento de identidad:" icon="pi pi-id-card" [isRow]="true">
+      <div class="flex items-center gap-1">
+        <small class="text-black/50 font-medium mb-0">({{couple().identity_type}})</small>
+        <p class="text-gray-800 font-medium mb-0">{{couple().identity_number}}</p>
+      </div>
+    </view-item>
+
+		<!-- correo electrónico -->
+		<view-item title="Correo electrónico:" icon="pi pi-envelope" [isRow]="true" [content]="couple().email"> </view-item>
+
+    <!-- ha estado casado por la iglesia -->
+    <view-item title="Ha estado casado por la iglesia:" icon="pi pi-building-columns" [isRow]="true">
+      <p-tag [severity]="couple().are_you_married ? 'success' : 'danger'" [value]="couple().are_you_married ? 'Si' : 'No'" [rounded]="true" />
+    </view-item>
+
+    <!-- tiene hijos -->
+    <view-item title="Tiene hijos:" icon="pi pi-user" [isRow]="true">
+      <p-tag [severity]="couple().have_children ? 'success' : 'danger'" [value]="couple().have_children ? 'Si' : 'No'" [rounded]="true" />
+    </view-item>
+		
+    <divider-line separatorClass="my-0 mx-1" color="bg-gray-200" />
+
+    <!-- ciudad de residencia -->
+    <view-item title="Ciudad de residencia:" icon="pi pi-map-marker" [isRow]="true" [content]="couple().city_of_residence"> </view-item>
+
+    <!-- dirección -->
+    <view-item title="Dirección:" icon="pi pi-map" [isRow]="true" [content]="couple().address"> </view-item>
+
+
+    <divider-line separatorClass="my-0 mx-1" color="bg-gray-200" />
+
+    <!-- teléfono de celular -->
+    <view-item title="Teléfono de celular:" icon="pi pi-mobile" [isRow]="true" [content]="couple().cell_phone"> </view-item>
+
+    <!-- teléfono de casa -->
+    @if (couple().home_phone) {
+    <view-item title="Teléfono de casa:" icon="pi pi-home" [isRow]="true" [content]="couple().home_phone"> </view-item>
+    }
+
+    <!-- teléfono de trabajo -->
+    @if (couple().work_phone) {
+    <view-item title="Teléfono de trabajo:" icon="pi pi-phone" [isRow]="true" [content]="couple().work_phone"> </view-item>
+    }
+
+    <divider-line separatorClass="my-0 mx-1" color="bg-gray-200" />
+
+    <!-- vive acompañado -->
+    <view-item title="Vive acompañado:" icon="pi pi-users" [isRow]="true">
+      <p-tag [severity]="couple().live_accompanied ? 'success' : 'danger'" [value]="couple().live_accompanied ? 'Si' : 'No'" [rounded]="true" />
+    </view-item>
+
+    <!-- Informacion de acompañante -->
+    @if (couple().live_accompanied) {
+    <span class="font-bold text-md" for="time-range">Acompañante</span>
+    <!-- nombre acompañante -->
+    <view-item title="Nombre:" icon="pi pi-user" [isRow]="true" [content]="couple().companion_full_name"> </view-item>
+    <!-- parentesco acompañante -->
+    <view-item title="Parentesco:" icon="pi pi-sparkles" [isRow]="true" [content]="couple().companion_relationship"> </view-item>
+    <!-- teléfono acompañante -->
+    <view-item title="Teléfono:" icon="pi pi-phone" [isRow]="true" [content]="couple().companion_phone"> </view-item>
+    }
+
+    <divider-line separatorClass="my-0 mx-1" color="bg-gray-200" />
+
+    <!-- información de contacto de emergencia -->
+    <span class="font-bold text-md" for="time-range">Contacto de emergencia</span>
+    <!-- nombre contacto de emergencia -->
+    <view-item title="Nombre:" icon="pi pi-user" [isRow]="true" [content]="couple().emergency_full_name"> </view-item>
+    <!-- parentesco contacto de emergencia -->
+    <view-item title="Parentesco:" icon="pi pi-sparkles" [isRow]="true" [content]="couple().emergency_relationship"> </view-item>
+    <!-- teléfono contacto de emergencia -->
+    <view-item title="Teléfono:" icon="pi pi-phone" [isRow]="true" [content]="couple().emergency_phone"> </view-item>
+
+    <divider-line separatorClass="my-0 mx-1" color="bg-gray-200" />
+
+    <!-- religión -->
+    <view-item title="Religión:" icon="pi pi-plus-circle" [isRow]="true" [content]="couple().religion"> </view-item>
+
+    <!-- parroquia -->
+    <view-item title="Parroquia:" icon="pi pi-building-columns" [isRow]="true" [content]="couple().church_name"> </view-item>
+  </div>
+</div>

@@ -1,4 +1,4 @@
-import { Component, inject, Input, OnInit, signal, OnDestroy } from '@angular/core';
+import { Component, inject, OnInit, signal, OnDestroy } from '@angular/core';
 import { RetreatHome } from '@core/entities/retreat-home/retreat-home.class';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
@@ -9,14 +9,13 @@ import { GalleriaModule } from 'primeng/galleria';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { DividerLine } from '@core/components/divider-line/divider-line';
 import { GalleryComponent } from '@core/components/gallery/gallery.component';
-import { ConfirmationService } from 'primeng/api';
-import { RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
 import { ToastService } from '@core/services/toast.service';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject } from 'rxjs';
+import { ViewItem } from '@core/components/view-item/view-item';
 
 @Component({
   selector: 'app-retreat-home-view',
-  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, GalleriaModule, DividerLine, GalleryComponent],
+  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, GalleriaModule, DividerLine, GalleryComponent, ViewItem],
   templateUrl: './retreat-home-view.html',
   styleUrl: './retreat-home-view.scss',
 })
@@ -32,21 +31,6 @@ export class RetreatHomeView implements OnInit, OnDestroy {
   activeIndex = 0;
   loading = signal(false);
   imagesLoaded = signal(0);
-
-  responsiveOptions: any[] = [
-    {
-      breakpoint: '1024px',
-      numVisible: 5,
-    },
-    {
-      breakpoint: '768px',
-      numVisible: 3,
-    },
-    {
-      breakpoint: '560px',
-      numVisible: 1,
-    },
-  ];
 
   constructor() {}
 
@@ -70,7 +54,6 @@ export class RetreatHomeView implements OnInit, OnDestroy {
     }
 
     let loadedCount = 0;
-    const totalImages = this.retreatHome.imagesData.length;
 
     this.retreatHome.imagesData.forEach(image => {
       const img = new Image();
@@ -120,10 +103,7 @@ export class RetreatHomeView implements OnInit, OnDestroy {
     if (this.retreatHome.hasLocation) {
       window.open(this.retreatHome.location, '_blank');
     } else {
-      this.toastService.warning({
-        message: 'No hay ubicación disponible',
-        title: 'Ubicación no disponible',
-      });
+      this.toastService.warning({ message: 'No hay ubicación disponible', title: 'Ubicación no disponible' });
     }
   }
 
@@ -147,9 +127,7 @@ export class RetreatHomeView implements OnInit, OnDestroy {
 
     this.retreatHome
       .confirmToggleStatus(this.retreatHome)
-      .then(() => {
-        this.ref.close();
-      })
+      .then(() => this.ref.close())
       .finally(() => this.loading.set(false));
   }
 
@@ -181,26 +159,9 @@ export class RetreatHomeView implements OnInit, OnDestroy {
   }
 
   /**
-   * Obtiene el texto de información de contacto
-   */
-  getContactInfoText(): string {
-    if (this.retreatHome.hasPhone) {
-      return this.retreatHome.phone;
-    }
-    return 'Sin teléfono definido';
-  }
-
-  /**
    * Obtiene la clase CSS para el estado de carga
    */
   getLoadingClass(): string {
     return this.loading() ? 'opacity-50 pointer-events-none' : '';
-  }
-
-  /**
-   * Cierra el diálogo
-   */
-  closeDialog(): void {
-    this.ref.close();
   }
 }

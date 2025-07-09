@@ -1,0 +1,80 @@
+<div *ngIf="request">
+  <!-- Información básica -->
+  <div class="grid grid-cols-12 gap-6">
+    <!-- Estado -->
+    <div class="col-span-12">
+      <view-item title="Estado" icon="pi pi-info-circle" [isRow]="true" [content]="request.statusInfo.label">
+        <p-tag [severity]="request.statusInfo.severity" [value]="request.statusInfo.label" [rounded]="true" />
+      </view-item>
+    </div>
+
+    <div class="col-span-12 md:hidden">
+      <divider-line separatorClass="my-0" />
+    </div>
+
+    <!-- Tiempo de Noviazgo -->
+    <div class="col-span-12 md:col-span-6">
+      <view-item title="Tiempo de Noviazgo" icon="pi pi-id-card" [content]="request.displayDatingPeriod" />
+    </div>
+
+    <div class="col-span-12 md:hidden">
+      <divider-line separatorClass="my-0" />
+    </div>
+
+    <!-- Tiene fecha de boda -->
+    <div class="col-span-6 {{request.have_wedding_date ? 'md:col-span-3' : ''}} ">
+      <view-item title="Tiene fecha boda" icon="pi pi-check-circle" [content]="request.have_wedding_date ? 'Si' : 'No'" />
+    </div>
+
+    <!-- Fecha de boda -->
+    @if (request.have_wedding_date) {
+    <div class="col-span-6 md:col-span-3">
+      <view-item title="Fecha de boda" icon="pi pi-calendar" [content]="request.displayWeddingDate" />
+    </div>
+    }
+
+    <div class="col-span-12">
+      <divider-line separatorClass="my-0" />
+    </div>
+
+    <!-- Como se enteraron del retiro -->
+    <div class="col-span-12 md:col-span-6">
+      <view-item title="Como se enteraron del retiro" icon="pi pi-megaphone" [content]="request.displayHowFindUs" />
+    </div>
+
+    <div class="col-span-12 md:hidden">
+      <divider-line separatorClass="my-0" />
+    </div>
+
+    <!-- Quien los invitó -->
+    <div class="col-span-12 md:col-span-6">
+      <view-item title="Quien los invitó al Retiro" icon="pi pi-user-plus" [content]="request.who_invited_you" />
+    </div>
+
+    <div class="col-span-12">
+      <divider-line separatorClass="my-2" />
+    </div>
+
+    <div class="col-span-12 md:col-span-6">
+      <couple-view [couple]="request.she" [coupleType]="CoupleType.SHE" />
+    </div>
+
+    <div class="col-span-12 md:hidden">
+      <divider-line separatorClass="my-4" />
+    </div>
+
+    <div class="col-span-12 md:col-span-6">
+      <couple-view [couple]="request.he" [coupleType]="CoupleType.HE" />
+    </div>
+
+    <div class="col-span-12"></div>
+  </div>
+
+  <!-- Mensaje cuando no hay información completa -->
+
+  <!-- Acciones -->
+  <div class="flex justify-end gap-3 w-full pt-4 border-t border-gray-200">
+    <p-button type="button" label="Aceptar solicitud" severity="success" [disabled]="loading() || request.status == RequestStatus.ACCEPTED" icon="pi pi-check" class="w-auto" (onClick)="toggleStatus(RequestStatus.ACCEPTED)" size="small" />
+    <p-button type="button" label="Rechazar solicitud" severity="danger" [disabled]="loading() || request.status == RequestStatus.REJECTED" icon="pi pi-times" class="w-auto" (onClick)="toggleStatus(RequestStatus.REJECTED)" size="small" />
+  </div>
+</div>

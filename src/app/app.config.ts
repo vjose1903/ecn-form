@@ -13,6 +13,8 @@ import { getStorage, provideStorage } from '@angular/fire/storage';
 import { environment } from '../environments/environment';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { DialogService } from 'primeng/dynamicdialog';
+import { provideAngularSvgIcon } from 'angular-svg-icon';
+import { provideHttpClient } from '@angular/common/http';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -20,6 +22,8 @@ export const appConfig: ApplicationConfig = {
     provideZonelessChangeDetection(),
     provideRouter(routes, withComponentInputBinding()),
     provideAnimationsAsync(),
+    provideHttpClient(),
+    provideAngularSvgIcon(),
     MessageService,
     DialogService,
     ConfirmationService,

@@ -7,6 +7,7 @@ import { RetreatForm } from 'app/pages/retreat-list/retreat-form/retreat-form';
 import { RetreatView } from 'app/pages/retreat-list/components/retreat-view/retreat-view';
 import { fun } from '@core/services/functions.service';
 import { RequestClass } from '../request/request.class';
+import { RequestService } from '../request/request.service';
 
 export class Retreat {
   id: string = '';
@@ -417,10 +418,12 @@ export class Retreat {
     });
   }
 
-  getRequests(): Promise<RequestClass[]> {
-    return runInInjectionContext(Ss.injector, () => {
+  getRequests(): Promise<void> {
+    return runInInjectionContext(Ss.injector, async () => {
       const retreatService = inject(RetreatService);
-      return retreatService.getRequests(this);
+      const requestService = inject(RequestService);
+
+      requestService.requests = await retreatService.getRequests(this);
     });
   }
 

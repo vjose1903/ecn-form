@@ -1,5 +1,5 @@
 import { Ss } from '@core/services/singleton.service';
-import { Component, inject, Input, OnInit, signal, OnDestroy, computed } from '@angular/core';
+import { Component, inject, OnInit, signal, OnDestroy, computed } from '@angular/core';
 import { Retreat } from '@core/entities/retreat/retreat.class';
 import { CommonModule, LowerCasePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
@@ -8,9 +8,6 @@ import { TooltipModule } from 'primeng/tooltip';
 import { TagModule } from 'primeng/tag';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { DividerLine } from '@core/components/divider-line/divider-line';
-import { ConfirmationService } from 'primeng/api';
-import { RetreatService } from '@core/entities/retreat/retreat.service';
-import { ToastService } from '@core/services/toast.service';
 import { Subject, takeUntil } from 'rxjs';
 import { BadgeModule } from 'primeng/badge';
 import { RequestClass } from '@core/entities/request/request.class';
@@ -19,15 +16,19 @@ import { RequestCard } from './requests/request-card/request-card';
 import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
+import { RequestService } from '@core/entities/request/request.service';
+import { ViewItem } from '@core/components/view-item/view-item';
 
 @Component({
   selector: 'app-retreat-view',
-  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, DividerLine, BadgeModule, RequestCard, SelectModule, FormsModule, LowerCasePipe, InputTextModule],
+  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, DividerLine, BadgeModule, RequestCard, SelectModule, FormsModule, LowerCasePipe, InputTextModule, ViewItem],
   templateUrl: './retreat-view.html',
   styleUrl: './retreat-view.scss',
 })
 export class RetreatView implements OnInit, OnDestroy {
   requests = signal<RequestClass[]>([]);
+  requestsService = inject(RequestService);
+
   requestFiltered = computed(() => {
     const word = this.filterWord();
     const status = this.selectedRequestStatus();
@@ -89,26 +90,43 @@ export class RetreatView implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.requestsService.clearCache();
     this.destroy$.next();
     this.destroy$.complete();
   }
 
   async getRequests(): Promise<void> {
     try {
-      const requests = await this.retreat.getRequests();
-      this.requests.set(requests);
+      this.fetchingRequests.set(true);
+      await this.retreat.getRequests();
 
-      requests
-        .filter(request => request.status !== RequestStatus.ALL)
-        .forEach(request => {
-          const status = request.status as Exclude<RequestStatus, RequestStatus.ALL>;
-          this.requestStats.update(prev => ({ ...prev, [status]: { ...prev[status], amount: prev[status].amount + 1 } }));
-        });
-
-      this.fetchingRequests.set(false);
+      this.requestsService.requests$.pipe(takeUntil(this.destroy$)).subscribe(requests => {
+        this.requests.set(requests);
+        this.updateRequestStats(requests);
+        this.fetchingRequests.set(false);
+      });
     } catch (error) {
       Ss.toastService.error({ message: 'Error al obtener las solicitudes', title: 'Error' });
     }
+  }
+
+  /**
+   * Actualiza las estadísticas de solicitudes
+   */
+  private updateRequestStats(requests: RequestClass[]): void {
+    const stats = requests
+      .filter(request => request.status !== RequestStatus.ALL)
+      .reduce((acc, request) => {
+        const status = request.status as Exclude<RequestStatus, RequestStatus.ALL>;
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      }, {} as Record<RequestStatus, number>);
+
+    this.requestStats.update(prev => ({
+      [RequestStatus.PENDING]: { ...prev[RequestStatus.PENDING], amount: stats[RequestStatus.PENDING] || 0 },
+      [RequestStatus.ACCEPTED]: { ...prev[RequestStatus.ACCEPTED], amount: stats[RequestStatus.ACCEPTED] || 0 },
+      [RequestStatus.REJECTED]: { ...prev[RequestStatus.REJECTED], amount: stats[RequestStatus.REJECTED] || 0 },
+    }));
   }
 
   getRequestStatusInfo(status: string): RequestStatusInfo {
@@ -116,16 +134,6 @@ export class RetreatView implements OnInit, OnDestroy {
     const statusInfo = stats[status as keyof typeof stats];
 
     return statusInfo;
-  }
-
-  /**
-   * Obtiene el texto de información de contacto
-   */
-  getContactInfoText(): string {
-    if (this.retreat.hasRetreatHome) {
-      return this.retreat.retreatHomeName;
-    }
-    return 'Casa de retiro no asignada';
   }
 
   /**
@@ -165,6 +173,8 @@ export class RetreatView implements OnInit, OnDestroy {
     try {
       this.loading.set(true);
       await this.retreat.confirmToggleStatus();
+      // Recargar las solicitudes para actualizar los stats si es necesario
+      await this.getRequests();
     } catch (error) {
       console.error('Error al cambiar estado:', error);
     } finally {
@@ -180,7 +190,7 @@ export class RetreatView implements OnInit, OnDestroy {
       this.ref.close();
 
       this.loading.set(true);
-      await this.retreat.openForm();
+      await this.retreat.openForm().then(() => {});
     } catch (error) {
       console.error('Error al abrir formulario:', error);
     } finally {
@@ -196,12 +206,5 @@ export class RetreatView implements OnInit, OnDestroy {
       return new Date(this.retreat.max_request_date).toLocaleDateString();
     }
     return 'No definida';
-  }
-
-  /**
-   * Cierra la vista
-   */
-  closeView(): void {
-    this.ref.close();
   }
 }

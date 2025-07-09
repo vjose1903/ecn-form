@@ -48,6 +48,10 @@ export class RequestService extends FirebaseRequest<RequestI> {
     return this._collectionName;
   }
 
+  set requests(value: RequestClass[]) {
+    this._requests.next(value);
+  }
+
   /**
    * Obtiene todos los retiros por retiro
    */
@@ -180,9 +184,9 @@ export class RequestService extends FirebaseRequest<RequestI> {
   /**
    * Actualiza un retiro
    */
-  async updateRetreat(retreat: RequestI): Promise<RequestI> {
-    if (!retreat.id) {
-      throw new Error('ID de retiro requerido para actualización');
+  async updateRequest(request: Partial<RequestI>, retreat: Retreat): Promise<RequestI> {
+    if (!request.id) {
+      throw new Error('ID de solicitud requerido para actualización');
     }
 
     try {
@@ -191,11 +195,10 @@ export class RequestService extends FirebaseRequest<RequestI> {
         throw new Error('Usuario no autenticado');
       }
 
-      const result = await this.updateOneInParentCollection({
-        parentCollection: this.userService.collectionName,
-        parentId: currentUser.id,
-        documentId: retreat.id,
-        data: retreat,
+      const result = await this._updateOne({
+        refString: `${retreat.completeRefString()}/request/${request.id}`,
+        find_value: request.id,
+        data: request,
       });
 
       // Actualizar observable
@@ -258,7 +261,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
       });
 
       // Remover del observable
-      this.removeRetreatFromCache(id);
+      this.removeRequestFromCache(id);
 
       Ss.toastService.success({ message: 'Retiro eliminado correctamente', title: 'Éxito' });
     } catch (error) {
@@ -303,7 +306,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
   /**
    * Remueve un retiro del observable
    */
-  private removeRetreatFromCache(id: string): void {
+  private removeRequestFromCache(id: string): void {
     const currentRequests = this._requests.value;
     const filteredRequests = currentRequests.filter(r => r.id !== id);
     this._requests.next(filteredRequests);

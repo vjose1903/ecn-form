@@ -8,7 +8,7 @@ import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { RetreatHome } from '@core/entities/retreat-home/retreat-home.class';
 import { RetreatHomeView } from '../retreat-home-view/retreat-home-view';
 import { RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
-import { Subject, debounceTime, takeUntil } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-retreat-home-data-list',

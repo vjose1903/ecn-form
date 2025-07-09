@@ -23,6 +23,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   private requestService = inject(RequestService);
 
   private _retreats: BehaviorSubject<Retreat[]> = new BehaviorSubject<Retreat[]>([]);
+  private _requests: BehaviorSubject<RequestClass[]> = new BehaviorSubject<RequestClass[]>([]);
   private _loadingRetreatList: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   private _lastFetch: number = 0;
   private readonly CACHE_DURATION = 3 * 60 * 1000; // 3 minutos
@@ -32,12 +33,20 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
     return this._retreats.asObservable();
   }
 
+  get requests$(): Observable<RequestClass[]> {
+    return this._requests.asObservable();
+  }
+
   get loadingRetreats$(): Observable<boolean> {
     return this._loadingRetreatList.asObservable();
   }
 
   get retreats(): Retreat[] {
     return this._retreats.value;
+  }
+
+  get requests(): RequestClass[] {
+    return this._requests.value;
   }
 
   get loadingRetreats(): boolean {

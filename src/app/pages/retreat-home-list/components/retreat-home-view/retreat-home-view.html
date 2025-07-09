@@ -3,11 +3,9 @@
   <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
     <!-- Estado -->
     <div class="flex items-center gap-3 col-span-12 md:col-span-6">
-      <div class="flex items-center gap-2">
-        <i class="pi pi-info-circle text-red-600" aria-hidden="true"></i>
-        <span class="text-gray-800 font-medium">Estado:</span>
-      </div>
-      <p-tag [severity]="retreatHome.statusSeverity" [value]="retreatHome.statusText" [rounded]="true" [attr.aria-label]="'Estado: ' + retreatHome.statusText" />
+      <view-item title="Estado:" icon="pi pi-info-circle" [isRow]="true">
+        <p-tag [severity]="retreatHome.statusSeverity" [value]="retreatHome.statusText" [rounded]="true" [attr.aria-label]="'Estado: ' + retreatHome.statusText" />
+      </view-item>
     </div>
 
     <div class="col-span-12 md:hidden">
@@ -16,11 +14,7 @@
 
     <!-- Teléfono -->
     <div class="flex flex-col gap-3 col-span-12 md:col-span-6">
-      <div class="flex items-center gap-2">
-        <i class="pi pi-phone text-red-600" aria-hidden="true"></i>
-        <span class="text-gray-800 font-medium">Teléfono:</span>
-      </div>
-      <p class="text-gray-600 m-0" [title]="getContactInfoText()">{{ getContactInfoText() }}</p>
+      <view-item title="Teléfono:" icon="pi pi-phone" [content]="retreatHome.displayPhone" />
     </div>
 
     <div class="col-span-12">
@@ -29,11 +23,7 @@
 
     <!-- Dirección -->
     <div class="flex flex-col gap-3 col-span-12">
-      <div class="flex items-center gap-2">
-        <i class="pi pi-map-marker text-red-600" aria-hidden="true"></i>
-        <span class="text-gray-800 font-medium">Dirección:</span>
-      </div>
-      <p class="text-gray-600 m-0" [title]="retreatHome.displayAddress">{{ retreatHome.displayAddress }}</p>
+      <view-item title="Dirección:" icon="pi pi-map-marker" [content]="retreatHome.displayAddress" />
     </div>
 
     <div class="col-span-12">
@@ -42,16 +32,15 @@
 
     <!-- Ubicación -->
     <div class="flex items-center gap-3 mb-6 col-span-12 md:col-span-6">
-      <div class="flex items-center gap-2">
-        <i class="pi pi-map text-red-600" aria-hidden="true"></i>
-        <span class="text-gray-800 font-medium">Ubicación:</span>
-      </div>
-      <p-button *ngIf="retreatHome.hasLocation" type="button" severity="contrast" variant="text" (onClick)="openOnGoogleMaps()" class="w-auto" [attr.aria-label]="'Abrir ubicación de ' + retreatHome.displayName + ' en Google Maps'">
-        <span class="flex items-center justify-center gap-2">
-          <span class="whitespace-nowrap">Ver en Google Maps</span>
-          <img src="icons/google-maps-icon.svg" alt="Google Maps" class="w-6 h-6" />
-        </span>
-      </p-button>
+      <view-item title="Ubicación:" icon="pi pi-map" [isRow]="true">
+        <p-button *ngIf="retreatHome.hasLocation" type="button" severity="contrast" variant="text" (onClick)="openOnGoogleMaps()" class="w-auto" [attr.aria-label]="'Abrir ubicación de ' + retreatHome.displayName + ' en Google Maps'">
+          <span class="flex items-center justify-center gap-2">
+            <span class="whitespace-nowrap">Ver en Google Maps</span>
+            <img src="icons/google-maps-icon.svg" alt="Google Maps" class="w-6 h-6" />
+          </span>
+        </p-button>
+      </view-item>
+
       <span *ngIf="!retreatHome.hasLocation" class="text-gray-500 text-sm"> No disponible </span>
     </div>
   </div>
@@ -92,17 +81,8 @@
 
   <!-- Acciones -->
   <div class="flex justify-end gap-3 w-full pt-4 border-t border-gray-200">
-    <p-button
-      type="button"
-      [label]="getStatusButtonText()"
-      [severity]="getStatusButtonSeverity()"
-      [disabled]="loading()"
-      [icon]="getStatusButtonIcon()"
-      class="w-auto"
-      (onClick)="confirmToggleStatus()"
-      [attr.aria-label]="getStatusButtonText() + ' ' + retreatHome.displayName" />
-
-    <p-button *ngIf="retreatHome.is_active" type="button" label="Editar" severity="secondary" [disabled]="loading()" icon="pi pi-pencil" class="w-auto" (onClick)="openEditForm()" [attr.aria-label]="'Editar ' + retreatHome.displayName" />
+    <p-button type="button" [label]="getStatusButtonText()" [severity]="getStatusButtonSeverity()" [disabled]="loading()" [icon]="getStatusButtonIcon()" class="w-auto" (onClick)="confirmToggleStatus()" size="small" />
+    <p-button *ngIf="retreatHome.is_active" type="button" label="Editar" severity="secondary" [disabled]="loading()" icon="pi pi-pencil" class="w-auto" (onClick)="openEditForm()" size="small" />
   </div>
 
   <!-- Indicador de carga general -->

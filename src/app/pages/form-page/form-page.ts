@@ -25,11 +25,9 @@ import { FormSkeletonComponent } from './components/form-skeleton/form-skeleton.
 import { RequestService } from '@core/entities/request/request.service';
 import { RequestI, RequestStatus } from '@core/entities/request/request.model';
 import { RequestSend } from './components/request-send/request-send';
-import { City } from '@core/entities/city/city.class';
 import { fun } from '@core/services/functions.service';
 import { UserService } from '@core/entities/user/user.service';
 import { UserC } from '@core/entities/user/user.class';
-import { formDataMuck } from './form-page.muck';
 import { RequestClass } from '@core/entities/request/request.class';
 
 @Component({
@@ -190,7 +188,7 @@ export class FormPage implements OnInit {
   }
 
   patchForm() {
-    this.formGroup.patchValue(formDataMuck as any, { emitEvent: true });
+    // this.formGroup.patchValue(formDataMuck as any, { emitEvent: true });
   }
 
   test() {

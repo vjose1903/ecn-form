@@ -2,24 +2,18 @@
   <!-- Información básica -->
   <div class="grid grid-cols-12 gap-6">
     <!-- Estado -->
-    <div class="flex items-center gap-3 col-span-12">
-      <div class="flex items-center gap-2">
-        <i class="pi pi-info-circle text-red-600" aria-hidden="true"></i>
-        <span class="text-gray-800 font-medium">Estado:</span>
-      </div>
-      <p-tag [severity]="retreat.statusSeverity" [value]="retreat.statusText" [rounded]="true" [attr.aria-label]="'Estado: ' + retreat.statusText" />
+    <div class="col-span-12">
+      <view-item title="Estado:" icon="pi pi-info-circle" [content]="retreat.statusText" [isRow]="true">
+        <p-tag [severity]="retreat.statusSeverity" [value]="retreat.statusText" [rounded]="true" [attr.aria-label]="'Estado: ' + retreat.statusText" />
+      </view-item>
     </div>
 
     <div class="col-span-12 md:hidden">
       <divider-line separatorClass="my-0" />
     </div>
 
-    <div class="flex flex-col gap-3 col-span-12 md:col-span-6">
-      <div class="flex items-center gap-2">
-        <i class="pi pi-id-card text-red-600" aria-hidden="true"></i>
-        <span class="text-gray-800 font-medium">Nombre de la Comunidad:</span>
-      </div>
-      <p class="text-gray-600 m-0" [title]="retreat.displayCommunityName">{{ retreat.displayCommunityName }}</p>
+    <div class="col-span-12 md:col-span-6">
+      <view-item title="Nombre de la Comunidad:" icon="pi pi-id-card" [content]="retreat.displayCommunityName" />
     </div>
 
     <div class="col-span-12 md:hidden">
@@ -28,11 +22,7 @@
 
     <!-- Casa de Retiro -->
     <div class="flex flex-col gap-3 col-span-12 md:col-span-6">
-      <div class="flex items-center gap-2">
-        <i class="pi pi-home text-red-600" aria-hidden="true"></i>
-        <span class="text-gray-800 font-medium">Casa de Retiro:</span>
-      </div>
-      <p class="text-gray-600 m-0" [title]="getContactInfoText()">{{ getContactInfoText() }}</p>
+      <view-item title="Casa de Retiro:" icon="pi pi-home" [content]="retreat.retreatHomeName" />
     </div>
 
     <div class="col-span-12">
@@ -41,11 +31,7 @@
 
     <!-- Número de Retiro -->
     <div class="flex flex-col gap-3 col-span-12 md:col-span-6">
-      <div class="flex items-center gap-2">
-        <i class="pi pi-hashtag text-red-600" aria-hidden="true"></i>
-        <span class="text-gray-800 font-medium">Número de Retiro:</span>
-      </div>
-      <p class="text-gray-600 m-0" [title]="retreat.displayNumber">{{ retreat.displayNumber }}</p>
+      <view-item title="Número de Retiro:" icon="pi pi-hashtag" [content]="retreat.displayNumber" />
     </div>
 
     <div class="col-span-12 md:hidden">
@@ -54,11 +40,7 @@
 
     <!-- Modalidad -->
     <div class="flex flex-col gap-3 col-span-12 md:col-span-6">
-      <div class="flex items-center gap-2">
-        <i class="pi pi-globe text-red-600" aria-hidden="true"></i>
-        <span class="text-gray-800 font-medium">Modalidad:</span>
-      </div>
-      <p class="text-gray-600 m-0" [title]="retreat.displayModality">{{ retreat.displayModality }}</p>
+      <view-item title="Modalidad:" icon="pi pi-globe" [content]="retreat.displayModality" />
     </div>
 
     <div class="col-span-12">
@@ -67,11 +49,7 @@
 
     <!-- Fecha Límite de Solicitudes -->
     <div class="flex flex-col gap-3 col-span-12 md:col-span-6">
-      <div class="flex items-center gap-2">
-        <i class="pi pi-clock text-red-600" aria-hidden="true"></i>
-        <span class="text-gray-800 font-medium">Fecha Límite de Solicitudes:</span>
-      </div>
-      <p class="text-gray-600 m-0" [title]="getMaxRequestDateFormatted()">{{ getMaxRequestDateFormatted() }}</p>
+      <view-item title="Fecha Límite de Solicitudes:" icon="pi pi-clock" [content]="getMaxRequestDateFormatted()" />
     </div>
 
     <div class="col-span-12 md:hidden">
@@ -80,11 +58,7 @@
 
     <!-- Fechas -->
     <div class="flex flex-col gap-3 col-span-12 md:col-span-6">
-      <div class="flex items-center gap-2">
-        <i class="pi pi-calendar text-red-600" aria-hidden="true"></i>
-        <span class="text-gray-800 font-medium">Período del Retiro:</span>
-      </div>
-      <p class="text-gray-600 m-0" [title]="retreat.displayDateRange">{{ retreat.displayDateRange }}</p>
+      <view-item title="Período del Retiro:" icon="pi pi-calendar" [content]="retreat.displayDateRange" />
     </div>
 
     <div class="col-span-12">
@@ -116,20 +90,15 @@
         </div>
 
         <div class="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4">
-          
-          @if (fetchingRequests()) {
-            @for (item of [1,2,3,4,5,6]; track item) {
-              <request-card [skeleton]="true" />
-            }
-          } @else if (requestFiltered().length > 0) {
-            @for (request of requestFiltered(); track request.id) {
-              <request-card [request]="request" [status]="getRequestStatusInfo(request.status)" [skeleton]="false" />
-            } 
-          } @else {
-            <div class="col-span-full text-center flex flex-col items-center gap-4">
-              <i class="pi pi-id-card text-gray-200" style="font-size: 4rem"></i>
-              <p class="text-lg font-medium text-gray-500">No hay solicitudes {{ selectedRequestStatus() === RequestStatus.ALL ? '' : (getRequestStatusInfo(selectedRequestStatus()).labelPlural | lowercase) }}</p>
-            </div>
+          @if (fetchingRequests()) { @for (item of [1,2,3,4,5,6]; track item) {
+          <request-card [skeleton]="true" />
+          } } @else if (requestFiltered().length > 0) { @for (request of requestFiltered(); track request.id) {
+          <request-card [request]="request" [status]="getRequestStatusInfo(request.status)" [skeleton]="false" />
+          } } @else {
+          <div class="col-span-full text-center flex flex-col items-center gap-4">
+            <i class="pi pi-id-card text-gray-200" style="font-size: 4rem"></i>
+            <p class="text-lg font-medium text-gray-500">No hay solicitudes {{ selectedRequestStatus() === RequestStatus.ALL ? '' : (getRequestStatusInfo(selectedRequestStatus()).labelPlural | lowercase) }}</p>
+          </div>
           }
         </div>
       </div>
@@ -147,17 +116,8 @@
 
   <!-- Acciones -->
   <div class="flex justify-end gap-3 w-full pt-4 border-t border-gray-200">
-    <p-button
-      type="button"
-      [label]="getStatusButtonText()"
-      [severity]="getStatusButtonSeverity()"
-      [disabled]="loading()"
-      [icon]="getStatusButtonIcon()"
-      class="w-auto"
-      (onClick)="confirmToggleStatus()"
-      [attr.aria-label]="getStatusButtonText() + ' ' + retreat.displayNumber" />
-
-    <p-button *ngIf="retreat.is_active" type="button" label="Editar" severity="secondary" [disabled]="loading()" icon="pi pi-pencil" class="w-auto" (onClick)="openEditForm()" [attr.aria-label]="'Editar ' + retreat.displayNumber" />
+    <p-button type="button" [label]="getStatusButtonText()" [severity]="getStatusButtonSeverity()" [disabled]="loading()" [icon]="getStatusButtonIcon()" class="w-auto" (onClick)="confirmToggleStatus()" size="small" />
+    <p-button *ngIf="retreat.is_active" type="button" label="Editar" severity="secondary" [disabled]="loading()" icon="pi pi-pencil" class="w-auto" (onClick)="openEditForm()" size="small" />
   </div>
 
   <!-- Indicador de carga general -->

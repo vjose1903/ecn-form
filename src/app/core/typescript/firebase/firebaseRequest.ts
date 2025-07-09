@@ -246,11 +246,10 @@ export class FirebaseRequest<T> {
       params = (await this.validateParams(params, 'update')) as referenceParams;
       params.find_value = params.data.id;
 
-      const refString = this.makeEntityRefString(params);
+      const refString = params?.refString ? params.refString : this.makeEntityRefString(params);
       const entityRef = doc(Ss.firestore, refString);
 
       const { id, ...data } = { ...params.data };
-
       await updateDoc(entityRef, data);
       const docSnapshot = await getDoc(entityRef);
 
