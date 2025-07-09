@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { FirebaseRequest } from '@core/typescript/firebase/firebaseRequest';
 import { RetreatHomeI } from './retreat-home.model';
-import { RetreatHome } from './retreat-home.class';
+import { RetreatHomeClass } from './retreat-home.class';
 import { UserService } from '../user/user.service';
 import { fun } from '@core/services/functions.service';
 import { AuthService } from '@core/services/auth.service';
@@ -17,13 +17,13 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   private userService = inject(UserService);
   private authService = inject(AuthService);
 
-  private _retreatHomes: BehaviorSubject<RetreatHome[]> = new BehaviorSubject<RetreatHome[]>([]);
+  private _retreatHomes: BehaviorSubject<RetreatHomeClass[]> = new BehaviorSubject<RetreatHomeClass[]>([]);
   private _loadingRetreatHomeList: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   private _lastFetch: number = 0;
   private readonly CACHE_DURATION = 3 * 60 * 1000; // 3 minutos
 
   // Observables públicos
-  get retreatHomes$(): Observable<RetreatHome[]> {
+  get retreatHomes$(): Observable<RetreatHomeClass[]> {
     return this._retreatHomes.asObservable();
   }
 
@@ -31,7 +31,7 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
     return this._loadingRetreatHomeList.asObservable();
   }
 
-  get retreatHomes(): RetreatHome[] {
+  get retreatHomes(): RetreatHomeClass[] {
     return this._retreatHomes.value;
   }
 
@@ -51,7 +51,7 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   /**
    * Obtiene todas las casas de retiro con caché
    */
-  async getAll(): Promise<RetreatHome[]> {
+  async getAll(): Promise<RetreatHomeClass[]> {
     const now = Date.now();
 
     // Verificar si el caché es válido
@@ -65,7 +65,7 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   /**
    * Obtiene todas las casas de retiro desde Firebase
    */
-  private async fetchAllRetreatHomes(): Promise<RetreatHome[]> {
+  private async fetchAllRetreatHomes(): Promise<RetreatHomeClass[]> {
     try {
       this._loadingRetreatHomeList.next(true);
       const currentUser = this.authService.current_user();
@@ -76,7 +76,7 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
       }
 
       const retreats = await this._getAll({ find_by: 'city', find_value: cityRef });
-      const retreatHomes = retreats.map((retreat: RetreatHomeI) => new RetreatHome(retreat));
+      const retreatHomes = retreats.map((retreat: RetreatHomeI) => new RetreatHomeClass(retreat));
 
       this._retreatHomes.next(retreatHomes);
       this._lastFetch = Date.now();
@@ -94,7 +94,7 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   /**
    * Obtiene una casa de retiro por ID
    */
-  async getRetreatHomeById(id: string): Promise<RetreatHome | null> {
+  async getRetreatHomeById(id: string): Promise<RetreatHomeClass | null> {
     if (!id) {
       return null;
     }
@@ -111,11 +111,11 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   /**
    * Procesa la obtención de una casa de retiro
    */
-  private processGetRetreatHome(value: string, by: string): Promise<RetreatHome | null> {
-    return new Promise<RetreatHome | null>((resolve, reject) => {
+  private processGetRetreatHome(value: string, by: string): Promise<RetreatHomeClass | null> {
+    return new Promise<RetreatHomeClass | null>((resolve, reject) => {
       this._getOne({ find_by: by, find_value: value })
         .then(retreat => {
-          const retreatHome = retreat ? new RetreatHome(retreat) : null;
+          const retreatHome = retreat ? new RetreatHomeClass(retreat) : null;
           resolve(retreatHome);
         })
         .catch(error => {
@@ -180,7 +180,7 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   /**
    * Cambia el estado de una casa de retiro
    */
-  async toggleRetreatHomeStatus(retreatHome: RetreatHome): Promise<RetreatHomeI> {
+  async toggleRetreatHomeStatus(retreatHome: RetreatHomeClass): Promise<RetreatHomeI> {
     try {
       const result = await this._updateOne({
         find_by: 'id',
@@ -231,7 +231,7 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
    * Actualiza o agrega una casa de retiro en el observable
    */
   private updateRetreatHomeInCache(retreatHomeData: RetreatHomeI, action: 'create' | 'update'): void {
-    const retreatHomeInstance = new RetreatHome(retreatHomeData);
+    const retreatHomeInstance = new RetreatHomeClass(retreatHomeData);
     const currentRetreatHomes = this._retreatHomes.value;
 
     if (action === 'create') {

@@ -20,7 +20,7 @@ import { RetreatHomeService } from '@core/entities/retreat-home/retreat-home.ser
 import { Ss } from '@core/services/singleton.service';
 import { AuthService } from '@core/services/auth.service';
 import { GalleryComponent } from '@core/components/gallery/gallery.component';
-import { RetreatHome } from '@core/entities/retreat-home/retreat-home.class';
+import { RetreatHomeClass } from '@core/entities/retreat-home/retreat-home.class';
 import { RetreatHomeI } from '@core/entities/retreat-home/retreat-home.model';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 
@@ -41,7 +41,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
   private retreatHomeService = inject(RetreatHomeService);
   private authService = inject(AuthService);
 
-  retreatHome!: RetreatHome | undefined;
+  retreatHome!: RetreatHomeClass | undefined;
 
   FormFieldId = FormFieldId;
   FormControlName = FormControlName;
@@ -122,7 +122,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
   /**
    * Crea el formulario
    */
-  async createForm(retreatHome: RetreatHome | undefined) {
+  async createForm(retreatHome: RetreatHomeClass | undefined) {
     try {
       const cityRef = await this.authService.current_user()?.cityRef;
 

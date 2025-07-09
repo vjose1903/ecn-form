@@ -2,7 +2,7 @@ import { inject, runInInjectionContext } from '@angular/core';
 import { RetreatI, RetreatModality, RetreatModalityType } from './retreat.model';
 import { Ss } from '@core/services/singleton.service';
 import { RetreatService } from './retreat.service';
-import { RetreatHome } from '../retreat-home/retreat-home.class';
+import { RetreatHomeClass } from '../retreat-home/retreat-home.class';
 import { RetreatForm } from 'app/pages/retreat-list/retreat-form/retreat-form';
 import { RetreatView } from 'app/pages/retreat-list/components/retreat-view/retreat-view';
 import { fun } from '@core/services/functions.service';
@@ -19,7 +19,7 @@ export class RetreatClass {
   end_date: string = '';
   max_request_date: string = '';
   retreat_home: string = '';
-  retreatHomeData?: RetreatHome;
+  retreatHomeData?: RetreatHomeClass;
   modality: RetreatModality = RetreatModality.PRESENCIAL;
   mixedModalityData: { [date: string]: RetreatModalityType } = {};
   accept_requests: boolean = true;
@@ -66,7 +66,7 @@ export class RetreatClass {
       this.retreat_home = retreatHome;
     } else if (retreatHome && typeof retreatHome === 'object' && retreatHome.id) {
       this.retreat_home = retreatHome.id;
-      this.retreatHomeData = new RetreatHome(retreatHome);
+      this.retreatHomeData = new RetreatHomeClass(retreatHome);
     } else {
       this.retreat_home = '';
     }

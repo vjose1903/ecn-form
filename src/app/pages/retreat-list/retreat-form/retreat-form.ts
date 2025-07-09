@@ -16,7 +16,7 @@ import { FormsModule } from '@angular/forms';
 import { RetreatService } from '@core/entities/retreat/retreat.service';
 import { RetreatI, RetreatModality, RetreatModalityType } from '@core/entities/retreat/retreat.model';
 import { SelectModule } from 'primeng/select';
-import { RetreatHome } from '@core/entities/retreat-home/retreat-home.class';
+import { RetreatHomeClass } from '@core/entities/retreat-home/retreat-home.class';
 import { RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
 import { RetreatClass } from '@core/entities/retreat/retreat.class';
 import { fun } from '@core/services/functions.service';
@@ -47,7 +47,7 @@ export class RetreatForm implements OnInit {
   FormFieldId = FormFieldId;
   FormControlName = FormControlName;
 
-  retreatHomes = signal<RetreatHome[]>([]);
+  retreatHomes = signal<RetreatHomeClass[]>([]);
   mixedModalityDates = signal<{ date: string; label: string }[]>([]);
   mixedModalityData = signal<{ [key: string]: RetreatModalityType }>({});
 
@@ -464,7 +464,7 @@ export class RetreatForm implements OnInit {
     // Obtener referencia de la casa de retiro
     const retreatHome = this.retreatHomes().find(retreatHome => retreatHome.id === formData.retreat_home);
     if (retreatHome) {
-      const retreatHomeInstance = new RetreatHome(retreatHome);
+      const retreatHomeInstance = new RetreatHomeClass(retreatHome);
       formData.retreat_home = await retreatHomeInstance.getRetreatHomeReference();
     }
 

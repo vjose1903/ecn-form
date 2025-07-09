@@ -6,7 +6,7 @@ import { DynamicDataviewComponent, DynamicDataviewConfig, FilterConfig } from '@
 import { RetreatHomeDataList } from './components/retreat-home-data-list/retreat-home-data-list';
 import { RetreatHomeDataGrid } from './components/retreat-home-data-grid/retreat-home-data-grid';
 import { RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
-import { RetreatHome } from '@core/entities/retreat-home/retreat-home.class';
+import { RetreatHomeClass } from '@core/entities/retreat-home/retreat-home.class';
 import { Subject, takeUntil } from 'rxjs';
 
 @Component({
@@ -148,7 +148,7 @@ export class RetreatHomeList implements OnInit, OnDestroy {
   /**
    * Actualiza los datos del dataview
    */
-  private updateDataviewData(retreats: RetreatHome[]): void {
+  private updateDataviewData(retreats: RetreatHomeClass[]): void {
     const filteredData = this.filterAndSortData(retreats);
     this.dataviewConfig.setData(filteredData);
   }
@@ -172,7 +172,7 @@ export class RetreatHomeList implements OnInit, OnDestroy {
   /**
    * Filtra y ordena los datos
    */
-  private filterAndSortData(retreats: RetreatHome[]): RetreatHome[] {
+  private filterAndSortData(retreats: RetreatHomeClass[]): RetreatHomeClass[] {
     let filtered = retreats;
     const filters = this.dataviewConfig.filters().values;
     const sorting = this.dataviewConfig.sorting();
@@ -241,6 +241,6 @@ export class RetreatHomeList implements OnInit, OnDestroy {
   showNewRetreatDialog(): void {
     if (this.loading()) return;
 
-    new RetreatHome().openForm();
+    new RetreatHomeClass().openForm();
   }
 }

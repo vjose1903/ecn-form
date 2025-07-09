@@ -8,7 +8,7 @@ import { ToastService } from '@core/services/toast.service';
 import { Ss } from '@core/services/singleton.service';
 import { RetreatHomeForm } from 'app/pages/retreat-home-list/retreat-home-form/retreat-home-form';
 
-export class RetreatHome {
+export class RetreatHomeClass {
   id: string = '';
   name: string = '';
   phone: string = '';
@@ -243,7 +243,7 @@ export class RetreatHome {
   /**
    * Confirma el cambio de estado
    */
-  confirmToggleStatus(retreatHome: RetreatHome): Promise<void> {
+  confirmToggleStatus(retreatHome: RetreatHomeClass): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       Ss.confirmationService.confirm({
         message: retreatHome.is_active ? '¿Estás seguro de querer desactivar esta casa de retiro?' : '¿Estás seguro de querer reactivar esta casa de retiro?',
@@ -266,7 +266,7 @@ export class RetreatHome {
   /**
    * Cambia el estado de la casa de retiro
    */
-  private toggleStatus(retreatHome: RetreatHome, resolve: Function, reject: Function): void {
+  private toggleStatus(retreatHome: RetreatHomeClass, resolve: Function, reject: Function): void {
     runInInjectionContext(Ss.injector, () => {
       const retreatHomeService = inject(RetreatHomeService);
 
@@ -299,14 +299,14 @@ export class RetreatHome {
   /**
    * Clona la instancia
    */
-  clone(): RetreatHome {
-    return new RetreatHome(this.asJson());
+  clone(): RetreatHomeClass {
+    return new RetreatHomeClass(this.asJson());
   }
 
   /**
    * Actualiza los datos desde otra instancia
    */
-  updateFrom(other: RetreatHome): void {
+  updateFrom(other: RetreatHomeClass): void {
     this.id = other.id;
     this.name = other.name;
     this.phone = other.phone;

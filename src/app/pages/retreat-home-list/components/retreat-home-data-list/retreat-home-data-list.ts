@@ -5,7 +5,7 @@ import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
 import { TagModule } from 'primeng/tag';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
-import { RetreatHome } from '@core/entities/retreat-home/retreat-home.class';
+import { RetreatHomeClass } from '@core/entities/retreat-home/retreat-home.class';
 import { RetreatHomeView } from '../retreat-home-view/retreat-home-view';
 import { RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
 import { Subject, takeUntil } from 'rxjs';
@@ -22,7 +22,7 @@ export class RetreatHomeDataList implements OnInit, OnDestroy {
   private dialogService = inject(DialogService);
   private destroy$ = new Subject<void>();
 
-  @Input() item!: RetreatHome;
+  @Input() item!: RetreatHomeClass;
   @Input() showActions: boolean = true;
   @Input() enableSelection: boolean = false;
 
@@ -97,7 +97,7 @@ export class RetreatHomeDataList implements OnInit, OnDestroy {
   /**
    * Confirma el cambio de estado con debounce
    */
-  confirmToggleStatus(retreatHome: RetreatHome): void {
+  confirmToggleStatus(retreatHome: RetreatHomeClass): void {
     if (this.loading()) return;
 
     // Debounce para evitar múltiples clicks

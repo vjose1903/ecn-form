@@ -1,5 +1,5 @@
 import { Component, inject, OnInit, signal, OnDestroy } from '@angular/core';
-import { RetreatHome } from '@core/entities/retreat-home/retreat-home.class';
+import { RetreatHomeClass } from '@core/entities/retreat-home/retreat-home.class';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -25,7 +25,7 @@ export class RetreatHomeView implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private toastService = inject(ToastService);
 
-  retreatHome!: RetreatHome;
+  retreatHome!: RetreatHomeClass;
 
   displayCustom = false;
   activeIndex = 0;

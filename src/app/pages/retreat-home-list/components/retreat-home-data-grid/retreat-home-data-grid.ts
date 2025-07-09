@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
-import { RetreatHome } from '@core/entities/retreat-home/retreat-home.class';
+import { RetreatHomeClass } from '@core/entities/retreat-home/retreat-home.class';
 import { TagModule } from 'primeng/tag';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { RetreatHomeView } from '../retreat-home-view/retreat-home-view';
@@ -22,7 +22,7 @@ export class RetreatHomeDataGrid implements OnInit, OnDestroy {
   private dialogService = inject(DialogService);
   private destroy$ = new Subject<void>();
 
-  @Input() item!: RetreatHome;
+  @Input() item!: RetreatHomeClass;
   @Input() showActions: boolean = true;
   @Input() enableSelection: boolean = false;
 
@@ -97,7 +97,7 @@ export class RetreatHomeDataGrid implements OnInit, OnDestroy {
   /**
    * Confirma el cambio de estado con debounce
    */
-  confirmToggleStatus(retreatHome: RetreatHome): void {
+  confirmToggleStatus(retreatHome: RetreatHomeClass): void {
     if (this.loading()) return;
 
     // Debounce para evitar múltiples clicks
