@@ -5,7 +5,7 @@ import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
 import { TagModule } from 'primeng/tag';
 import { DialogService } from 'primeng/dynamicdialog';
-import { Retreat } from '@core/entities/retreat/retreat.class';
+import { RetreatClass } from '@core/entities/retreat/retreat.class';
 import { RetreatService } from '@core/entities/retreat/retreat.service';
 import { Subject, debounceTime } from 'rxjs';
 
@@ -21,7 +21,7 @@ export class RetreatDataList implements OnInit, OnDestroy {
   private dialogService = inject(DialogService);
   private destroy$ = new Subject<void>();
 
-  @Input() item!: Retreat;
+  @Input() item!: RetreatClass;
   @Input() showActions: boolean = true;
   @Input() enableSelection: boolean = false;
 

@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { FirebaseRequest } from '@core/typescript/firebase/firebaseRequest';
 import { RetreatI } from './retreat.model';
-import { Retreat } from './retreat.class';
+import { RetreatClass } from './retreat.class';
 import { UserService } from '../user/user.service';
 import { fun } from '@core/services/functions.service';
 import { AuthService } from '@core/services/auth.service';
@@ -22,14 +22,14 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   private authService = inject(AuthService);
   private requestService = inject(RequestService);
 
-  private _retreats: BehaviorSubject<Retreat[]> = new BehaviorSubject<Retreat[]>([]);
+  private _retreats: BehaviorSubject<RetreatClass[]> = new BehaviorSubject<RetreatClass[]>([]);
   private _requests: BehaviorSubject<RequestClass[]> = new BehaviorSubject<RequestClass[]>([]);
   private _loadingRetreatList: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   private _lastFetch: number = 0;
   private readonly CACHE_DURATION = 3 * 60 * 1000; // 3 minutos
 
   // Observables públicos
-  get retreats$(): Observable<Retreat[]> {
+  get retreats$(): Observable<RetreatClass[]> {
     return this._retreats.asObservable();
   }
 
@@ -41,7 +41,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
     return this._loadingRetreatList.asObservable();
   }
 
-  get retreats(): Retreat[] {
+  get retreats(): RetreatClass[] {
     return this._retreats.value;
   }
 
@@ -65,7 +65,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   /**
    * Obtiene todos los retiros con caché
    */
-  async getRetreatByUser(user: UserC): Promise<Retreat[] | null> {
+  async getRetreatByUser(user: UserC): Promise<RetreatClass[] | null> {
     const retreats = await this._getAllByMultipleFields(
       [
         { field: 'is_active', value: true },
@@ -76,13 +76,13 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
       }
     );
 
-    return retreats.map(retreat => new Retreat(retreat as RetreatI));
+    return retreats.map(retreat => new RetreatClass(retreat as RetreatI));
   }
 
   /**
    * Obtiene todos los retiros con caché
    */
-  async getAll(args: { onlyActive?: boolean } = {}): Promise<Retreat[]> {
+  async getAll(args: { onlyActive?: boolean } = {}): Promise<RetreatClass[]> {
     const now = Date.now();
 
     // Verificar si el caché es válido
@@ -96,7 +96,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   /**
    * Obtiene todos los retiros desde Firebase usando la colección padre
    */
-  private async fetchAllRetreats(args: { onlyActive?: boolean } = {}): Promise<Retreat[]> {
+  private async fetchAllRetreats(args: { onlyActive?: boolean } = {}): Promise<RetreatClass[]> {
     const { onlyActive } = args;
     try {
       this._loadingRetreatList.next(true);
@@ -126,7 +126,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
         });
       }
 
-      const retreatList = retreats.map(retreat => new Retreat(retreat));
+      const retreatList = retreats.map(retreat => new RetreatClass(retreat));
 
       this._retreats.next(retreatList);
       this._lastFetch = Date.now();
@@ -144,7 +144,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   /**
    * Obtiene un retiro por ID
    */
-  async getRetreatById(id: string): Promise<Retreat | null> {
+  async getRetreatById(id: string): Promise<RetreatClass | null> {
     if (!id) {
       return null;
     }
@@ -163,7 +163,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
         parentId: currentUser.id,
         documentId: id,
       });
-      return retreat ? new Retreat(retreat) : null;
+      return retreat ? new RetreatClass(retreat) : null;
     }
 
     return this.processGetRetreat(id, 'id');
@@ -172,11 +172,11 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   /**
    * Procesa la obtención de un retiro
    */
-  private processGetRetreat(value: string, by: string): Promise<Retreat | null> {
-    return new Promise<Retreat | null>((resolve, reject) => {
+  private processGetRetreat(value: string, by: string): Promise<RetreatClass | null> {
+    return new Promise<RetreatClass | null>((resolve, reject) => {
       this._getOne({ find_by: by, find_value: value })
         .then(retreat => {
-          const retreatObj = retreat ? new Retreat(retreat) : null;
+          const retreatObj = retreat ? new RetreatClass(retreat) : null;
           resolve(retreatObj);
         })
         .catch(error => {
@@ -251,7 +251,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   /**
    * Cambia el estado de un retiro
    */
-  async toggleRetreatStatus(retreat: Retreat): Promise<RetreatI> {
+  async toggleRetreatStatus(retreat: RetreatClass): Promise<RetreatI> {
     try {
       const currentUser = this.authService.current_user();
       if (!currentUser?.id) {
@@ -279,7 +279,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
     }
   }
 
-  async getRequests(retreat: Retreat): Promise<RequestClass[]> {
+  async getRequests(retreat: RetreatClass): Promise<RequestClass[]> {
     const refString = `user/${retreat.user_id}/retreat/${retreat.id}/request`;
 
     return this._getAll<RequestI>({ find_value: retreat.id, refString }).then((res: RetreatI[] | RequestI[]) => {
@@ -333,7 +333,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
    * Actualiza o agrega un retiro en el observable
    */
   private updateRetreatInCache(retreatData: RetreatI, action: 'create' | 'update'): void {
-    const retreatInstance = new Retreat(retreatData);
+    const retreatInstance = new RetreatClass(retreatData);
     const currentRetreats = this._retreats.value;
 
     if (action === 'create') {

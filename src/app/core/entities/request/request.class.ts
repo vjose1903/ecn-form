@@ -1,7 +1,7 @@
 import { RequestI, CoupleI, RequestStatus, RequestStatusInfo } from './request.model';
 import { Ss } from '@core/services/singleton.service';
 import { RequestService } from './request.service';
-import { Retreat } from '../retreat/retreat.class';
+import { RetreatClass } from '../retreat/retreat.class';
 import { fun } from '@core/services/functions.service';
 import { RequestView } from 'app/pages/retreat-list/components/retreat-view/requests/request-view/request-view';
 import { RetreatService } from '../retreat/retreat.service';
@@ -25,7 +25,7 @@ export class RequestClass {
   private _displayDatingPeriod: string | null = null;
   private _displayWeddingDate: string | null = null;
   private _displayHowFindUs: string | null = null;
-  private _retreatData: Retreat | null = null;
+  private _retreatData: RetreatClass | null = null;
 
   get displayCoupleNames(): string {
     return fun.joinWords([this.she.full_name, this.he.full_name]);
@@ -68,11 +68,11 @@ export class RequestClass {
     return this._displayHowFindUs;
   }
 
-  get retreatData(): Retreat | null {
+  get retreatData(): RetreatClass | null {
     if (this._retreatData === null) {
       runInInjectionContext(Ss.injector, () => {
         const retreatService = inject(RetreatService);
-        const retreat = retreatService.retreats.find((retreat: Retreat) => retreat.id === this.retreat);
+        const retreat = retreatService.retreats.find((retreat: RetreatClass) => retreat.id === this.retreat);
         this._retreatData = retreat || null;
       });
     }

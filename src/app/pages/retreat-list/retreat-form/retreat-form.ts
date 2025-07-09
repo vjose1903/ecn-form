@@ -18,7 +18,7 @@ import { RetreatI, RetreatModality, RetreatModalityType } from '@core/entities/r
 import { SelectModule } from 'primeng/select';
 import { RetreatHome } from '@core/entities/retreat-home/retreat-home.class';
 import { RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
-import { Retreat } from '@core/entities/retreat/retreat.class';
+import { RetreatClass } from '@core/entities/retreat/retreat.class';
 import { fun } from '@core/services/functions.service';
 import { yesNoOptions } from '@core/typescript/constants';
 import { SelectButtonModule } from 'primeng/selectbutton';
@@ -40,7 +40,7 @@ export class RetreatForm implements OnInit {
   private fb = inject(FormBuilder);
   private ref = inject(DynamicDialogRef);
 
-  retreat!: Retreat;
+  retreat!: RetreatClass;
 
   formGroup = signal<FormGroup | undefined>(undefined);
   loading = signal(false);
@@ -104,7 +104,7 @@ export class RetreatForm implements OnInit {
     this.getRetreatHomes();
   }
 
-  createForm(retreat: Retreat | undefined) {
+  createForm(retreat: RetreatClass | undefined) {
     const form = this.fb.group({
       [FormControlName.id]: [retreat?.id ?? null, []],
       [FormControlName.user_id]: [retreat?.user_id ?? Ss.authService.current_user()?.id ?? null, []],

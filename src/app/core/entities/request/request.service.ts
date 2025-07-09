@@ -7,7 +7,7 @@ import { fun } from '@core/services/functions.service';
 import { AuthService } from '@core/services/auth.service';
 import { Ss } from '@core/services/singleton.service';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { Retreat } from '../retreat/retreat.class';
+import { RetreatClass } from '../retreat/retreat.class';
 
 @Injectable({
   providedIn: 'root',
@@ -162,7 +162,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
   /**
    * Crea un nuevo retiro
    */
-  async createRequest(newRequest: RequestI, retreat: Retreat): Promise<RequestI> {
+  async createRequest(newRequest: RequestI, retreat: RetreatClass): Promise<RequestI> {
     if (fun.isEmpty(this.authService.current_user())) {
       throw new Error('Usuario no autenticado');
     }
@@ -184,7 +184,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
   /**
    * Actualiza un retiro
    */
-  async updateRequest(request: Partial<RequestI>, retreat: Retreat): Promise<RequestI> {
+  async updateRequest(request: Partial<RequestI>, retreat: RetreatClass): Promise<RequestI> {
     if (!request.id) {
       throw new Error('ID de solicitud requerido para actualización');
     }

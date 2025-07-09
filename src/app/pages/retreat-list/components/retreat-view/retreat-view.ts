@@ -1,6 +1,6 @@
 import { Ss } from '@core/services/singleton.service';
 import { Component, inject, OnInit, signal, OnDestroy, computed } from '@angular/core';
-import { Retreat } from '@core/entities/retreat/retreat.class';
+import { RetreatClass } from '@core/entities/retreat/retreat.class';
 import { CommonModule, LowerCasePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -73,7 +73,7 @@ export class RetreatView implements OnInit, OnDestroy {
 
   RequestStatus = RequestStatus;
 
-  retreat!: Retreat;
+  retreat!: RetreatClass;
   loading = signal(false);
 
   private destroy$ = new Subject<void>();

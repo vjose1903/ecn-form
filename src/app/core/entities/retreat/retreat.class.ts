@@ -9,7 +9,7 @@ import { fun } from '@core/services/functions.service';
 import { RequestClass } from '../request/request.class';
 import { RequestService } from '../request/request.service';
 
-export class Retreat {
+export class RetreatClass {
   id: string = '';
   user_id: string = '';
   is_active: boolean = true;
@@ -438,14 +438,14 @@ export class Retreat {
   /**
    * Clona la instancia
    */
-  clone(): Retreat {
-    return new Retreat(this.asJson());
+  clone(): RetreatClass {
+    return new RetreatClass(this.asJson());
   }
 
   /**
    * Actualiza desde otra instancia
    */
-  updateFrom(other: Retreat): void {
+  updateFrom(other: RetreatClass): void {
     this.id = other.id;
     this.user_id = other.user_id;
     this.number = other.number;

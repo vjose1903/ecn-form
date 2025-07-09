@@ -19,7 +19,7 @@ import { CedulaValidator } from '@core/typescript/validate-cedula';
 import { PreviousRequestValidator } from '@core/typescript/validate-previous-request';
 import { yesNoOptions } from '@core/typescript/constants';
 import { RetreatService } from '@core/entities/retreat/retreat.service';
-import { Retreat } from '@core/entities/retreat/retreat.class';
+import { RetreatClass } from '@core/entities/retreat/retreat.class';
 import { Ss } from '@core/services/singleton.service';
 import { FormSkeletonComponent } from './components/form-skeleton/form-skeleton.component';
 import { RequestService } from '@core/entities/request/request.service';
@@ -138,7 +138,7 @@ export class FormPage implements OnInit {
     }),
   });
 
-  retreats = signal<Retreat[] | null>(null);
+  retreats = signal<RetreatClass[] | null>(null);
   initialized = signal(true);
   error = signal(false);
   loading = signal(true);
@@ -205,8 +205,8 @@ export class FormPage implements OnInit {
   processInitForm() {
     this.initialized.set(false);
 
-    const getRequiredInfo = () => new Promise<[UserC | null, Retreat[] | null]>(resolve => resolve([this.userData, this.retreats()]));
-    const reintentarSi = (requiredInfo: [UserC | null, Retreat[] | null]) => requiredInfo.some((info: UserC | Retreat[] | null) => info === null);
+    const getRequiredInfo = () => new Promise<[UserC | null, RetreatClass[] | null]>(resolve => resolve([this.userData, this.retreats()]));
+    const reintentarSi = (requiredInfo: [UserC | null, RetreatClass[] | null]) => requiredInfo.some((info: UserC | RetreatClass[] | null) => info === null);
     const noLoadedRequiredInfo = () => {
       this.error.set(true);
       this.initialized.set(true);

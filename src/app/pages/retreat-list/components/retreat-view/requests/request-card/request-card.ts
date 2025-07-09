@@ -5,7 +5,7 @@ import { CardModule } from 'primeng/card';
 import { TagModule } from 'primeng/tag';
 import { SkeletonModule } from 'primeng/skeleton';
 import { CommonModule } from '@angular/common';
-import { Retreat } from '@core/entities/retreat/retreat.class';
+import { RetreatClass } from '@core/entities/retreat/retreat.class';
 
 @Component({
   selector: 'request-card',
@@ -15,7 +15,7 @@ import { Retreat } from '@core/entities/retreat/retreat.class';
 })
 export class RequestCard {
   request = input<RequestClass>();
-  retreat = input<Retreat>();
+  retreat = input<RetreatClass>();
   status = input<RequestStatusInfo>();
   skeleton = input(false);
 

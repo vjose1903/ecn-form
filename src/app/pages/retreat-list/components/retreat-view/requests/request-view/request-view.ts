@@ -10,7 +10,7 @@ import { ViewItem } from '@core/components/view-item/view-item';
 import { CoupleType, RequestStatus } from '@core/entities/request/request.model';
 import { CoupleView } from './couple-view/couple-view';
 import { RequestService } from '@core/entities/request/request.service';
-import { Retreat } from '@core/entities/retreat/retreat.class';
+import { RetreatClass } from '@core/entities/retreat/retreat.class';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 
 @Component({
@@ -26,7 +26,7 @@ export class RequestView implements OnInit {
 
   loading = signal(false);
   request!: RequestClass;
-  retreat!: Retreat;
+  retreat!: RetreatClass;
   CoupleType = CoupleType;
   RequestStatus = RequestStatus;
 
