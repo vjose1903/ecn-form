@@ -31,7 +31,6 @@ export class App implements OnInit {
   private readonly ngZone = inject(NgZone);
   private readonly authService = inject(AuthService);
   private readonly firestore = inject(Firestore);
-  private readonly userService = inject(UserService);
   private readonly toastService = inject(ToastService);
   private readonly copyToClipboardService = inject(CopyToClipboardService);
   private readonly confirmationService = inject(ConfirmationService);
