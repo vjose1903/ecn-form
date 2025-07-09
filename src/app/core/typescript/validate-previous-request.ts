@@ -31,42 +31,30 @@ type CoupleFieldName =
 export class PreviousRequestValidator {
   /**
    * Valida que no exista una solicitud anterior con el mismo valor en la propiedad especificada
-   * @param previousRequests - Signal con las solicitudes anteriores
+   * @param previousRequests - Array con las solicitudes anteriores
    * @param fieldName - Nombre del campo a validar (ej: 'email', 'identity_number', etc.)
    * @returns Función validadora
    */
-  static validate(previousRequests: Signal<RequestClass[]>, fieldName: FormControlName) {
+  static validate(previousRequests: RequestClass[], fieldName: FormControlName) {
     return (control: AbstractControl): ValidationErrors | null => {
       const currentValue = control.value;
 
       // Si no hay valor, no hay error (el required se maneja por separado)
-      if (!currentValue) {
-        return null;
-      }
-
-      const requests = previousRequests();
+      if (!currentValue) return null;
 
       // Si no hay solicitudes anteriores, no hay conflicto
-      if (!requests || requests.length === 0) {
-        return null;
-      }
+      if (!previousRequests || previousRequests.length === 0) return null;
 
       // Verificar que el campo sea válido para CoupleI
-      if (!this.isValidCoupleField(fieldName)) {
-        return null;
-      }
+      if (!this.isValidCoupleField(fieldName)) return null;
 
       // Buscar en todas las solicitudes anteriores
-      const hasConflict = requests.some(request => {
+      const hasConflict = previousRequests.some(request => {
         // Buscar en el grupo 'she'
-        if (request.she && request.she[fieldName as CoupleFieldName] === currentValue) {
-          return true;
-        }
+        if (request.she && request.she[fieldName as CoupleFieldName] === currentValue) return true;
 
         // Buscar en el grupo 'he'
-        if (request.he && request.he[fieldName as CoupleFieldName] === currentValue) {
-          return true;
-        }
+        if (request.he && request.he[fieldName as CoupleFieldName] === currentValue) return true;
 
         return false;
       });
@@ -127,7 +115,6 @@ export class PreviousRequestValidator {
     const fieldNames: Record<FormControlName, string> = {
       [FormControlName.id]: 'ID',
       [FormControlName.is_active]: 'Estado activo',
-      [FormControlName.is_accepted]: 'Estado de aceptación',
       [FormControlName.retreat]: 'Retiro',
       [FormControlName.dating_period]: 'Período de noviazgo',
       [FormControlName.have_wedding_date]: 'Fecha de boda',

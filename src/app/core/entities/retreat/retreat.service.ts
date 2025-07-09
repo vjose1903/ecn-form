@@ -279,34 +279,6 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
     }
   }
 
-  /**
-   * Cambia el estado de un retiro
-   */
-  async incrementRequestCount(retreat: Retreat): Promise<RetreatI> {
-    try {
-      const currentUser = this.authService.current_user();
-      if (!currentUser?.id) {
-        throw new Error('Usuario no autenticado');
-      }
-
-      const result = await this.updateOneInParentCollection({
-        parentCollection: this.userService.collectionName,
-        parentId: currentUser.id,
-        documentId: retreat.id,
-        data: { request_count: retreat.request_count + 1 },
-      });
-
-      // Actualizar observable
-      this.updateRetreatInCache(result, 'update');
-
-      return result;
-    } catch (error) {
-      console.error('Error al cambiar estado del retiro:', error);
-      Ss.toastService.error({ message: 'Error al cambiar el estado del retiro', title: 'Error' });
-      throw error;
-    }
-  }
-
   async getRequests(retreat: Retreat): Promise<RequestClass[]> {
     const refString = `user/${retreat.user_id}/retreat/${retreat.id}/request`;
 

@@ -13,7 +13,7 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { DividerLine } from '../../core/components/divider-line/divider-line';
 import { DeviceDetectorService } from '../../core/services/device-detector.service';
 import { DeviceE } from '../../core/models/device-detector.model';
-import { Affirmation, FormControlName, FormFieldId, FormGroupFields, IdentityType } from './form-page.model';
+import { Affirmation, cleanFormValues, FormControlName, FormFieldId, FormGroupFields, IdentityType } from './form-page.model';
 import { FormErrorMsgComponent } from '@core/components/form-error-msg/form-error-msg.component';
 import { CedulaValidator } from '@core/typescript/validate-cedula';
 import { PreviousRequestValidator } from '@core/typescript/validate-previous-request';
@@ -75,7 +75,6 @@ export class FormPage implements OnInit {
   formGroup = this.fb.group({
     [FormControlName.id]: [''],
     [FormControlName.is_active]: [true],
-    [FormControlName.is_accepted]: [null],
     [FormControlName.status]: [RequestStatus.PENDING],
     [FormControlName.retreat]: ['', Validators.required],
     [FormControlName.dating_period]: ['', Validators.required],
@@ -90,13 +89,13 @@ export class FormPage implements OnInit {
       [FormControlName.nickname]: [''],
       [FormControlName.birth_date]: ['', Validators.required],
       [FormControlName.identity_type]: [IdentityType.cedula, Validators.required],
-      [FormControlName.identity_number]: ['', Validators.compose([Validators.required, CedulaValidator.validate, PreviousRequestValidator.validate(this.previousRequests, FormControlName.identity_number)])],
+      [FormControlName.identity_number]: ['', Validators.compose([Validators.required, CedulaValidator.validate])],
       [FormControlName.are_you_married]: [null, Validators.required],
       [FormControlName.have_children]: [null, Validators.required],
       [FormControlName.city_of_residence]: ['', Validators.required],
       [FormControlName.address]: ['', Validators.required],
-      [FormControlName.email]: ['', Validators.compose([Validators.required, Validators.email, PreviousRequestValidator.validate(this.previousRequests, FormControlName.email)])],
-      [FormControlName.cell_phone]: ['', Validators.compose([Validators.required, PreviousRequestValidator.validate(this.previousRequests, FormControlName.cell_phone)])],
+      [FormControlName.email]: ['', Validators.compose([Validators.required, Validators.email])],
+      [FormControlName.cell_phone]: ['', Validators.required],
       [FormControlName.home_phone]: [''],
       [FormControlName.work_phone]: [''],
       [FormControlName.live_accompanied]: [null, Validators.required],
@@ -114,13 +113,13 @@ export class FormPage implements OnInit {
       [FormControlName.nickname]: [''],
       [FormControlName.birth_date]: ['', Validators.required],
       [FormControlName.identity_type]: [IdentityType.cedula, Validators.required],
-      [FormControlName.identity_number]: ['', Validators.compose([Validators.required, CedulaValidator.validate, PreviousRequestValidator.validate(this.previousRequests, FormControlName.identity_number)])],
+      [FormControlName.identity_number]: ['', Validators.compose([Validators.required, CedulaValidator.validate])],
       [FormControlName.are_you_married]: [null, Validators.required],
       [FormControlName.have_children]: [null, Validators.required],
       [FormControlName.city_of_residence]: ['', Validators.required],
       [FormControlName.address]: ['', Validators.required],
-      [FormControlName.email]: ['', Validators.compose([Validators.required, Validators.email, PreviousRequestValidator.validate(this.previousRequests, FormControlName.email)])],
-      [FormControlName.cell_phone]: ['', Validators.compose([Validators.required, PreviousRequestValidator.validate(this.previousRequests, FormControlName.cell_phone)])],
+      [FormControlName.email]: ['', Validators.compose([Validators.required, Validators.email])],
+      [FormControlName.cell_phone]: ['', Validators.required],
       [FormControlName.home_phone]: [''],
       [FormControlName.work_phone]: [''],
       [FormControlName.live_accompanied]: [null, Validators.required],
@@ -191,9 +190,7 @@ export class FormPage implements OnInit {
     // this.formGroup.patchValue(formDataMuck as any, { emitEvent: true });
   }
 
-  test() {
-    console.log(this.formGroup);
-  }
+  test() {}
 
   processInitForm() {
     this.loading.set(true);
@@ -312,9 +309,9 @@ export class FormPage implements OnInit {
       this.removeRequiredControl(identityNumberControl, '');
 
       if (identityType === IdentityType.cedula) {
-        identityNumberControl?.addValidators([Validators.required, CedulaValidator.validate, PreviousRequestValidator.validate(this.previousRequests, FormControlName.identity_number)]);
+        identityNumberControl?.addValidators([Validators.required, CedulaValidator.validate, PreviousRequestValidator.validate(this.previousRequests(), FormControlName.identity_number)]);
       } else {
-        identityNumberControl?.addValidators([Validators.required, PreviousRequestValidator.validate(this.previousRequests, FormControlName.identity_number)]);
+        identityNumberControl?.addValidators([Validators.required, PreviousRequestValidator.validate(this.previousRequests(), FormControlName.identity_number)]);
       }
 
       identityNumberControl?.markAsPristine();
@@ -357,17 +354,55 @@ export class FormPage implements OnInit {
     const retreatId = this.formGroup.get(FormControlName.retreat)?.value;
     const retreat = this.retreats()?.find(r => r.id === retreatId);
 
+    // Limpiar validadores anteriores primero
+    this.clearPreviousRequestValidators();
+
     const previousRequests = (await retreat?.getRequests()) ?? [];
     this.previousRequests.set(previousRequests);
+
+    // Verificar que el signal se actualizó correctamente
 
     // Actualizar validadores de campos que dependen de solicitudes anteriores
     this.updatePreviousRequestValidators();
   }
 
   /**
+   * Limpia los validadores de solicitudes anteriores
+   */
+  private clearPreviousRequestValidators() {
+    // Campos que necesitan validación de solicitudes anteriores
+    const fieldsToValidate = [FormControlName.email, FormControlName.cell_phone, FormControlName.identity_number];
+
+    // Limpiar validadores para ambos grupos (she y he)
+    [FormGroupFields.she, FormGroupFields.he].forEach(groupName => {
+      const group = this.formGroup.get(groupName);
+
+      fieldsToValidate.forEach(fieldName => {
+        const control = group?.get(fieldName);
+        if (control) {
+          // Obtener validadores existentes
+          const currentValidators = control.validator ? [control.validator] : [];
+
+          // Filtrar validadores que no sean PreviousRequestValidator
+          const filteredValidators = currentValidators.filter(validator => {
+            return !validator.toString().includes('PreviousRequestValidator');
+          });
+
+          // Aplicar los validadores filtrados
+          control.setValidators(filteredValidators);
+          control.updateValueAndValidity({ emitEvent: false });
+        }
+      });
+    });
+  }
+
+  /**
    * Actualiza los validadores de campos que dependen de solicitudes anteriores
    */
   private updatePreviousRequestValidators() {
+    // Verificar que tenemos datos en el signal
+    const currentRequests = this.previousRequests();
+
     // Campos que necesitan validación de solicitudes anteriores
     const fieldsToValidate = [FormControlName.email, FormControlName.cell_phone, FormControlName.identity_number];
 
@@ -378,15 +413,11 @@ export class FormPage implements OnInit {
       fieldsToValidate.forEach(fieldName => {
         const control = group?.get(fieldName);
         if (control) {
-          // Obtener validadores existentes (excluyendo el validador de solicitudes anteriores)
+          // Obtener validadores existentes
           const currentValidators = control.validator ? [control.validator] : [];
-          const asyncValidators = control.asyncValidator ? [control.asyncValidator] : [];
 
-          // Filtrar validadores existentes que no sean PreviousRequestValidator
-          const filteredValidators = currentValidators.filter(validator => validator !== PreviousRequestValidator.validate(this.previousRequests, fieldName));
-
-          // Agregar el nuevo validador de solicitudes anteriores
-          const newValidators = [...filteredValidators, PreviousRequestValidator.validate(this.previousRequests, fieldName)];
+          // Agregar el validador de solicitudes anteriores con el array directamente
+          const newValidators = [...currentValidators, PreviousRequestValidator.validate(currentRequests, fieldName)];
 
           // Aplicar los validadores actualizados
           control.setValidators(newValidators);
@@ -505,7 +536,7 @@ export class FormPage implements OnInit {
   }
 
   resetForm() {
-    this.formGroup.reset();
+    this.formGroup.reset(cleanFormValues);
     this.submission_success.set(false);
   }
 
@@ -542,8 +573,6 @@ export class FormPage implements OnInit {
       } else {
         request = await this.requestService.createRequest(formData, retreat);
       }
-
-      await retreat.incrementRequestCount();
 
       this.submission_success.set(true);
 

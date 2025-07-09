@@ -405,25 +405,13 @@ export class Retreat {
     });
   }
 
-  incrementRequestCount(): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      runInInjectionContext(Ss.injector, () => {
-        const retreatService = inject(RetreatService);
-
-        retreatService
-          .incrementRequestCount(this)
-          .then(() => resolve())
-          .catch(error => reject(error));
-      });
-    });
-  }
-
-  getRequests(): Promise<void> {
+  getRequests(): Promise<RequestClass[]> {
     return runInInjectionContext(Ss.injector, async () => {
       const retreatService = inject(RetreatService);
       const requestService = inject(RequestService);
 
       requestService.requests = await retreatService.getRequests(this);
+      return requestService.requests;
     });
   }
 

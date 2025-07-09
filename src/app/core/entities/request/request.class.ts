@@ -10,7 +10,6 @@ import { inject, runInInjectionContext } from '@angular/core';
 export class RequestClass {
   id: string = '';
   is_active: boolean = true;
-  is_accepted: boolean | null = null;
   how_find_us: string = '';
   retreat: string = '';
   have_wedding_date: boolean = false;
@@ -123,7 +122,6 @@ export class RequestClass {
    */
   private initializeFromData(request: RequestI & { retreat?: any }): void {
     this.id = request.id || '';
-    this.is_accepted = request.is_accepted || null;
     this.how_find_us = request.how_find_us || '';
     this.have_wedding_date = request.have_wedding_date || false;
     this.who_invited_you = request.who_invited_you || '';

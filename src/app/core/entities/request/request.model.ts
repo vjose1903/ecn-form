@@ -11,7 +11,6 @@ export interface RequestI {
   she: CoupleI;
   he: CoupleI;
   is_active?: boolean;
-  is_accepted: boolean | null;
   status: RequestStatus;
 }
 
