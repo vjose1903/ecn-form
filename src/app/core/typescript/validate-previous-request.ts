@@ -18,9 +18,7 @@ type CoupleFieldName =
   | 'cell_phone'
   | 'home_phone'
   | 'work_phone'
-  | 'familiar_full_name'
-  | 'familiar_phone'
-  | 'familiar_relationship'
+  | 'family_information'
   | 'emergency_full_name'
   | 'emergency_phone'
   | 'emergency_relationship'
@@ -91,9 +89,7 @@ export class PreviousRequestValidator {
       'cell_phone',
       'home_phone',
       'work_phone',
-      'familiar_full_name',
-      'familiar_phone',
-      'familiar_relationship',
+      'family_information',
       'emergency_full_name',
       'emergency_phone',
       'emergency_relationship',

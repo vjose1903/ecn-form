@@ -46,11 +46,12 @@
 
     <divider-line separatorClass="my-0 mx-1" color="bg-gray-200" />
 
-    <!-- ciudad de residencia -->
-    <view-item title="Ciudad de residencia:" icon="pi pi-map-marker" [isRow]="true" [content]="couple().city_of_residence"> </view-item>
-
+    
     <!-- dirección -->
     <view-item title="Dirección:" icon="pi pi-map" [isRow]="true" [content]="couple().address"> </view-item>
+    
+    <!-- ciudad de residencia -->
+    <view-item title="Ciudad de residencia:" icon="pi pi-map-marker" [isRow]="true" [content]="couple().city_of_residence"> </view-item>
 
     <divider-line separatorClass="my-0 mx-1" color="bg-gray-200" />
 
@@ -69,16 +70,22 @@
 
     <divider-line separatorClass="my-0 mx-1" color="bg-gray-200" />
 
-    <!-- Informacion familiar -->
+    <!-- Información familiar -->
 
     <span class="font-bold text-md" for="time-range">Información familiar</span>
-    <!-- nombre acompañante -->
-    <view-item title="Nombre:" icon="pi pi-user" [isRow]="true" [content]="couple().familiar_full_name"> </view-item>
-    <!-- parentesco acompañante -->
-    <view-item title="Parentesco:" icon="pi pi-sparkles" [isRow]="true" [content]="couple().familiar_relationship"> </view-item>
-    <!-- teléfono acompañante -->
-    <view-item title="Teléfono:" icon="pi pi-phone" [isRow]="true" [content]="couple().familiar_phone"> </view-item>
 
+    @for (familyMember of couple().family_information; track familyMember.familiar_full_name) {
+    <small class="text-black/50 font-bold mb-0 text-[10px]">Familiar {{ $index +1 }}</small>
+    <!-- nombre acompañante -->
+    <view-item title="Nombre:" icon="pi pi-user" [isRow]="true" [content]="familyMember.familiar_full_name"> </view-item>
+    <!-- parentesco acompañante -->
+    <view-item title="Parentesco:" icon="pi pi-sparkles" [isRow]="true" [content]="familyMember.familiar_relationship"> </view-item>
+    <!-- teléfono acompañante -->
+    <view-item title="Teléfono:" icon="pi pi-phone" [isRow]="true" [content]="familyMember.familiar_phone"> </view-item>
+
+    @if (!$last){
+    <divider-line separatorClass="my-1 mx-2" color="bg-gray-200/60" />
+    } }
     <divider-line separatorClass="my-0 mx-1" color="bg-gray-200" />
 
     <!-- información de contacto de emergencia -->
