@@ -14,8 +14,10 @@ export class RequestClass {
   retreat: string = '';
   have_wedding_date: boolean = false;
   who_invited_you: string = '';
+  who_invited_you_phone: string = '';
   wedding_date: Date | string | null = null;
-  dating_period: string = '';
+  dating_period_year: number = 0;
+  dating_period_month: number = 0;
   how_find_us_other: string = '';
   she: CoupleI = this.getDefaultCouple();
   he: CoupleI = this.getDefaultCouple();
@@ -46,7 +48,14 @@ export class RequestClass {
    */
   get displayDatingPeriod(): string {
     if (this._displayDatingPeriod === null) {
-      this._displayDatingPeriod = this.dating_period || '';
+      const years = this.dating_period_year && this.dating_period_year > 0 ? this.dating_period_year : null;
+      const months = this.dating_period_month && this.dating_period_month > 0 ? this.dating_period_month : null;
+
+      this._displayDatingPeriod = `${years ? `${years} año${years === 1 ? '' : 's'}` : ''} ${years && months ? 'y' : ''} ${months ? `${months} mes${months === 1 ? '' : 'es'}` : ''}`;
+      this._displayDatingPeriod = this._displayDatingPeriod
+        .split(' ')
+        .filter(word => word.trim() !== '')
+        .join(' ');
     }
     return this._displayDatingPeriod;
   }
@@ -102,7 +111,6 @@ export class RequestClass {
       birth_date_display: '',
       church_name: '',
       home_phone: '',
-      familiar_phone: '',
       email: '',
       nickname: '',
       address: '',
@@ -110,9 +118,19 @@ export class RequestClass {
       cell_phone: '',
       identity_number: '',
       work_phone: '',
-      familiar_relationship: '',
-      familiar_full_name: '',
       emergency_phone: '',
+      family_information: [
+        {
+          familiar_phone: '',
+          familiar_relationship: '',
+          familiar_full_name: '',
+        },
+        {
+          familiar_phone: '',
+          familiar_relationship: '',
+          familiar_full_name: '',
+        },
+      ],
     };
   }
 
@@ -124,9 +142,11 @@ export class RequestClass {
     this.how_find_us = request.how_find_us || '';
     this.have_wedding_date = request.have_wedding_date || false;
     this.who_invited_you = request.who_invited_you || '';
+    this.who_invited_you_phone = request.who_invited_you_phone || '';
     this.wedding_date = fun.convertFirebaseTimestamp(request.wedding_date) || null;
     this.retreat = request.retreat || '';
-    this.dating_period = request.dating_period || '';
+    this.dating_period_year = request.dating_period_year || 0;
+    this.dating_period_month = request.dating_period_month || 0;
     this.how_find_us_other = request.how_find_us_other || '';
     this.she = this.initializeCouple(request.she);
     this.he = this.initializeCouple(request.he);
@@ -149,7 +169,6 @@ export class RequestClass {
       birth_date_display: birthDate.toLocaleDateString() || '',
       church_name: couple.church_name || '',
       home_phone: couple.home_phone || '',
-      familiar_phone: couple.familiar_phone || '',
       email: couple.email || '',
       nickname: couple.nickname || '',
       address: couple.address || '',
@@ -157,9 +176,8 @@ export class RequestClass {
       cell_phone: couple.cell_phone || '',
       identity_number: couple.identity_number || '',
       work_phone: couple.work_phone || '',
-      familiar_relationship: couple.familiar_relationship || '',
-      familiar_full_name: couple.familiar_full_name || '',
       emergency_phone: couple.emergency_phone || '',
+      family_information: couple.family_information || [],
     };
   }
 
@@ -174,8 +192,10 @@ export class RequestClass {
       retreatData: this.retreatData?.asJson(),
       have_wedding_date: this.have_wedding_date,
       who_invited_you: this.who_invited_you,
+      who_invited_you_phone: this.who_invited_you_phone,
       wedding_date: this.wedding_date,
-      dating_period: this.dating_period,
+      dating_period_year: this.dating_period_year,
+      dating_period_month: this.dating_period_month,
       how_find_us_other: this.how_find_us_other,
       she: this.she,
       he: this.he,
@@ -279,8 +299,10 @@ export class RequestClass {
     this.retreat = other.retreat;
     this.have_wedding_date = other.have_wedding_date;
     this.who_invited_you = other.who_invited_you;
+    this.who_invited_you_phone = other.who_invited_you_phone;
     this.wedding_date = other.wedding_date;
-    this.dating_period = other.dating_period;
+    this.dating_period_year = other.dating_period_year;
+    this.dating_period_month = other.dating_period_month;
     this.how_find_us_other = other.how_find_us_other;
     this.she = other.she;
     this.he = other.he;

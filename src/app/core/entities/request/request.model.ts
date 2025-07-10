@@ -5,8 +5,10 @@ export interface RequestI {
   retreatData: any;
   have_wedding_date: boolean;
   who_invited_you: string;
+  who_invited_you_phone: string;
   wedding_date: Date | string | null;
-  dating_period: string;
+  dating_period_year: number;
+  dating_period_month: number;
   how_find_us_other: string;
   she: CoupleI;
   he: CoupleI;
@@ -32,7 +34,6 @@ export interface CoupleI {
   birth_date_display: string;
   church_name: string;
   home_phone: string;
-  familiar_phone: string;
   email: string;
   nickname: string;
   address: string;
@@ -40,10 +41,16 @@ export interface CoupleI {
   cell_phone: string;
   identity_number: string;
   work_phone: string;
-  familiar_relationship: string;
-  familiar_full_name: string;
+  family_information: FamilyMemberI[];
   emergency_phone: string;
 }
+
+export interface FamilyMemberI {
+  familiar_phone: string;
+  familiar_relationship: string;
+  familiar_full_name: string;
+}
+
 export interface BirthDate {
   seconds: number;
   nanoseconds: number;

@@ -46,10 +46,19 @@
       <divider-line separatorClass="my-0" />
     </div>
 
-    <!-- Quien los invitó -->
-    <div class="col-span-12 md:col-span-6">
-      <view-item title="Quien los invitó al Retiro" icon="pi pi-user-plus" [content]="request.who_invited_you" />
+    <!-- Quien los invitó al Retiro -->
+    <div class="col-span-6 {{request.who_invited_you_phone ? 'md:col-span-3' : ''}} ">
+      @if (request.who_invited_you) {
+        <view-item title="Quien los invitó al Retiro" icon="pi pi-user-plus" [content]="request.who_invited_you" />
+      }
     </div>
+
+    <!-- Telefono de quien los invitó -->
+    @if (request.who_invited_you_phone) {
+    <div class="col-span-6 md:col-span-3">
+      <view-item title="Telefono de quien los invitó" icon="pi pi-phone" [content]="request.who_invited_you_phone" />
+    </div>
+    }
 
     <div class="col-span-12">
       <divider-line separatorClass="my-2" />
