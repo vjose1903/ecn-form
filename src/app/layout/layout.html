@@ -5,11 +5,11 @@
       <img src="images/Logo_ECN.png" alt="logo" srcset="" class="w-12 h-12" />
       <div class="">
         <span class="block text-md md:text-2xl font-semibold">Encuentro Católico para Novios</span>
-        @if(city()){
+        @if(!isAuthRoute()){ @if(city()){
         <small class="block text-white/70">{{ city()?.large_label }}</small>
         } @else {
         <p-skeleton height="19px" width="120px" class="opacity-50" />
-        }
+        } }
       </div>
     </div>
 
