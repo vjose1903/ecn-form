@@ -3,7 +3,14 @@
   <div class="bg-red-700 w-full p-2 text-white flex items-center justify-between gap-4">
     <div class="flex items-center gap-4">
       <img src="images/Logo_ECN.png" alt="logo" srcset="" class="w-12 h-12" />
-      <span class="text-md md:text-2xl font-semibold">Encuentro Católico para Novios</span>
+      <div class="">
+        <span class="block text-md md:text-2xl font-semibold">Encuentro Católico para Novios</span>
+        @if(city()){
+        <small class="block text-white/70">{{ city()?.large_label }}</small>
+        } @else {
+        <p-skeleton height="19px" width="120px" class="opacity-50" />
+        }
+      </div>
     </div>
 
     <div class="flex items-center gap-2">
@@ -16,7 +23,7 @@
   <!-- Contenido de las páginas -->
   <div #contentRef class="bg-gray-50/50" [ngClass]="{'grid grid-cols-[min-content_1fr]': isAdminRoute()}">
     @if(isAdminRoute()){
-    <app-menu  />
+    <app-menu />
     }
     <div class="h-full">
       <router-outlet />

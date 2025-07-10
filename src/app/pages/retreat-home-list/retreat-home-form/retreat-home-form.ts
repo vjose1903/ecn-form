@@ -15,7 +15,7 @@ import { FileI } from '@core/entities/file/file.model';
 import { FileClass } from '@core/entities/file/file.class';
 import { FileService } from '@core/entities/file/file.service';
 import { fun } from '@core/services/functions.service';
-import { UrlValidator } from '@core/typescript/validate-url';
+import { UrlValidator } from '@core/typescript/validators/validate-url';
 import { RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
 import { Ss } from '@core/services/singleton.service';
 import { AuthService } from '@core/services/auth.service';

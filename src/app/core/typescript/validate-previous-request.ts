@@ -18,10 +18,9 @@ type CoupleFieldName =
   | 'cell_phone'
   | 'home_phone'
   | 'work_phone'
-  | 'live_accompanied'
-  | 'companion_full_name'
-  | 'companion_phone'
-  | 'companion_relationship'
+  | 'familiar_full_name'
+  | 'familiar_phone'
+  | 'familiar_relationship'
   | 'emergency_full_name'
   | 'emergency_phone'
   | 'emergency_relationship'
@@ -92,10 +91,9 @@ export class PreviousRequestValidator {
       'cell_phone',
       'home_phone',
       'work_phone',
-      'live_accompanied',
-      'companion_full_name',
-      'companion_phone',
-      'companion_relationship',
+      'familiar_full_name',
+      'familiar_phone',
+      'familiar_relationship',
       'emergency_full_name',
       'emergency_phone',
       'emergency_relationship',
@@ -116,12 +114,14 @@ export class PreviousRequestValidator {
       [FormControlName.id]: 'ID',
       [FormControlName.is_active]: 'Estado activo',
       [FormControlName.retreat]: 'Retiro',
-      [FormControlName.dating_period]: 'Período de noviazgo',
+      [FormControlName.dating_period_month]: 'Período de noviazgo',
+      [FormControlName.dating_period_year]: 'Período de noviazgo',
       [FormControlName.have_wedding_date]: 'Fecha de boda',
       [FormControlName.wedding_date]: 'Fecha de boda',
       [FormControlName.how_find_us]: 'Cómo nos encontró',
       [FormControlName.how_find_us_other]: 'Otro método de contacto',
       [FormControlName.who_invited_you]: 'Quién lo invitó',
+      [FormControlName.who_invited_you_phone]: 'Teléfono de quien lo invitó',
       [FormControlName.full_name]: 'Nombre completo',
       [FormControlName.nickname]: 'Apodo',
       [FormControlName.birth_date]: 'Fecha de nacimiento',
@@ -135,10 +135,10 @@ export class PreviousRequestValidator {
       [FormControlName.cell_phone]: 'Teléfono celular',
       [FormControlName.home_phone]: 'Teléfono de casa',
       [FormControlName.work_phone]: 'Teléfono del trabajo',
-      [FormControlName.live_accompanied]: 'Vive acompañado',
-      [FormControlName.companion_full_name]: 'Nombre del acompañante',
-      [FormControlName.companion_phone]: 'Teléfono del acompañante',
-      [FormControlName.companion_relationship]: 'Relación con el acompañante',
+      [FormControlName.family_information]: 'Información familiar',
+      [FormControlName.familiar_full_name]: 'Nombre del acompañante',
+      [FormControlName.familiar_phone]: 'Teléfono del acompañante',
+      [FormControlName.familiar_relationship]: 'Relación con el acompañante',
       [FormControlName.emergency_full_name]: 'Nombre de contacto de emergencia',
       [FormControlName.emergency_phone]: 'Teléfono de emergencia',
       [FormControlName.emergency_relationship]: 'Relación con contacto de emergencia',

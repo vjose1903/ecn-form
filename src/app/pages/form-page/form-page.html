@@ -5,12 +5,8 @@
 } @else if (error()) {
 <error-message (retry)="onRetry()" />
 } @else {
-<div class="m-auto w-[92vw] md:w-3/4 lg:w-1/2 py-10 flex flex-col gap-1">
-  <p>
-    Esta es la ficha de solicitud para vivir el retiro del
-    <span class="font-bold">Encuentro Católico Para Novios</span>
-    en {{city()?.definite_article}} {{ city()?.large_label }}.
-  </p>
+<div class="m-auto w-[95vw] md:w-3/4 lg:w-1/2 py-10 flex flex-col gap-1">
+  <p class="mb-2">Esta es la ficha de solicitud para vivir el retiro del <span class="font-bold">Encuentro Católico Para Novios</span></p>
 
   <p>Una vez llenada, el Equipo la evaluará y le indicará si fue aprobada y le indicarán el día de la información.</p>
   <p>Favor de llenar cada dato solicitado apegado a la verdad. Ante cualquier duda, póngase en contacto con la persona que le invitó a vivir esta maravillosa experiencia o la pareja encargada de Reclutamiento & Promoción.</p>
@@ -22,9 +18,9 @@
     <div class="shadow-lg rounded-[6px]">
       <p-accordion [value]="openedAccordionPanel" (onClose)="changeAccordionPanelIndex($event.index, 'close')" (onOpen)="changeAccordionPanelIndex($event.index, 'open')" [multiple]="true">
         <p-accordion-panel [value]="0">
-          <!-- INFORMACION GENERAL -->
+          <!-- INFORMACIÓN GENERAL -->
           <p-accordion-header class="!p-2 md:!p-4 !bg-gray-200/60">
-            <ng-container *ngTemplateOutlet="accordionHeader; context: { title: 'Informaciónes Generales', isCompleted: areRequiredFieldsComplete(FormGroupFields.general), invalid: areInvalidFields(FormGroupFields.general) }"></ng-container>
+            <ng-container *ngTemplateOutlet="accordionHeader; context: { title: 'Informaciones Generales', isCompleted: areRequiredFieldsComplete(FormGroupFields.general), invalid: areInvalidFields(FormGroupFields.general) }"></ng-container>
           </p-accordion-header>
           <p-accordion-content class="{{ openedAccordionPanel.includes(0) ? '!py-2 md:!py-4' : '' }}">
             <div class="flex flex-col gap-5 overflow-hidden">
@@ -48,16 +44,42 @@
                 </div>
               </div>
 
-              <div class="flex flex-col gap-1" [id]="FormFieldId.dating_period">
-                <div class="flex gap-1">
-                  <label class="font-bold" [for]="FormFieldId.dating_period + '_control'">Tiempo de Noviazgo</label>
-                  <span class="text-red-500">*</span>
+              <div class="flex flex-col gap-1">
+                <div class="flex flex-col gap-1">
+                  <div class="flex gap-1">
+                    <label class="font-bold mb-0">Tiempo de Noviazgo?</label>
+                    <span class="text-red-500">*</span>
+                  </div>
+                  <div class="flex gap-1 items-center">
+                    <i class="pi pi-info-circle text-gray-300"></i>
+                    <small class="text-gray-400">Si es exacto (ej: 2 años), complete solo el campo correspondiente y deje el otro en 0</small>
+                  </div>
                 </div>
 
-                <div class="flex flex-col relative">
-                  <p-select [inputId]="FormFieldId.dating_period + '_control'" [options]="timeRanges" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" [formControlName]="FormControlName.dating_period" />
-                  <form-error-msg [control]="formGroup.get(FormControlName.dating_period)" />
+                <div class="grid grid-cols-2 gap-5 relative w-full">
+                  <div class="flex flex-col gap-1">
+                    <p-inputgroup>
+                      <p-inputnumber [id]="FormFieldId.dating_period_year + '_control'" [formControlName]="FormControlName.dating_period_year" placeholder="#" [min]="0" />
+                      <p-inputgroup-addon>
+                        <div class="min-w-15 text-center">{{getDatingPeriodAddon(FormControlName.dating_period_year)}}</div>
+                      </p-inputgroup-addon>
+                    </p-inputgroup>
+                    <form-error-msg [control]="formGroup.get(FormControlName.dating_period_year)" />
+                  </div>
+
+                  <div class="flex flex-col gap-1">
+                    <p-inputgroup>
+                      <p-inputnumber [id]="FormFieldId.dating_period_month + '_control'" [formControlName]="FormControlName.dating_period_month" placeholder="#" [min]="0" />
+                      <p-inputgroup-addon>
+                        <div class="min-w-15 text-center">{{getDatingPeriodAddon(FormControlName.dating_period_month)}}</div>
+                      </p-inputgroup-addon>
+                    </p-inputgroup>
+                    <form-error-msg [control]="formGroup.get(FormControlName.dating_period_month)" />
+                  </div>
                 </div>
+
+                <!-- Mensaje de error general para el grupo de campos de tiempo de noviazgo -->
+                <form-error-msg [customErrorMessage]="datingPeriodError ? 'No pueden ser ambos campos 0' : null" />
               </div>
 
               <div class="grid grid-cols-0 md:grid-cols-[min-content_1fr] gap-2 md:gap-7">
@@ -117,13 +139,30 @@
                 }
               </div>
 
-              <div class="flex flex-col gap-1" [id]="FormFieldId.who_invited_you">
-                <div class="flex gap-1">
-                  <label class="font-bold" [for]="FormFieldId.who_invited_you + '_control'">Quien los invitó al Retiro?</label>
-                </div>
-                <div class="flex flex-col relative">
-                  <input type="text" pInputText placeholder="Ej: María González, Padre Juan, etc." [formControlName]="FormControlName.who_invited_you" class="w-full" />
-                  <form-error-msg [control]="formGroup.get(FormControlName.who_invited_you)" />
+              <div class="flex flex-col gap-1">
+                <span class="font-bold text-lg">Quien los invitó al Retiro</span>
+
+                <div class="flex flex-col gap-5">
+                  <div class="flex flex-col gap-1" [id]="FormFieldId.who_invited_you">
+                    <div class="flex gap-1">
+                      <label class="font-medium" [for]="FormFieldId.who_invited_you + '_control'">Nombres y Apellidos</label>
+                    </div>
+                    <div class="flex flex-col relative">
+                      <input type="text" pInputText placeholder="Ej: María Teresa González Pérez, Padre Juan, etc." [formControlName]="FormControlName.who_invited_you" class="w-full" />
+                      <form-error-msg [control]="formGroup.get(FormControlName.who_invited_you)" />
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col gap-1 flex-grow" [id]="FormFieldId.who_invited_you_phone">
+                    <div class="flex gap-1">
+                      <label class="font-medium" [for]="FormFieldId.who_invited_you_phone + '_control'">Teléfono</label>
+                    </div>
+
+                    <div class="flex flex-col relative">
+                      <p-inputmask [inputId]="FormFieldId.who_invited_you_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" [formControlName]="FormControlName.who_invited_you_phone" />
+                      <form-error-msg [control]="formGroup.get(FormControlName.who_invited_you_phone)" />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -139,7 +178,7 @@
             <div class="flex flex-col gap-5 overflow-hidden" [formGroupName]="FormGroupFields.she">
               <div class="flex flex-col gap-1" [id]="FormFieldId.she_full_name">
                 <div class="flex gap-1">
-                  <label class="font-bold" [for]="FormFieldId.she_full_name + '_control'">Nombre y Apellido</label>
+                  <label class="font-bold" [for]="FormFieldId.she_full_name + '_control'">Nombres y Apellidos</label>
                   <span class="text-red-500">*</span>
                 </div>
                 <div class="flex flex-col relative">
@@ -247,17 +286,6 @@
 
               <divider-line />
 
-              <div class="flex flex-col gap-1" [id]="FormFieldId.she_city_of_residence">
-                <div class="flex gap-1">
-                  <label class="font-bold" [for]="FormFieldId.she_city_of_residence + '_control'">Ciudad</label>
-                  <span class="text-red-500">*</span>
-                </div>
-                <div class="flex flex-col relative">
-                  <input [id]="FormFieldId.she_city_of_residence + '_control'" type="text" pInputText placeholder="Ej: La Vega, Santiago, Santo Domingo" class="w-full" [formControlName]="FormControlName.city_of_residence" />
-                  <form-error-msg [control]="sheGroup.get(FormControlName.city_of_residence)" />
-                </div>
-              </div>
-
               <div class="flex flex-col gap-1" [id]="FormFieldId.she_address">
                 <div class="flex gap-1">
                   <label class="font-bold" [for]="FormFieldId.she_address + '_control'">Dirección actual</label>
@@ -266,6 +294,17 @@
                 <div class="flex flex-col relative">
                   <textarea [id]="FormFieldId.she_address + '_control'" rows="5" cols="30" pTextarea placeholder="Ej: Calle Principal #123, Sector Los Jardines, La Vega" class="w-full" [formControlName]="FormControlName.address"></textarea>
                   <form-error-msg [control]="sheGroup.get(FormControlName.address)" />
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-1" [id]="FormFieldId.she_city_of_residence">
+                <div class="flex gap-1">
+                  <label class="font-bold" [for]="FormFieldId.she_city_of_residence + '_control'">Ciudad</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <div class="flex flex-col relative">
+                  <input [id]="FormFieldId.she_city_of_residence + '_control'" type="text" pInputText placeholder="Ej: La Vega, Santiago, Santo Domingo" class="w-full" [formControlName]="FormControlName.city_of_residence" />
+                  <form-error-msg [control]="sheGroup.get(FormControlName.city_of_residence)" />
                 </div>
               </div>
 
@@ -317,66 +356,60 @@
 
               <divider-line />
 
-              <div class="flex flex-col gap-1" [id]="FormFieldId.she_live_accompanied">
-                <div class="flex gap-1">
-                  <label class="font-bold" [for]="FormFieldId.she_live_accompanied + '_control'">Vive acompañado?</label>
-                  <span class="text-red-500">*</span>
-                </div>
-
-                <div class="flex flex-col relative">
-                  <p-selectbutton [id]="FormFieldId.she_live_accompanied + '_control'" class="w-fit" [options]="yesNoOptions" optionLabel="label" optionValue="value" aria-labelledby="basic" [formControlName]="FormControlName.live_accompanied" />
-                  <form-error-msg [control]="sheGroup.get(FormControlName.live_accompanied)" />
-                </div>
-              </div>
-
-              @if(sheGroup.get(FormControlName.live_accompanied)?.value) {
               <div class="flex flex-col gap-1">
-                <span class="font-bold text-lg" for="time-range">Acompañante</span>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-4">
-                  <div class="flex flex-col gap-1" [id]="FormFieldId.she_companion_full_name">
-                    <div class="flex gap-1">
-                      <label class="font-medium" [for]="FormFieldId.she_companion_full_name + '_control'">Nombre y apellido</label>
-                      <span class="text-red-500">*</span>
-                    </div>
-                    <div class="flex flex-col relative">
-                      <input [id]="FormFieldId.she_companion_full_name + '_control'" type="text" pInputText placeholder="Ej: Ana María González" class="w-full" [formControlName]="FormControlName.companion_full_name" />
-                      <form-error-msg [control]="sheGroup.get(FormControlName.companion_full_name)" />
-                    </div>
-                  </div>
-
-                  <div class="flex flex-col gap-1" [id]="FormFieldId.she_companion_phone">
-                    <div class="flex gap-1">
-                      <label class="font-medium" [for]="FormFieldId.she_companion_phone + '_control'">Teléfono </label>
-                      <span class="text-red-500">*</span>
-                    </div>
-                    <div class="flex flex-col relative">
-                      <p-inputmask [inputId]="FormFieldId.she_companion_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" [formControlName]="FormControlName.companion_phone" />
-                      <form-error-msg [control]="sheGroup.get(FormControlName.companion_phone)" />
-                    </div>
-                  </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-bold text-lg" for="time-range">Información familiar</span>
+                  <!-- <p-button icon="pi pi-plus" label="Agregar familiar" variant="outlined" severity="info" size="small" (click)="addFamilyMember(FormGroupFields.she)" /> -->
                 </div>
 
-                <div class="flex flex-col gap-1" [id]="FormFieldId.she_companion_relationship">
-                  <div class="flex gap-1">
-                    <label class="font-medium" [for]="FormFieldId.she_companion_relationship + '_control'">Parentesco</label>
-                    <span class="text-red-500">*</span>
+                <div [formArrayName]="FormControlName.family_information" class="flex flex-col gap-5">
+                  @for (familyMember of sheFamilyInformationArray.controls; track familyMember; let index = $index) {
+                  <div [formGroupName]="index" class="mb-2">
+                    <div class="flex justify-between items-center">
+                      <small class="font-medium text-gray-500">Familiar {{ index + 1 }}</small>
+                      @if (sheFamilyInformationArray.length > 2) {
+                      <p-button icon="pi pi-trash" label="Eliminar" variant="outlined" severity="danger" size="small" (click)="removeFamilyMember(FormGroupFields.she, index)" />
+                      }
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7">
+                      <div class="flex flex-col gap-1">
+                        <div class="flex gap-1">
+                          <label class="font-medium">Nombres y apellidos</label>
+                          <span class="text-red-500">*</span>
+                        </div>
+                        <div class="flex flex-col relative">
+                          <input type="text" pInputText placeholder="Ej: Ana María González Pérez" class="w-full" [formControlName]="FormControlName.familiar_full_name" />
+                          <form-error-msg [control]="getFamilyMember(FormGroupFields.she, index).get(FormControlName.familiar_full_name)" />
+                        </div>
+                      </div>
+
+                      <div class="flex flex-col gap-1">
+                        <div class="flex gap-1">
+                          <label class="font-medium">Teléfono</label>
+                          <span class="text-red-500">*</span>
+                        </div>
+                        <div class="flex flex-col relative">
+                          <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" [formControlName]="FormControlName.familiar_phone" />
+                          <form-error-msg [control]="getFamilyMember(FormGroupFields.she, index).get(FormControlName.familiar_phone)" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="flex flex-col gap-1 mt-4">
+                      <div class="flex gap-1">
+                        <label class="font-medium">Parentesco</label>
+                        <span class="text-red-500">*</span>
+                      </div>
+                      <div class="flex flex-col relative">
+                        <p-select [options]="companionOptions" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" [formControlName]="FormControlName.familiar_relationship" />
+                        <form-error-msg [control]="getFamilyMember(FormGroupFields.she, index).get(FormControlName.familiar_relationship)" />
+                      </div>
+                    </div>
                   </div>
-                  <div class="flex flex-col relative">
-                    <p-select
-                      [inputId]="FormFieldId.she_companion_relationship + '_control'"
-                      [options]="companionOptions"
-                      optionLabel="label"
-                      optionValue="label"
-                      placeholder="Seleccione"
-                      class="w-full"
-                      appendTo="body"
-                      [formControlName]="FormControlName.companion_relationship" />
-                    <form-error-msg [control]="sheGroup.get(FormControlName.companion_relationship)" />
-                  </div>
+                  }
                 </div>
               </div>
-              }
 
               <divider-line />
 
@@ -386,7 +419,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-4" [id]="FormFieldId.she_emergency_full_name">
                   <div class="flex flex-col gap-1">
                     <div class="flex gap-1">
-                      <label class="font-medium" [for]="FormFieldId.she_emergency_full_name + '_control'">Nombre y Apellido</label>
+                      <label class="font-medium" [for]="FormFieldId.she_emergency_full_name + '_control'">Nombres y Apellidos</label>
                       <span class="text-red-500">*</span>
                     </div>
                     <div class="flex flex-col relative">
@@ -465,7 +498,7 @@
             <div class="flex flex-col gap-5 overflow-hidden" [formGroupName]="FormGroupFields.he">
               <div class="flex flex-col gap-1" [id]="FormFieldId.he_full_name">
                 <div class="flex gap-1">
-                  <label class="font-bold" [for]="FormFieldId.he_full_name + '_control'">Nombre y Apellido</label>
+                  <label class="font-bold" [for]="FormFieldId.he_full_name + '_control'">Nombres y Apellidos</label>
                   <span class="text-red-500">*</span>
                 </div>
                 <div class="flex flex-col relative">
@@ -573,17 +606,6 @@
 
               <divider-line />
 
-              <div class="flex flex-col gap-1" [id]="FormFieldId.he_city_of_residence">
-                <div class="flex gap-1">
-                  <label class="font-bold" [for]="FormFieldId.he_city_of_residence + '_control'">Ciudad</label>
-                  <span class="text-red-500">*</span>
-                </div>
-                <div class="flex flex-col relative">
-                  <input [id]="FormFieldId.he_city_of_residence + '_control'" type="text" pInputText placeholder="Ej: La Vega, Santiago, Santo Domingo" class="w-full" [formControlName]="FormControlName.city_of_residence" />
-                  <form-error-msg [control]="heGroup.get(FormControlName.city_of_residence)" />
-                </div>
-              </div>
-
               <div class="flex flex-col gap-1" [id]="FormFieldId.he_address">
                 <div class="flex gap-1">
                   <label class="font-bold" [for]="FormFieldId.he_address + '_control'">Dirección actual</label>
@@ -592,6 +614,17 @@
                 <div class="flex flex-col relative">
                   <textarea [id]="FormFieldId.he_address + '_control'" rows="5" cols="30" pTextarea placeholder="Ej: Avenida Libertad #456, Sector Centro, La Vega" class="w-full" [formControlName]="FormControlName.address"></textarea>
                   <form-error-msg [control]="heGroup.get(FormControlName.address)" />
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-1" [id]="FormFieldId.he_city_of_residence">
+                <div class="flex gap-1">
+                  <label class="font-bold" [for]="FormFieldId.he_city_of_residence + '_control'">Ciudad</label>
+                  <span class="text-red-500">*</span>
+                </div>
+                <div class="flex flex-col relative">
+                  <input [id]="FormFieldId.he_city_of_residence + '_control'" type="text" pInputText placeholder="Ej: La Vega, Santiago, Santo Domingo" class="w-full" [formControlName]="FormControlName.city_of_residence" />
+                  <form-error-msg [control]="heGroup.get(FormControlName.city_of_residence)" />
                 </div>
               </div>
 
@@ -643,66 +676,60 @@
 
               <divider-line />
 
-              <div class="flex flex-col gap-1" [id]="FormFieldId.he_live_accompanied">
-                <div class="flex gap-1">
-                  <label class="font-bold" [for]="FormFieldId.he_live_accompanied + '_control'">Vive acompañado?</label>
-                  <span class="text-red-500">*</span>
-                </div>
-
-                <div class="flex flex-col relative">
-                  <p-selectbutton [id]="FormFieldId.he_live_accompanied + '_control'" class="w-fit" [options]="yesNoOptions" optionLabel="label" optionValue="value" aria-labelledby="basic" [formControlName]="FormControlName.live_accompanied" />
-                  <form-error-msg [control]="heGroup.get(FormControlName.live_accompanied)" />
-                </div>
-              </div>
-
-              @if(heGroup.get(FormControlName.live_accompanied)?.value) {
               <div class="flex flex-col gap-1">
-                <span class="font-bold text-lg" for="time-range">Acompañante</span>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-4">
-                  <div class="flex flex-col gap-1" [id]="FormFieldId.he_companion_full_name">
-                    <div class="flex gap-1">
-                      <label class="font-medium" [for]="FormFieldId.he_companion_full_name + '_control'">Nombre y apellido</label>
-                      <span class="text-red-500">*</span>
-                    </div>
-                    <div class="flex flex-col relative">
-                      <input [id]="FormFieldId.he_companion_full_name + '_control'" type="text" pInputText placeholder="Ej: Pedro Rodríguez López" class="w-full" [formControlName]="FormControlName.companion_full_name" />
-                      <form-error-msg [control]="heGroup.get(FormControlName.companion_full_name)" />
-                    </div>
-                  </div>
-
-                  <div class="flex flex-col gap-1" [id]="FormFieldId.he_companion_phone">
-                    <div class="flex gap-1">
-                      <label class="font-medium" [for]="FormFieldId.he_companion_phone + '_control'">Teléfono </label>
-                      <span class="text-red-500">*</span>
-                    </div>
-                    <div class="flex flex-col relative">
-                      <p-inputmask [inputId]="FormFieldId.he_companion_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" [formControlName]="FormControlName.companion_phone" />
-                      <form-error-msg [control]="heGroup.get(FormControlName.companion_phone)" />
-                    </div>
-                  </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-bold text-lg" for="time-range">Información familiar</span>
+                  <!-- <p-button icon="pi pi-plus" label="Agregar familiar" variant="outlined" severity="info" size="small" (click)="addFamilyMember(FormGroupFields.he)" /> -->
                 </div>
 
-                <div class="flex flex-col gap-1" [id]="FormFieldId.he_companion_relationship">
-                  <div class="flex gap-1">
-                    <label class="font-medium" [for]="FormFieldId.he_companion_relationship + '_control'">Parentesco</label>
-                    <span class="text-red-500">*</span>
+                <div [formArrayName]="FormControlName.family_information" class="flex flex-col gap-5">
+                  @for (familyMember of heFamilyInformationArray.controls; track familyMember; let index = $index) {
+                  <div [formGroupName]="index" class="mb-2">
+                    <div class="flex justify-between items-center">
+                      <small class="font-medium text-gray-500">Familiar {{ index + 1 }}</small>
+                      @if (heFamilyInformationArray.length > 2) {
+                      <p-button icon="pi pi-trash" label="Eliminar" variant="outlined" severity="danger" size="small" (click)="removeFamilyMember(FormGroupFields.he, index)" />
+                      }
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7">
+                      <div class="flex flex-col gap-1">
+                        <div class="flex gap-1">
+                          <label class="font-medium">Nombres y apellidos</label>
+                          <span class="text-red-500">*</span>
+                        </div>
+                        <div class="flex flex-col relative">
+                          <input type="text" pInputText placeholder="Ej: Ana María González Pérez" class="w-full" [formControlName]="FormControlName.familiar_full_name" />
+                          <form-error-msg [control]="getFamilyMember(FormGroupFields.he, index).get(FormControlName.familiar_full_name)" />
+                        </div>
+                      </div>
+
+                      <div class="flex flex-col gap-1">
+                        <div class="flex gap-1">
+                          <label class="font-medium">Teléfono</label>
+                          <span class="text-red-500">*</span>
+                        </div>
+                        <div class="flex flex-col relative">
+                          <p-inputmask mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" [formControlName]="FormControlName.familiar_phone" />
+                          <form-error-msg [control]="getFamilyMember(FormGroupFields.he, index).get(FormControlName.familiar_phone)" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="flex flex-col gap-1 mt-4">
+                      <div class="flex gap-1">
+                        <label class="font-medium">Parentesco</label>
+                        <span class="text-red-500">*</span>
+                      </div>
+                      <div class="flex flex-col relative">
+                        <p-select [options]="companionOptions" optionLabel="label" optionValue="label" placeholder="Seleccione" class="w-full" appendTo="body" [formControlName]="FormControlName.familiar_relationship" />
+                        <form-error-msg [control]="getFamilyMember(FormGroupFields.he, index).get(FormControlName.familiar_relationship)" />
+                      </div>
+                    </div>
                   </div>
-                  <div class="flex flex-col relative">
-                    <p-select
-                      [inputId]="FormFieldId.he_companion_relationship + '_control'"
-                      [options]="companionOptions"
-                      optionLabel="label"
-                      optionValue="label"
-                      placeholder="Seleccione"
-                      class="w-full"
-                      appendTo="body"
-                      [formControlName]="FormControlName.companion_relationship" />
-                    <form-error-msg [control]="heGroup.get(FormControlName.companion_relationship)" />
-                  </div>
+                  }
                 </div>
               </div>
-              }
 
               <divider-line />
 
@@ -712,7 +739,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-7 mb-4" [id]="FormFieldId.he_emergency_full_name">
                   <div class="flex flex-col gap-1">
                     <div class="flex gap-1">
-                      <label class="font-medium" [for]="FormFieldId.he_emergency_full_name + '_control'">Nombre y Apellido</label>
+                      <label class="font-medium" [for]="FormFieldId.he_emergency_full_name + '_control'">Nombres y Apellidos</label>
                       <span class="text-red-500">*</span>
                     </div>
                     <div class="flex flex-col relative">
@@ -785,6 +812,7 @@
     </div>
 
     <div class="flex justify-end my-10">
+      {{this.formGroup.valid}} {{!this.datingPeriodError}} {{!isFormValid || loading()}} {{!isFormValid}} {{loading()}}
       <p-button label="Enviar" [disabled]="!isFormValid || loading()" (onClick)="onSubmit()" />
     </div>
   </div>

@@ -24,7 +24,6 @@ export interface CoupleI {
   age: number;
   city_of_residence: string;
   are_you_married: boolean;
-  live_accompanied: boolean;
   religion: string;
   emergency_full_name: string;
   have_children: boolean;
@@ -33,7 +32,7 @@ export interface CoupleI {
   birth_date_display: string;
   church_name: string;
   home_phone: string;
-  companion_phone: string;
+  familiar_phone: string;
   email: string;
   nickname: string;
   address: string;
@@ -41,8 +40,8 @@ export interface CoupleI {
   cell_phone: string;
   identity_number: string;
   work_phone: string;
-  companion_relationship: string;
-  companion_full_name: string;
+  familiar_relationship: string;
+  familiar_full_name: string;
   emergency_phone: string;
 }
 export interface BirthDate {

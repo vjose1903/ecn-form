@@ -31,8 +31,8 @@
       </div>
     </view-item>
 
-		<!-- correo electrónico -->
-		<view-item title="Correo electrónico:" icon="pi pi-envelope" [isRow]="true" [content]="couple().email"> </view-item>
+    <!-- correo electrónico -->
+    <view-item title="Correo electrónico:" icon="pi pi-envelope" [isRow]="true" [content]="couple().email"> </view-item>
 
     <!-- ha estado casado por la iglesia -->
     <view-item title="Ha estado casado por la iglesia:" icon="pi pi-building-columns" [isRow]="true">
@@ -43,7 +43,7 @@
     <view-item title="Tiene hijos:" icon="pi pi-user" [isRow]="true">
       <p-tag [severity]="couple().have_children ? 'success' : 'danger'" [value]="couple().have_children ? 'Si' : 'No'" [rounded]="true" />
     </view-item>
-		
+
     <divider-line separatorClass="my-0 mx-1" color="bg-gray-200" />
 
     <!-- ciudad de residencia -->
@@ -51,7 +51,6 @@
 
     <!-- dirección -->
     <view-item title="Dirección:" icon="pi pi-map" [isRow]="true" [content]="couple().address"> </view-item>
-
 
     <divider-line separatorClass="my-0 mx-1" color="bg-gray-200" />
 
@@ -70,21 +69,15 @@
 
     <divider-line separatorClass="my-0 mx-1" color="bg-gray-200" />
 
-    <!-- vive acompañado -->
-    <view-item title="Vive acompañado:" icon="pi pi-users" [isRow]="true">
-      <p-tag [severity]="couple().live_accompanied ? 'success' : 'danger'" [value]="couple().live_accompanied ? 'Si' : 'No'" [rounded]="true" />
-    </view-item>
+    <!-- Informacion familiar -->
 
-    <!-- Informacion de acompañante -->
-    @if (couple().live_accompanied) {
-    <span class="font-bold text-md" for="time-range">Acompañante</span>
+    <span class="font-bold text-md" for="time-range">Información familiar</span>
     <!-- nombre acompañante -->
-    <view-item title="Nombre:" icon="pi pi-user" [isRow]="true" [content]="couple().companion_full_name"> </view-item>
+    <view-item title="Nombre:" icon="pi pi-user" [isRow]="true" [content]="couple().familiar_full_name"> </view-item>
     <!-- parentesco acompañante -->
-    <view-item title="Parentesco:" icon="pi pi-sparkles" [isRow]="true" [content]="couple().companion_relationship"> </view-item>
+    <view-item title="Parentesco:" icon="pi pi-sparkles" [isRow]="true" [content]="couple().familiar_relationship"> </view-item>
     <!-- teléfono acompañante -->
-    <view-item title="Teléfono:" icon="pi pi-phone" [isRow]="true" [content]="couple().companion_phone"> </view-item>
-    }
+    <view-item title="Teléfono:" icon="pi pi-phone" [isRow]="true" [content]="couple().familiar_phone"> </view-item>
 
     <divider-line separatorClass="my-0 mx-1" color="bg-gray-200" />
 

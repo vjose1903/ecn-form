@@ -18,8 +18,8 @@ type FieldElement = ElementRef<HTMLInputElement> | HTMLInputElement | HTMLSelect
   selector: 'form-error-msg',
   imports: [],
   template: `
-    @if (showError) {
-    <div class="error-message">{{ errorMessage }}</div>
+    @if (customErrorMessage || showError ) {
+    <div class="error-message">{{ customErrorMessage ?? errorMessage }}</div>
     }
   `,
   styles: [
@@ -38,6 +38,7 @@ export class FormErrorMsgComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() control?: AbstractControl | null;
   @Input() fieldName?: string; // Para mensajes personalizados
   @Input() fieldElement?: FieldElement;
+  @Input() customErrorMessage: string | null = null;
 
   private readonly destroy$ = new Subject<void>();
   private mutationObserver?: MutationObserver;
@@ -59,6 +60,8 @@ export class FormErrorMsgComponent implements OnInit, OnDestroy, AfterViewInit {
     maxlength: (error: any) => `Máximo ${error.requiredLength} caracteres.`,
     invalidUrl: 'Ingrese una URL válida.',
     previousRequestExists: (error: any) => error.message || 'Ya existe una solicitud anterior con este valor.',
+    bothFieldsZero: 'Al menos uno de los campos debe tener un valor mayor a 0.',
+    bothFieldsEmpty: 'Debe completar al menos uno de los campos.',
   };
 
   constructor(private elementRef: ElementRef) {}

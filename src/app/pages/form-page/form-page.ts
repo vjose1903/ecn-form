@@ -1,8 +1,8 @@
 import { Component, inject, Input, OnInit, signal } from '@angular/core';
-import { NgTemplateOutlet } from '@angular/common';
+import { CommonModule, NgTemplateOutlet } from '@angular/common';
 import { AccordionModule } from 'primeng/accordion';
 import { InputTextModule } from 'primeng/inputtext';
-import { AbstractControl, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { TextareaModule } from 'primeng/textarea';
@@ -15,7 +15,7 @@ import { DeviceDetectorService } from '../../core/services/device-detector.servi
 import { DeviceE } from '../../core/models/device-detector.model';
 import { Affirmation, cleanFormValues, FormControlName, FormFieldId, FormGroupFields, IdentityType } from './form-page.model';
 import { FormErrorMsgComponent } from '@core/components/form-error-msg/form-error-msg.component';
-import { CedulaValidator } from '@core/typescript/validate-cedula';
+import { CedulaValidator } from '@core/typescript/validators/validate-cedula';
 import { PreviousRequestValidator } from '@core/typescript/validate-previous-request';
 import { yesNoOptions } from '@core/typescript/constants';
 import { RetreatService } from '@core/entities/retreat/retreat.service';
@@ -31,10 +31,14 @@ import { UserService } from '@core/entities/user/user.service';
 import { UserC } from '@core/entities/user/user.class';
 import { RequestClass } from '@core/entities/request/request.class';
 import { CityClass } from '@core/entities/city/city.class';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
+import { InputNumberModule } from 'primeng/inputnumber';
 
 @Component({
   selector: 'app-form-page',
   imports: [
+    CommonModule,
     AccordionModule,
     InputTextModule,
     FormsModule,
@@ -51,6 +55,9 @@ import { CityClass } from '@core/entities/city/city.class';
     FormSkeletonComponent,
     RequestSend,
     ErrorMessage,
+    InputGroupModule,
+    InputGroupAddonModule,
+    InputNumberModule,
   ],
   templateUrl: './form-page.html',
   styleUrl: './form-page.scss',
@@ -59,7 +66,6 @@ export class FormPage implements OnInit {
   @Input() user_id: string = '';
   userData: UserC | null = null;
   submission_success = signal(false);
-  city = signal<CityClass | null>(null);
 
   deviceDetectorService = inject(DeviceDetectorService);
   retreatService = inject(RetreatService);
@@ -81,12 +87,14 @@ export class FormPage implements OnInit {
     [FormControlName.is_active]: [true],
     [FormControlName.status]: [RequestStatus.PENDING],
     [FormControlName.retreat]: ['', Validators.required],
-    [FormControlName.dating_period]: ['', Validators.required],
+    [FormControlName.dating_period_year]: [null, Validators.required],
+    [FormControlName.dating_period_month]: [null, Validators.required],
     [FormControlName.have_wedding_date]: [null, Validators.required],
     [FormControlName.wedding_date]: [null],
     [FormControlName.how_find_us]: ['', Validators.required],
     [FormControlName.how_find_us_other]: [''],
     [FormControlName.who_invited_you]: [''],
+    [FormControlName.who_invited_you_phone]: [''],
 
     [FormGroupFields.she]: this.fb.group({
       [FormControlName.full_name]: ['', Validators.required],
@@ -102,10 +110,22 @@ export class FormPage implements OnInit {
       [FormControlName.cell_phone]: ['', Validators.required],
       [FormControlName.home_phone]: [''],
       [FormControlName.work_phone]: [''],
-      [FormControlName.live_accompanied]: [null, Validators.required],
-      [FormControlName.companion_full_name]: ['', Validators.required],
-      [FormControlName.companion_phone]: ['', Validators.required],
-      [FormControlName.companion_relationship]: ['', Validators.required],
+      [FormControlName.family_information]: this.fb.array(
+        [
+          this.fb.group({
+            [FormControlName.familiar_full_name]: ['', Validators.required],
+            [FormControlName.familiar_phone]: ['', Validators.required],
+            [FormControlName.familiar_relationship]: ['', Validators.required],
+          }),
+          this.fb.group({
+            [FormControlName.familiar_full_name]: ['', Validators.required],
+            [FormControlName.familiar_phone]: ['', Validators.required],
+            [FormControlName.familiar_relationship]: ['', Validators.required],
+          }),
+        ],
+        [Validators.minLength(2)]
+      ),
+
       [FormControlName.emergency_full_name]: ['', Validators.required],
       [FormControlName.emergency_phone]: ['', Validators.required],
       [FormControlName.emergency_relationship]: ['', Validators.required],
@@ -126,10 +146,21 @@ export class FormPage implements OnInit {
       [FormControlName.cell_phone]: ['', Validators.required],
       [FormControlName.home_phone]: [''],
       [FormControlName.work_phone]: [''],
-      [FormControlName.live_accompanied]: [null, Validators.required],
-      [FormControlName.companion_full_name]: ['', Validators.required],
-      [FormControlName.companion_phone]: ['', Validators.required],
-      [FormControlName.companion_relationship]: ['', Validators.required],
+      [FormControlName.family_information]: this.fb.array(
+        [
+          this.fb.group({
+            [FormControlName.familiar_full_name]: ['', Validators.required],
+            [FormControlName.familiar_phone]: ['', Validators.required],
+            [FormControlName.familiar_relationship]: ['', Validators.required],
+          }),
+          this.fb.group({
+            [FormControlName.familiar_full_name]: ['', Validators.required],
+            [FormControlName.familiar_phone]: ['', Validators.required],
+            [FormControlName.familiar_relationship]: ['', Validators.required],
+          }),
+        ],
+        [Validators.minLength(2)]
+      ),
       [FormControlName.emergency_full_name]: ['', Validators.required],
       [FormControlName.emergency_phone]: ['', Validators.required],
       [FormControlName.emergency_relationship]: ['', Validators.required],
@@ -141,8 +172,7 @@ export class FormPage implements OnInit {
   retreats = signal<RetreatClass[] | null>(null);
   initialized = signal(true);
   error = signal(false);
-  loading = signal(true);
-  timeRanges = [{ label: '0 a 6 meses' }, { label: '6 a 12 meses' }, { label: '1 a 4 años' }, { label: '4 a 6 años' }, { label: '6 a 8 años' }, { label: '8 a 10 años' }, { label: 'mas de 10 años' }];
+  loading = signal(false);
 
   howToKnow = [{ label: 'Redes Sociales' }, { label: 'Amigos' }, { label: 'Familia' }, { label: 'Otro' }];
 
@@ -150,23 +180,7 @@ export class FormPage implements OnInit {
 
   yesNoOptions = yesNoOptions;
 
-  companionOptions = [
-    { label: 'Padre' },
-    { label: 'Madre' },
-    { label: 'Hermano' },
-    { label: 'Hermana' },
-    { label: 'Tio' },
-    { label: 'Tia' },
-    { label: 'Abuelo' },
-    { label: 'Abuela' },
-    { label: 'Novio' },
-    { label: 'Novia' },
-    { label: 'Esposo' },
-    { label: 'Esposa' },
-    { label: 'Hijo' },
-    { label: 'Hija' },
-    { label: 'Amigo' },
-  ];
+  companionOptions = [{ label: 'Padre' }, { label: 'Madre' }, { label: 'Hermano' }, { label: 'Hermana' }, { label: 'Tio' }, { label: 'Tia' }, { label: 'Abuelo' }, { label: 'Abuela' }, { label: 'Amigo' }];
 
   get isDesktop() {
     return this.deviceDetectorService.getDeviceInfo().device === DeviceE.desktop;
@@ -180,8 +194,25 @@ export class FormPage implements OnInit {
     return this.formGroup?.get(FormGroupFields.he) as FormGroup;
   }
 
+  get sheFamilyInformationArray() {
+    return this.sheGroup?.get(FormControlName.family_information) as FormArray;
+  }
+
+  get heFamilyInformationArray() {
+    return this.heGroup?.get(FormControlName.family_information) as FormArray;
+  }
+
   get isFormValid() {
-    return this.formGroup.valid;
+    return this.formGroup.valid && !this.datingPeriodError;
+  }
+
+  get datingPeriodError() {
+    const yearValue = this.formGroup.get(FormControlName.dating_period_year)?.value;
+    const monthValue = this.formGroup.get(FormControlName.dating_period_month)?.value;
+
+    const ambosCero = yearValue !== null && yearValue !== undefined && monthValue !== null && monthValue !== undefined && yearValue === 0 && monthValue === 0;
+
+    return ambosCero;
   }
 
   async ngOnInit(): Promise<void> {
@@ -192,6 +223,44 @@ export class FormPage implements OnInit {
     this.processInitForm();
   }
 
+  addFamilyMember(groupName: FormGroupFields.she | FormGroupFields.he) {
+    const familyArray = groupName === FormGroupFields.she ? this.sheFamilyInformationArray : this.heFamilyInformationArray;
+
+    const newFamilyMember = this.fb.group({
+      [FormControlName.familiar_full_name]: ['', Validators.required],
+      [FormControlName.familiar_phone]: ['', Validators.required],
+      [FormControlName.familiar_relationship]: ['', Validators.required],
+    });
+
+    familyArray.push(newFamilyMember);
+  }
+
+  removeFamilyMember(groupName: FormGroupFields.she | FormGroupFields.he, index: number) {
+    const familyArray = groupName === FormGroupFields.she ? this.sheFamilyInformationArray : this.heFamilyInformationArray;
+
+    // Mantener mínimo 2 familiares
+    if (familyArray.length > 2) {
+      familyArray.removeAt(index);
+    }
+  }
+
+  getFamilyMember(groupName: FormGroupFields.she | FormGroupFields.he, index: number) {
+    const familyArray = groupName === FormGroupFields.she ? this.sheFamilyInformationArray : this.heFamilyInformationArray;
+    return familyArray.at(index) as FormGroup;
+  }
+
+  getDatingPeriodAddon(formControlName: FormControlName.dating_period_year | FormControlName.dating_period_month) {
+    const value = this.formGroup.get(formControlName)?.value;
+
+    const addons = {
+      [FormControlName.dating_period_year]: { singular: ' Año', plural: ' Años' },
+      [FormControlName.dating_period_month]: { singular: ' Mes', plural: ' Meses' },
+    } as const;
+
+    if (value === null || value === undefined) return addons[formControlName].plural;
+
+    return Number(value) == 1 ? addons[formControlName].singular : addons[formControlName].plural;
+  }
   patchForm() {
     // this.formGroup.patchValue(formDataMuck as any, { emitEvent: true });
   }
@@ -227,7 +296,6 @@ export class FormPage implements OnInit {
   getUser() {
     this.userService.getUserById(this.user_id).then(user => {
       this.userData = user;
-      this.city.set(user?.cityData ?? null);
       this.getRetreats();
     });
   }
@@ -281,6 +349,7 @@ export class FormPage implements OnInit {
       }
       howFindUsOtherControl?.updateValueAndValidity({ emitEvent: false });
     });
+
   }
 
   /**
@@ -289,24 +358,24 @@ export class FormPage implements OnInit {
    * @param groupName - 'she' o 'he'
    */
   private setupCompanionFieldSubscription(groupName: FormGroupFields.she | FormGroupFields.he) {
-    const group = this.formGroup.get(groupName);
-    const liveAccompaniedControl = group?.get(FormControlName.live_accompanied);
-
-    liveAccompaniedControl?.valueChanges.subscribe(liveAccompanied => {
-      const companionFields = [FormControlName.companion_full_name, FormControlName.companion_phone, FormControlName.companion_relationship];
-
-      companionFields.forEach(fieldName => {
-        const control = group?.get(fieldName);
-
-        if (liveAccompanied === true) {
-          this.setRequiredControl(control);
-        } else if (liveAccompanied === false) {
-          this.removeRequiredControl(control, '');
-        }
-        control?.updateValueAndValidity({ emitEvent: false });
-      });
-    });
+    // const group = this.formGroup.get(groupName);
+    // const liveAccompaniedControl = group?.get(FormControlName.live_accompanied);
+    // liveAccompaniedControl?.valueChanges.subscribe(liveAccompanied => {
+    //   const companionFields = [FormControlName.familiar_full_name, FormControlName.familiar_phone, FormControlName.familiar_relationship];
+    //   companionFields.forEach(fieldName => {
+    //     const control = group?.get(fieldName);
+    //     if (liveAccompanied === true) {
+    //       this.setRequiredControl(control);
+    //     } else if (liveAccompanied === false) {
+    //       this.removeRequiredControl(control, '');
+    //     }
+    //     control?.updateValueAndValidity({ emitEvent: false });
+    //   });
+    // });
   }
+
+
+
 
   /**
    * Configura la suscripción para manejar campos de identidad dinámicamente
@@ -349,9 +418,11 @@ export class FormPage implements OnInit {
    * @param control - The control to remove the required validator and set the value
    * @param value - The value to set the control to
    */
-  private removeRequiredControl(control: AbstractControl | null | undefined, value: string | null) {
+  private removeRequiredControl(control: AbstractControl | null | undefined, value: string | number | null | undefined) {
     control?.clearValidators();
     control?.setValue(value, { emitEvent: false });
+    control?.markAsPristine();
+    control?.markAsUntouched();
   }
 
   changeAccordionPanelIndex(index: number, type: 'close' | 'open') {
@@ -446,9 +517,7 @@ export class FormPage implements OnInit {
    * @returns true si todos los campos requeridos están completos, false en caso contrario
    */
   areRequiredFieldsComplete(section: FormGroupFields): boolean {
-    if (section === FormGroupFields.general) {
-      return this.checkRequiredFields(this.formGroup, true);
-    }
+    if (section === FormGroupFields.general) return this.checkRequiredFields(this.formGroup, true);
 
     const groupName = section === FormGroupFields.she ? FormGroupFields.she : FormGroupFields.he;
     const subGroup = this.formGroup.get(groupName);
@@ -466,12 +535,14 @@ export class FormPage implements OnInit {
     if (control instanceof FormGroup) {
       return Object.entries(control.controls).every(([controlName, childControl]) => {
         // Si es nivel raíz y encontramos un subgrupo, saltarlo
-        if (rootLevelOnly && (controlName === FormGroupFields.she || controlName === FormGroupFields.he)) {
-          return true;
-        }
+        if (rootLevelOnly && (controlName === FormGroupFields.she || controlName === FormGroupFields.he)) return true;
 
         return this.checkRequiredFields(childControl, false);
       });
+    }
+
+    if (control instanceof FormArray) {
+      return control.controls.every(childControl => this.checkRequiredFields(childControl, false));
     }
 
     // Para FormControl individual
@@ -485,9 +556,7 @@ export class FormPage implements OnInit {
    */
   private isControlCompleted(control: AbstractControl): boolean {
     // Si no tiene error de required, es válido
-    if (!control.hasError('required')) {
-      return true;
-    }
+    if (!control.hasError('required')) return true;
 
     // Si tiene error de required, verificamos si tiene valor truthy
     return !!control.value;
@@ -500,7 +569,7 @@ export class FormPage implements OnInit {
    */
   areInvalidFields(section: FormGroupFields): boolean {
     if (section === FormGroupFields.general) {
-      return this.checkInvalidFields(this.formGroup, true);
+      return this.checkInvalidFields(this.formGroup, true) || this.datingPeriodError;
     }
 
     const groupName = section === FormGroupFields.she ? FormGroupFields.she : FormGroupFields.he;
@@ -519,12 +588,14 @@ export class FormPage implements OnInit {
     if (control instanceof FormGroup) {
       return Object.entries(control.controls).some(([controlName, childControl]) => {
         // Si es nivel raíz y encontramos un subgrupo, saltarlo
-        if (rootLevelOnly && (controlName === FormGroupFields.she || controlName === FormGroupFields.he)) {
-          return false;
-        }
+        if (rootLevelOnly && (controlName === FormGroupFields.she || controlName === FormGroupFields.he)) return false;
 
         return this.checkInvalidFields(childControl, false);
       });
+    }
+
+    if (control instanceof FormArray) {
+      return control.controls.some(childControl => this.checkInvalidFields(childControl, false));
     }
 
     // Para FormControl individual
@@ -538,9 +609,7 @@ export class FormPage implements OnInit {
    */
   private isControlInvalid(control: AbstractControl): boolean {
     // Si el control no tiene errores, es válido
-    if (!control.errors) {
-      return false;
-    }
+    if (!control.errors) return false;
 
     // Obtener todas las claves de errores excepto 'required'
     const errorKeys = Object.keys(control.errors).filter(key => key !== 'required');
@@ -557,6 +626,7 @@ export class FormPage implements OnInit {
   onSubmit() {
     this.loading.set(true);
     const formData = this.formGroup.getRawValue() as unknown as RequestI;
+    console.log('formData ', formData);
 
     Ss.confirmationService.confirm({
       message:
