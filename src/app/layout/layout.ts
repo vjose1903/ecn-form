@@ -48,6 +48,11 @@ export class Layout implements OnInit {
     return fun.hasValue(path) && !this.excludePaths.some(excludePath => path.startsWith(excludePath));
   });
 
+  isAuthRoute = computed(() => {
+    const path = this.currentPath();
+    return fun.hasValue(path) && path.includes('/auth/');
+  });
+
   private onDestroy$ = new Subject<void>();
 
   constructor() {
