@@ -658,7 +658,7 @@ export class FormPage implements OnInit {
 
     Ss.confirmationService.confirm({
       message:
-        '<span class="text-lg text-red-600 font-semibold">IMPORTANTE: Solo se permite el envío de un formulario por persona.</span> <br> <br> <span class="text-sm">Por favor, revisa cuidadosamente toda la información proporcionada antes de confirmar el envío. Una vez enviado, no podrás realizar cambios.</span> <br> <span class="text-sm">Se enviará un correo de confirmación a la dirección de correo electrónico proporcionada.</span>',
+        '<span class="text-lg text-red-600 font-semibold">IMPORTANTE: Solo se permite el envío de un formulario por pareja.</span> <br> <br> <span class="text-sm">Por favor, revisa cuidadosamente toda la información proporcionada antes de confirmar el envío. Una vez enviado, no podrás realizar cambios.</span> <br> <span class="text-sm">Se enviará un correo de confirmación a la dirección de correo electrónico proporcionada.</span>',
       header: '¿Estás seguro de querer enviar este formulario?',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Enviar',
