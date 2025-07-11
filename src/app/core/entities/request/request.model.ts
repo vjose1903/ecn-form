@@ -2,7 +2,7 @@ export interface RequestI {
   id: string;
   how_find_us: string;
   retreat: string;
-  retreatData: any;
+  retreatData?: any;
   have_wedding_date: boolean;
   who_invited_you: string;
   who_invited_you_phone: string;
@@ -23,7 +23,7 @@ export enum CoupleType {
 
 export interface CoupleI {
   full_name: string;
-  age: number;
+  age?: number;
   city_of_residence: string;
   are_you_married: boolean;
   religion: string;
@@ -31,7 +31,7 @@ export interface CoupleI {
   have_children: boolean;
   identity_type: string;
   birth_date: BirthDate | Date | string;
-  birth_date_display: string;
+  birth_date_display?: string;
   church_name: string;
   home_phone: string;
   email: string;

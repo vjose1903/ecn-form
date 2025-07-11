@@ -1,4 +1,4 @@
-import { Component, inject, Input, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, Input, OnInit, signal } from '@angular/core';
 import { CommonModule, NgTemplateOutlet } from '@angular/common';
 import { AccordionModule } from 'primeng/accordion';
 import { InputTextModule } from 'primeng/inputtext';
@@ -34,6 +34,7 @@ import { CityClass } from '@core/entities/city/city.class';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { formDataMuck } from './form-page.muck';
 
 @Component({
   selector: 'app-form-page',
@@ -64,7 +65,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 })
 export class FormPage implements OnInit {
   @Input() user_id: string = '';
-  userData: UserC | null = null;
+
   submission_success = signal(false);
 
   deviceDetectorService = inject(DeviceDetectorService);
@@ -173,6 +174,17 @@ export class FormPage implements OnInit {
   initialized = signal(true);
   error = signal(false);
   loading = signal(false);
+  retreatSelected = signal<RetreatClass | null>(null);
+  userSelected = signal<UserC | null>(null);
+
+  requestRefString = computed(() => {
+    const retreatSelected = this.retreatSelected();
+    const user = this.userSelected();
+
+    if (!retreatSelected || !user) return '';
+
+    return `user/${user.id}/retreat/${retreatSelected.id}/request`;
+  });
 
   howToKnow = [{ label: 'Redes Sociales' }, { label: 'Amigos' }, { label: 'Familia' }, { label: 'Otro' }];
 
@@ -219,8 +231,8 @@ export class FormPage implements OnInit {
     await this.getUser();
 
     this.subscribeToFormChanges();
-    // this.patchForm();
     this.processInitForm();
+    // this.patchForm();
   }
 
   addFamilyMember(groupName: FormGroupFields.she | FormGroupFields.he) {
@@ -262,7 +274,7 @@ export class FormPage implements OnInit {
     return Number(value) == 1 ? addons[formControlName].singular : addons[formControlName].plural;
   }
   patchForm() {
-    // this.formGroup.patchValue(formDataMuck as any, { emitEvent: true });
+    this.formGroup.patchValue(formDataMuck as any);
   }
 
   test() {}
@@ -274,7 +286,7 @@ export class FormPage implements OnInit {
   processInitForm() {
     this.initialized.set(false);
 
-    const getRequiredInfo = () => new Promise<[UserC | null, RetreatClass[] | null]>(resolve => resolve([this.userData, this.retreats()]));
+    const getRequiredInfo = () => new Promise<[UserC | null, RetreatClass[] | null]>(resolve => resolve([this.userSelected(), this.retreats()]));
     const reintentarSi = (requiredInfo: [UserC | null, RetreatClass[] | null]) => requiredInfo.some((info: UserC | RetreatClass[] | null) => info === null);
     const noLoadedRequiredInfo = () => {
       this.error.set(true);
@@ -295,16 +307,17 @@ export class FormPage implements OnInit {
 
   getUser() {
     this.userService.getUserById(this.user_id).then(user => {
-      this.userData = user;
+      this.userSelected.set(user);
       this.getRetreats();
     });
   }
 
   getRetreats() {
-    if (!this.userData) return;
+    const user = this.userSelected();
+    if (user == null) return;
 
     this.retreatService
-      .getRetreatByUser(this.userData)
+      .getRetreatByUser(user)
       .then(retreats => {
         this.retreats.set(retreats);
 
@@ -319,6 +332,8 @@ export class FormPage implements OnInit {
 
   subscribeToFormChanges() {
     // Suscripción específica para wedding_date
+    this.formGroup.valueChanges.subscribe(value => {});
+
     this.formGroup.get(FormControlName.have_wedding_date)?.valueChanges.subscribe(haveWeddingDate => {
       const weddingDateControl = this.formGroup.get(FormControlName.wedding_date);
 
@@ -349,7 +364,6 @@ export class FormPage implements OnInit {
       }
       howFindUsOtherControl?.updateValueAndValidity({ emitEvent: false });
     });
-
   }
 
   /**
@@ -373,9 +387,6 @@ export class FormPage implements OnInit {
     //   });
     // });
   }
-
-
-
 
   /**
    * Configura la suscripción para manejar campos de identidad dinámicamente
@@ -438,6 +449,8 @@ export class FormPage implements OnInit {
   async onRetreatChange() {
     const retreatId = this.formGroup.get(FormControlName.retreat)?.value;
     const retreat = this.retreats()?.find(r => r.id === retreatId);
+
+    this.retreatSelected.set(retreat ?? null);
 
     // Limpiar validadores anteriores primero
     this.clearPreviousRequestValidators();
@@ -623,10 +636,25 @@ export class FormPage implements OnInit {
     this.submission_success.set(false);
   }
 
+  getFormStats(event: Event, type: 'incomplete' | 'invalid') {
+    event.stopPropagation();
+
+    if (type === 'incomplete') {
+    } else if (type === 'invalid') {
+    }
+  }
+
   onSubmit() {
     this.loading.set(true);
     const formData = this.formGroup.getRawValue() as unknown as RequestI;
-    console.log('formData ', formData);
+
+    if (!this.retreatSelected() || !this.userSelected()) {
+      setTimeout(() => {
+        this.error.set(true);
+        this.loading.set(false);
+      }, 2000);
+      return;
+    }
 
     Ss.confirmationService.confirm({
       message:
@@ -658,7 +686,7 @@ export class FormPage implements OnInit {
       if (formData.id) {
         // request = await this.requestService.updateRequest(formData, retreat);
       } else {
-        request = await this.requestService.createRequest(formData, retreat);
+        request = await this.requestService.createRequest({ payload: formData, refString: this.requestRefString() });
       }
 
       this.submission_success.set(true);
