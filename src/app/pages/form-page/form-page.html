@@ -6,6 +6,8 @@
 <error-message (retry)="onRetry()" />
 } @else {
 <div class="m-auto w-[95vw] md:w-3/4 lg:w-1/2 py-10 flex flex-col gap-1">
+  <div class="hidden">{{ requestRefString() }}</div>
+
   <p class="mb-2">Esta es la ficha de solicitud para vivir el retiro del <span class="font-bold">Encuentro Católico Para Novios</span></p>
 
   <p>Una vez llenada, el Equipo la evaluará y le indicará si fue aprobada y le indicarán el día de la información.</p>
@@ -812,8 +814,7 @@
     </div>
 
     <div class="flex justify-end my-10">
-      {{this.formGroup.valid}} {{!this.datingPeriodError}} {{!isFormValid || loading()}} {{!isFormValid}} {{loading()}}
-      <p-button label="Enviar" [disabled]="!isFormValid || loading()" (onClick)="onSubmit()" />
+      <p-button [label]="loading() ? 'Enviando...' : 'Enviar'" [icon]="loading() ? 'pi pi-spin pi-spinner' : ''" [disabled]="!isFormValid || loading()" (onClick)="onSubmit()" />
     </div>
   </div>
 </div>
@@ -825,12 +826,12 @@
 
     <div class="flex items-center gap-3">
       @if(!isCompleted) {
-      <span class="flex items-center gap-2 bg-yellow-300/60 p-2px !px-2 rounded-lg animate-pulse">
+      <span class="flex items-center gap-2 bg-yellow-300/60 p-2px !px-2 rounded-lg animate-pulse" (click)="getFormStats($event, 'incomplete')">
         <span class="text-sm font-bold text-yellow-700"> Incompleto </span>
         <i class="pi pi-exclamation-circle text-yellow-700"></i>
       </span>
       } @if(invalid) {
-      <span class="flex items-center gap-2 bg-red-300/60 p-2px !px-2 rounded-lg animate-pulse">
+      <span class="flex items-center gap-2 bg-red-300/60 p-2px !px-2 rounded-lg animate-pulse" (click)="getFormStats($event, 'invalid')">
         <span class="text-sm font-bold text-red-700"> Inválido </span>
         <i class="pi pi-exclamation-circle text-red-700"></i>
       </span>

@@ -117,7 +117,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
   /**
    * Obtiene un retiro por ID
    */
-  async getRetreatById(id: string): Promise<RequestClass | null> {
+  async getRequestById(id: string): Promise<RequestClass | null> {
     if (!id) {
       return null;
     }
@@ -139,13 +139,13 @@ export class RequestService extends FirebaseRequest<RequestI> {
       return retreat ? new RequestClass(retreat) : null;
     }
 
-    return this.processGetRetreat(id, 'id');
+    return this.processGetRequest(id, 'id');
   }
 
   /**
    * Procesa la obtención de un retiro
    */
-  private processGetRetreat(value: string, by: string): Promise<RequestClass | null> {
+  private processGetRequest(value: string, by: string): Promise<RequestClass | null> {
     return new Promise<RequestClass | null>((resolve, reject) => {
       this._getOne({ find_by: by, find_value: value })
         .then(retreat => {
@@ -162,13 +162,14 @@ export class RequestService extends FirebaseRequest<RequestI> {
   /**
    * Crea un nuevo retiro
    */
-  async createRequest(newRequest: RequestI, retreat: RetreatClass): Promise<RequestI> {
-    if (fun.isEmpty(this.authService.current_user())) {
-      throw new Error('Usuario no autenticado');
-    }
+  async createRequest(args: { payload: RequestI; refString: string }): Promise<RequestI> {
+    const { payload, refString } = args;
 
     try {
-      const result = await this._createOne({ refString: `${retreat.completeRefString()}/request`, data: newRequest });
+      console.log('%c refString ', 'color: yellow', refString);
+      const result = await this._createOne({ refString, data: payload });
+
+      console.log('%c result ', 'color: lime', result);
 
       // Actualizar observable
       this.updateRequestInCache(result, 'create');

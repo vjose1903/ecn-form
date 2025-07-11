@@ -21,7 +21,7 @@
     </div>
 
     <!-- fecha de nacimiento -->
-    <view-item title="Fecha de nacimiento:" icon="pi pi-calendar" [isRow]="true" [content]="couple().birth_date_display"> </view-item>
+    <view-item title="Fecha de nacimiento:" icon="pi pi-calendar" [isRow]="true" [content]="couple().birth_date_display ?? ''"> </view-item>
 
     <!-- documento de identidad -->
     <view-item title="Documento de identidad:" icon="pi pi-id-card" [isRow]="true">

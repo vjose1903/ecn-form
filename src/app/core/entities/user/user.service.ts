@@ -11,6 +11,7 @@ import { DocumentReference } from '@angular/fire/firestore';
 export class UserService extends FirebaseRequest<UserI> {
   private _collectionName = 'user';
 
+  
   constructor() {
     super();
     this.firebaseCollectionName = this._collectionName;
