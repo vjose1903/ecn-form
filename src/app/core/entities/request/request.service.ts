@@ -166,10 +166,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
     const { payload, refString } = args;
 
     try {
-      console.log('%c refString ', 'color: yellow', refString);
       const result = await this._createOne({ refString, data: payload });
-
-      console.log('%c result ', 'color: lime', result);
 
       // Actualizar observable
       this.updateRequestInCache(result, 'create');

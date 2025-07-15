@@ -1,0 +1,39 @@
+<div class="min-w-[400px] max-w-[600px] sm:min-w-full">
+  <form [formGroup]="formGroup" class="space-y-6">
+    <!-- Email (solo lectura) -->
+    <div class="mb-6">
+      <label [for]="FormFieldId.email + '_control'" class="font-bold"> Email </label>
+
+      <input [id]="FormFieldId.email + '_control'" type="email" pInputText [formControlName]="FormControlName.email" class="w-full bg-gray-50 cursor-not-allowed" placeholder="tu@email.com" readonly />
+      <div class="flex gap-1 items-center">
+        <i class="pi pi-info-circle text-gray-400 text-sm"></i>
+        <small class="text-gray-400 text-sm">El email no se puede modificar</small>
+      </div>
+    </div>
+
+    <!-- Ciudad -->
+    <div class="mb-6">
+      <div class="flex gap-1">
+        <label [for]="FormFieldId.city + '_control'" class="font-bold"> Ciudad </label>
+        <span class="text-red-500">*</span>
+      </div>
+      <p-select [id]="FormFieldId.city + '_control'" [formControlName]="FormControlName.city" [options]="cities()" optionLabel="label" optionValue="id" placeholder="Selecciona una ciudad" class="w-full" appendTo="body" [disabled]="loading()" />
+      <form-error-msg [control]="formGroup.get('city')" [fieldName]="'ciudad'" />
+    </div>
+
+    <div class="mb-6">
+      <div class="flex gap-1">
+        <label class="font-bold" [for]="FormFieldId.phone + '_control'"> Teléfono </label>
+        <span class="text-red-500">*</span>
+      </div>
+      <p-inputmask [inputId]="FormFieldId.phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" [formControlName]="FormControlName.phone" [disabled]="loading()" />
+      <form-error-msg [control]="formGroup.get('city')" [fieldName]="'ciudad'" />
+    </div>
+  </form>
+
+  <!-- Botones -->
+  <div class="flex justify-end gap-3 mt-8">
+    <p-button type="button" label="Cancelar" severity="secondary" (onClick)="onCancel()" [disabled]="loading()" class="min-w-[100px] sm:min-w-[80px]" />
+    <p-button type="button" label="Guardar" severity="success" (onClick)="onSubmit()" [loading]="loading()" [disabled]="!isFormValid" class="min-w-[100px] sm:min-w-[80px]" />
+  </div>
+</div>

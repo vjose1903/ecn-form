@@ -57,17 +57,17 @@ export class Layout implements OnInit {
 
   constructor() {
     effect(() => {
-      if (Ss.authService.isAuthenticated()) {
-        this.retreatHomeService.refresh();
-      }
+      const isAuthenticated = Ss.authService.isAuthenticated();
+      const currentUser = Ss.authService.current_user();
+
+      if (isAuthenticated) this.retreatHomeService.refresh();
+      this.setCity();
     });
   }
 
   ngOnInit(): void {
     this.setupRouterListener();
     this.setCity();
-    console.log('city', this.city());
-    console.log('current_path', this.currentPath());
   }
 
   ngOnDestroy(): void {

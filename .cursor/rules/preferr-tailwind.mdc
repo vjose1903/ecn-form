@@ -1,0 +1,9 @@
+---
+description: In this project, the use of tailwind is prioritized
+alwaysApply: false
+---
+- Always use Tailwind classes in the HTML template.
+
+- When it asks you to create a file or modify something, use Tailwind.
+
+- If it asks you to create a new file, create the SCSS file but don't use it. Just leave it blank.

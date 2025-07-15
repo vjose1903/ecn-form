@@ -5,4 +5,5 @@ export interface UserI {
   uid: string;
   email: string;
   city: string | CityI;
+  phone: string;
 }

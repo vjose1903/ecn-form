@@ -320,8 +320,6 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
 
       const result = await this.processFormSubmission(formData);
 
-      console.log('RESULTADO', result);
-
       // Cerrar el dialog y devolver los datos
       this.ref.close(result);
     } catch (error) {
@@ -386,8 +384,6 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
     if (formData.id) {
       retreatHome = await this.retreatHomeService.updateRetreatHome(formData);
     } else {
-      console.log('CREAR NUEVO');
-
       retreatHome = await this.retreatHomeService.createRetreatHome(formData);
     }
 

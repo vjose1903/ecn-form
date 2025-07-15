@@ -86,8 +86,6 @@ export class AuthService implements OnDestroy {
 
               // Iniciar verificación periódica de token
               this.startTokenExpirationCheck();
-
-              console.log('✅ [AuthService] Usuario autenticado:', user.email);
             } else {
               console.warn('⚠️ [AuthService] Usuario no encontrado en Firestore');
               await this.handleUserNotRegistered();
@@ -130,7 +128,6 @@ export class AuthService implements OnDestroy {
 
             // Si el token expira en menos de 10 minutos, renovarlo
             if (timeUntilExpiration < 10 * 60 * 1000) {
-              console.log('🔄 [AuthService] Renovando token...');
               await firebaseUser.getIdToken(true);
             }
           }
@@ -180,8 +177,6 @@ export class AuthService implements OnDestroy {
     if (this.tokenCheckInterval) {
       clearInterval(this.tokenCheckInterval);
     }
-
-    console.log('🔓 [AuthService] Usuario desautenticado');
   }
 
   /**
