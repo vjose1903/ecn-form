@@ -11,12 +11,14 @@ export class UserC {
   uid: string = '';
   city: string = '';
   id: string = '';
+  phone: string = '';
   cityData?: CityClass;
 
   constructor(user: UserI & { city?: any }) {
     this.email = user.email;
     this.uid = user.uid;
     this.id = user.id;
+    this.phone = user.phone;
 
     // Manejar city que puede ser string (ID) o objeto (referencia resuelta)
     if (typeof user.city === 'string') {
@@ -32,11 +34,12 @@ export class UserC {
 
   asJson() {
     return {
+      id: this.id,
       email: this.email,
       uid: this.uid,
       city: this.city,
-      id: this.id,
       cityData: this.cityData?.asJson(),
+      phone: this.phone,
     };
   }
 

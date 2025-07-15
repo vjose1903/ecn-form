@@ -33,7 +33,7 @@ export class CityClass {
     return runInInjectionContext(Ss.injector, () => {
       const cityService = inject(CityService);
 
-      return cityService.getDocumentRef({ id: this.key });
+      return cityService.getDocumentRef({ id: this.id });
     });
   }
 }
