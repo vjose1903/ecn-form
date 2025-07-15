@@ -51,8 +51,6 @@ export class App implements OnInit {
 
       this.isReady.set(true);
       this.cdRef.detectChanges();
-
-      console.log('✅ [App] Aplicación inicializada correctamente');
     } catch (error) {
       console.error('❌ [App] Error durante la inicialización:', error);
       // Aún marcar como lista para que la app funcione

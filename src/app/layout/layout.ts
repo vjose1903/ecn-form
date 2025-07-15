@@ -68,8 +68,6 @@ export class Layout implements OnInit {
   ngOnInit(): void {
     this.setupRouterListener();
     this.setCity();
-    console.log('city', this.city());
-    console.log('current_path', this.currentPath());
   }
 
   ngOnDestroy(): void {
