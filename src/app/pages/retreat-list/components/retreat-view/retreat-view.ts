@@ -213,8 +213,7 @@ export class RetreatView implements OnInit, OnDestroy {
   async exportCouplesCallInfo(): Promise<void> {
     try {
       // Obtener las solicitudes aceptadas para el reporte
-      const acceptedRequests = this.requests()
-      // const acceptedRequests = this.requests().filter(request => request.status === RequestStatus.ACCEPTED);
+      const acceptedRequests = this.requests().filter(request => request.status === RequestStatus.ACCEPTED);
       
       if (acceptedRequests.length === 0) {
         Ss.toastService.warning({ 
