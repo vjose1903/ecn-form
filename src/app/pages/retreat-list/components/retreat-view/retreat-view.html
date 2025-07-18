@@ -82,7 +82,7 @@
           </div>
 
           <div class="flex items-center gap-2">
-            <p-button icon="pi pi-download"  severity="secondary"  (onClick)="exportCouplesCallInfo()" />
+            <p-button icon="pi pi-download" severity="secondary" (onClick)="exportCouplesCallInfo()" pTooltip="Exportar contactos de parejas" />
             <div class="relative">
               <i class="pi pi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
               <input type="text" pInputText placeholder="Buscar..." [ngModel]="filterWord()" (ngModelChange)="filterWord.set($event)" class="w-full !px-10" />

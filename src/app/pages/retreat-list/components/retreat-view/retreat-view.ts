@@ -18,6 +18,7 @@ import { FormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { RequestService } from '@core/entities/request/request.service';
 import { ViewItem } from '@core/components/view-item/view-item';
+import { PdfService, CoupleInfo } from '../../utils/pdf.service';
 
 @Component({
   selector: 'app-retreat-view',
@@ -28,6 +29,7 @@ import { ViewItem } from '@core/components/view-item/view-item';
 export class RetreatView implements OnInit, OnDestroy {
   requests = signal<RequestClass[]>([]);
   requestsService = inject(RequestService);
+  pdfService = inject(PdfService);
 
   requestFiltered = computed(() => {
     const word = this.filterWord();
@@ -208,7 +210,89 @@ export class RetreatView implements OnInit, OnDestroy {
     return 'No definida';
   }
 
-  exportCouplesCallInfo(): void {
-    console.log('exportCouplesCallInfo');
+  async exportCouplesCallInfo(): Promise<void> {
+    try {
+      // Obtener las solicitudes aceptadas para el reporte
+      const acceptedRequests = this.requests()
+      // const acceptedRequests = this.requests().filter(request => request.status === RequestStatus.ACCEPTED);
+      
+      if (acceptedRequests.length === 0) {
+        Ss.toastService.warning({ 
+          message: 'No hay solicitudes aceptadas para exportar', 
+          title: 'Sin datos' 
+        });
+        return;
+      }
+
+      // Convertir las solicitudes a formato de parejas
+      const couples: CoupleInfo[] = acceptedRequests.map(request => ({
+        novia: {
+          name: request.she.full_name,
+          familyContact: [
+            {
+              name: request.she.family_information[0]?.familiar_full_name || '',
+              relationship: request.she.family_information[0]?.familiar_relationship || '',
+              phone: request.she.family_information[0]?.familiar_phone || ''
+            },
+            {
+              name: request.she.family_information[1]?.familiar_full_name || '',
+              relationship: request.she.family_information[1]?.familiar_relationship || '',
+              phone: request.she.family_information[1]?.familiar_phone || ''
+            }
+          ],
+          emergencyContact: {
+            name: request.she.emergency_full_name || '',
+            relationship: request.she.emergency_relationship || '',
+            phone: request.she.emergency_phone || ''
+          }
+        },
+        novio: {
+          name: request.he.full_name,
+          familyContact: [
+            {
+              name: request.he.family_information[0]?.familiar_full_name || '',
+              relationship: request.he.family_information[0]?.familiar_relationship || '',
+              phone: request.he.family_information[0]?.familiar_phone || ''
+            },
+            {
+              name: request.he.family_information[1]?.familiar_full_name || '',
+              relationship: request.he.family_information[1]?.familiar_relationship || '',
+              phone: request.he.family_information[1]?.familiar_phone || ''
+            }
+          ],
+          emergencyContact: {
+            name: request.he.emergency_full_name || '',
+            relationship: request.he.emergency_relationship || '',
+            phone: request.he.emergency_phone || ''
+          }
+        }
+      }));
+
+      // Información del retiro para el reporte
+      const retreatInfo = {
+        name: this.retreat.displayCommunityName,
+        number: this.retreat.displayNumber,
+        modality: this.retreat.displayModality,
+        dateRange: this.retreat.displayDateRange
+      };
+
+      // Obtener información de la ciudad desde el layout
+      const cityInfo = Ss.authService.current_user()?.cityData;
+      
+      // Generar el PDF
+      await this.pdfService.generateCouplesReport(couples, retreatInfo, cityInfo);
+      
+      Ss.toastService.success({ 
+        message: `Reporte generado con ${couples.length} parejas`, 
+        title: 'PDF Exportado' 
+      });
+      
+    } catch (error) {
+      console.error('Error al exportar PDF:', error);
+      Ss.toastService.error({ 
+        message: 'Error al generar el reporte PDF', 
+        title: 'Error' 
+      });
+    }
   }
 }
