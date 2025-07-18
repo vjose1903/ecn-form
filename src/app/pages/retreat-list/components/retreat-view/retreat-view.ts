@@ -207,4 +207,8 @@ export class RetreatView implements OnInit, OnDestroy {
     }
     return 'No definida';
   }
+
+  exportCouplesCallInfo(): void {
+    console.log('exportCouplesCallInfo');
+  }
 }
