@@ -98,12 +98,6 @@ export class RetreatList implements OnInit, OnDestroy {
     this.setupSubscriptions();
     // Limpiar filtros al inicializar para asegurar que no haya filtros activos
     this.dataviewConfig.clearFilters();
-
-    // Debug: verificar valores de filtros después de limpiar
-    setTimeout(() => {
-      const filters = this.dataviewConfig.filters();
-      console.log('Filtros después de limpiar:', filters.values);
-    }, 100);
   }
 
   ngOnDestroy(): void {
