@@ -56,18 +56,28 @@ export class Layout implements OnInit {
   private onDestroy$ = new Subject<void>();
 
   constructor() {
-    effect(() => {
-      const isAuthenticated = Ss.authService.isAuthenticated();
-      const currentUser = Ss.authService.current_user();
+    // Solo ejecutar una vez al inicializar
+    const isAuthenticated = Ss.authService.isAuthenticated();
 
-      if (isAuthenticated) this.retreatHomeService.refresh();
-      this.setCity();
+    if (isAuthenticated) {
+      this.retreatHomeService.refresh();
+    }
+
+    effect(() => {
+      const isAuthRoute = this.isAuthRoute();
+
+      if (!isAuthRoute && fun.isEmpty(this.city())) this.setCity();
     });
   }
 
   ngOnInit(): void {
     this.setupRouterListener();
-    this.setCity();
+
+    // Verificar autenticación después de la inicialización
+    const isAuthenticated = Ss.authService.isAuthenticated();
+    if (isAuthenticated) {
+      this.retreatHomeService.refresh();
+    }
   }
 
   ngOnDestroy(): void {
@@ -86,6 +96,7 @@ export class Layout implements OnInit {
 
   setCity() {
     this.city.set(Ss.authService.current_user()?.cityData ?? null);
+
     if (fun.isEmpty(this.city()) && this.currentPath().includes('/formulario/')) {
       const user_id = this.currentPath().split('/')[2];
 
