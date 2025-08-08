@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, Input, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, Input, OnInit, signal } from '@angular/core';
 import { CommonModule, NgTemplateOutlet } from '@angular/common';
 import { AccordionModule } from 'primeng/accordion';
 import { InputTextModule } from 'primeng/inputtext';
@@ -30,11 +30,11 @@ import { fun } from '@core/services/functions.service';
 import { UserService } from '@core/entities/user/user.service';
 import { UserC } from '@core/entities/user/user.class';
 import { RequestClass } from '@core/entities/request/request.class';
-import { CityClass } from '@core/entities/city/city.class';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { formDataMuck } from './form-page.muck';
+import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 
 @Component({
   selector: 'app-form-page',
@@ -177,6 +177,12 @@ export class FormPage implements OnInit {
   retreatSelected = signal<RetreatClass | null>(null);
   userSelected = signal<UserC | null>(null);
 
+  private ref = inject(DynamicDialogRef);
+  private config = inject(DynamicDialogConfig);
+
+  formType: 'new' | 'update' = 'new';
+  request: RequestI | null = null;
+
   requestRefString = computed(() => {
     const retreatSelected = this.retreatSelected();
     const user = this.userSelected();
@@ -228,11 +234,17 @@ export class FormPage implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    if (this.ref) {
+      this.formType = this.config.data.formType;
+      this.request = this.config.data.request;
+      this.user_id = this.config.data.user_id;
+    }
+
     await this.getUser();
 
     this.subscribeToFormChanges();
     this.processInitForm();
-    // this.patchForm();
+    this.patchForm();
   }
 
   addFamilyMember(groupName: FormGroupFields.she | FormGroupFields.he) {
@@ -273,8 +285,9 @@ export class FormPage implements OnInit {
 
     return Number(value) == 1 ? addons[formControlName].singular : addons[formControlName].plural;
   }
+
   patchForm() {
-    this.formGroup.patchValue(formDataMuck as any);
+    if (fun.hasValue(this.request)) this.formGroup.patchValue(this.request as any);
   }
 
   test() {}

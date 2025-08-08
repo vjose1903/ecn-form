@@ -1,13 +1,14 @@
 @if (!initialized()) {
-<app-form-skeleton />
+<app-form-skeleton [formType]="formType" />
 } @else if (submission_success()) {
 <request-send (close)="resetForm()" />
 } @else if (error()) {
 <error-message (retry)="onRetry()" />
 } @else {
-<div class="m-auto w-[95vw] md:w-3/4 lg:w-1/2 py-10 flex flex-col gap-1">
+<div class="m-auto {{formType === 'new' ? 'w-[95vw] md:w-3/4 lg:w-1/2 py-10' : 'w-[98%]'}}  flex flex-col gap-1">
   <div class="hidden">{{ requestRefString() }}</div>
 
+  @if (formType === 'new') {
   <p class="mb-2">Esta es la ficha de solicitud para vivir el retiro del <span class="font-bold">Encuentro Católico Para Novios</span></p>
 
   <p>Una vez llenada, el Equipo la evaluará y le indicará si fue aprobada y le indicarán el día de la información.</p>
@@ -16,6 +17,10 @@
   <p class="font-bold">Debe de completar el formulario para enviarlo, no se guardan los datos hasta que se envíe.</p>
 
   <span class="bg-red-500/10 text-red-800 p-2 my-5 rounded-md shadow-md" (click)="test()"> Los campos marcados con * son <span class="font-bold">obligatorios</span> </span>
+  } @if (formType === 'update') {
+  <p class="mb-2">Revisa los datos de la solicitud y haz los cambios necesarios.</p>
+  }
+
   <div [formGroup]="formGroup" class="w-full">
     <div class="shadow-lg rounded-[6px]">
       <p-accordion [value]="openedAccordionPanel" (onClose)="changeAccordionPanelIndex($event.index, 'close')" (onOpen)="changeAccordionPanelIndex($event.index, 'open')" [multiple]="true">
@@ -58,7 +63,7 @@
                   </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-5 relative w-full">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 relative w-full">
                   <div class="flex flex-col gap-1">
                     <p-inputgroup>
                       <p-inputnumber [id]="FormFieldId.dating_period_year + '_control'" [formControlName]="FormControlName.dating_period_year" placeholder="#" [min]="0" />
@@ -814,7 +819,7 @@
     </div>
 
     <div class="flex justify-end my-10">
-      <p-button [label]="loading() ? 'Enviando...' : 'Enviar'" [icon]="loading() ? 'pi pi-spin pi-spinner' : ''" [disabled]="!isFormValid || loading()" (onClick)="onSubmit()" />
+      <p-button [label]="loading() ? formType === 'new' ? 'Enviando...' : 'Actualizando...' : formType === 'new' ? 'Enviar' : 'Editar'" [icon]="loading() ? 'pi pi-spin pi-spinner' : ''" [disabled]="!isFormValid || loading()" (onClick)="onSubmit()" />
     </div>
   </div>
 </div>

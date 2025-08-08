@@ -12,10 +12,14 @@ import { CoupleView } from './couple-view/couple-view';
 import { RequestService } from '@core/entities/request/request.service';
 import { RetreatClass } from '@core/entities/retreat/retreat.class';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
+import { TooltipModule } from 'primeng/tooltip';
+import { MenuModule } from 'primeng/menu';
+import { MenuItem } from 'primeng/api';
+import { FormPage } from '@pages/form-page/form-page';
 
 @Component({
   selector: 'app-request-view',
-  imports: [CommonModule, TagModule, DividerLine, ButtonModule, ViewItem, CoupleView],
+  imports: [CommonModule, TagModule, DividerLine, ButtonModule, ViewItem, CoupleView, TooltipModule, MenuModule],
   templateUrl: './request-view.html',
   styleUrl: './request-view.scss',
 })
@@ -29,6 +33,19 @@ export class RequestView implements OnInit {
   retreat!: RetreatClass;
   CoupleType = CoupleType;
   RequestStatus = RequestStatus;
+
+  actions: MenuItem[] = [
+    {
+      label: 'Acciones',
+      items: [
+        {
+          label: 'Editar solicitud',
+          icon: 'pi pi-pencil',
+          command: () => this.editRequest(),
+        },
+      ],
+    },
+  ];
 
   ngOnInit(): void {
     this.request = this.config.data.request;
@@ -54,5 +71,33 @@ export class RequestView implements OnInit {
         Ss.toastService.error({ message: 'Error al actualizar la solicitud', title: 'Error' });
         this.loading.set(false);
       });
+  }
+
+  editRequest() {
+    const dialogService = Ss.dialogService;
+
+    if (!dialogService) {
+      console.error('DialogService no disponible');
+      return;
+    }
+
+    const dialogRef = dialogService.open(FormPage, {
+      header: `Editar Solicitud`,
+      width: '70vw',
+      modal: true,
+      draggable: false,
+      resizable: false,
+      closable: true,
+      focusOnShow: false,
+      data: {
+        request: this.request,
+        formType: 'update',
+        user_id: Ss.authService.current_user()?.id,
+      },
+      breakpoints: { '960px': '80vw', '640px': '90vw' },
+    });
+
+    // Limpiar referencia cuando se cierre
+    dialogRef.onClose.subscribe();
   }
 }

@@ -1,4 +1,5 @@
-<div class="m-auto w-[92vw] md:w-3/4 lg:w-1/2 py-10 flex flex-col gap-1">
+<div class="m-auto {{ formType === 'new' ? 'w-[92vw] md:w-3/4 lg:w-1/2' : 'w-[98%]' }} py-10 flex flex-col gap-1">
+  @if (formType === 'new') {
   <!-- Header text skeleton -->
   <div class="space-y-2">
     <p-skeleton height="1rem" width="75%" class="mb-2"></p-skeleton>
@@ -20,6 +21,7 @@
   <div class="bg-red-500/10 p-2 my-5 rounded-md shadow-md w-full">
     <p-skeleton height="1rem" width="60%"></p-skeleton>
   </div>
+  }
 
   <div class="w-full">
     <div class="shadow-lg rounded-[6px]">
