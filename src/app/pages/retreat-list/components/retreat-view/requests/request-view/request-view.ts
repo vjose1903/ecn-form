@@ -1,13 +1,13 @@
 import { Ss } from '@core/services/singleton.service';
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { DividerLine } from '@core/components/divider-line/divider-line';
 import { RequestClass } from '@core/entities/request/request.class';
 import { DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { ViewItem } from '@core/components/view-item/view-item';
-import { CoupleType, RequestStatus } from '@core/entities/request/request.model';
+import { CoupleType, RequestI, RequestStatus } from '@core/entities/request/request.model';
 import { CoupleView } from './couple-view/couple-view';
 import { RequestService } from '@core/entities/request/request.service';
 import { RetreatClass } from '@core/entities/retreat/retreat.class';
@@ -29,7 +29,8 @@ export class RequestView implements OnInit {
   requestService = inject(RequestService);
 
   loading = signal(false);
-  request!: RequestClass;
+  private _request = signal<RequestClass | null>(null);
+  request = computed(() => this._request());
   retreat!: RetreatClass;
   CoupleType = CoupleType;
   RequestStatus = RequestStatus;
@@ -48,13 +49,16 @@ export class RequestView implements OnInit {
   ];
 
   ngOnInit(): void {
-    this.request = this.config.data.request;
+    this._request.set(this.config.data.request);
     this.retreat = this.config.data.retreat;
   }
 
   toggleStatus(status: RequestStatus) {
     this.loading.set(true);
-    const payload = { id: this.request.id, status };
+    const currentRequest = this.request();
+    if (!currentRequest) return;
+    const payload = { id: currentRequest.id, status };
+
     this.requestService
       .updateRequest(payload, this.retreat)
       .then(() => {
@@ -85,19 +89,31 @@ export class RequestView implements OnInit {
       header: `Editar Solicitud`,
       width: '70vw',
       modal: true,
+      appendTo: 'body',
       draggable: false,
       resizable: false,
       closable: true,
+      contentStyle: { padding: '0' },
       focusOnShow: false,
-      data: {
-        request: this.request,
-        formType: 'update',
-        user_id: Ss.authService.current_user()?.id,
-      },
+              data: {
+          request: this.request(),
+          formType: 'update',
+          user_id: Ss.authService.current_user()?.id,
+        },
       breakpoints: { '960px': '80vw', '640px': '90vw' },
     });
 
-    // Limpiar referencia cuando se cierre
-    dialogRef.onClose.subscribe();
+    // Aquí capturas lo que retorna el modal
+    dialogRef.onClose.subscribe((result: RequestI | undefined) => {
+      if (result) {
+        if (result && result.id) {
+          const newRequest = new RequestClass(result);
+          this._request.set(newRequest);
+          this.config.data.request = newRequest;
+        }
+      } else {
+        console.log('Modal cerrado sin datos');
+      }
+    });
   }
 }

@@ -30,9 +30,10 @@ export class PreviousRequestValidator {
    * Valida que no exista una solicitud anterior con el mismo valor en la propiedad especificada
    * @param previousRequests - Array con las solicitudes anteriores
    * @param fieldName - Nombre del campo a validar (ej: 'email', 'identity_number', etc.)
+   * @param currentRequestId - ID de la solicitud actual (opcional) para excluirla de la validación
    * @returns Función validadora
    */
-  static validate(previousRequests: RequestClass[], fieldName: FormControlName) {
+  static validate(previousRequests: RequestClass[], fieldName: FormControlName, currentRequestId?: string | null) {
     return (control: AbstractControl): ValidationErrors | null => {
       const currentValue = control.value;
 
@@ -45,8 +46,16 @@ export class PreviousRequestValidator {
       // Verificar que el campo sea válido para CoupleI
       if (!this.isValidCoupleField(fieldName)) return null;
 
-      // Buscar en todas las solicitudes anteriores
-      const hasConflict = previousRequests.some(request => {
+      // Filtrar solicitudes excluyendo la actual si se proporciona currentRequestId
+      const requestsToCheck = currentRequestId && currentRequestId.trim() !== '' 
+        ? previousRequests.filter(request => request.id !== currentRequestId)
+        : previousRequests;
+
+      // Si después del filtrado no hay solicitudes que revisar, no hay conflicto
+      if (requestsToCheck.length === 0) return null;
+
+      // Buscar en las solicitudes filtradas
+      const hasConflict = requestsToCheck.some(request => {
         // Buscar en el grupo 'she'
         if (request.she && request.she[fieldName as CoupleFieldName] === currentValue) return true;
 

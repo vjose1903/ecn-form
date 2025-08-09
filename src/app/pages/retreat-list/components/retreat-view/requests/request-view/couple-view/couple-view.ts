@@ -17,6 +17,8 @@ export class CoupleView {
   couple = input.required<CoupleI>();
   coupleType = input.required<CoupleType>();
 
+  type = input<'complete' | 'essential'>('complete');
+
   coupleLabel = computed(() => {
     return this.coupleType() === CoupleType.SHE ? 'Novia' : 'Novio';
   });
@@ -36,4 +38,8 @@ export class CoupleView {
   coupleIconName = computed(() => {
     return this.coupleType() === CoupleType.SHE ? 'woman-icon' : 'man-icon';
   });
+
+  get isComplete() {
+    return this.type() === 'complete';
+  }
 }

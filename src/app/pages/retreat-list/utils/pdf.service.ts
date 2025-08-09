@@ -62,7 +62,7 @@ export class PdfService {
     // Información del retiro
     doc.setFontSize(10);
     this.addStyledText(doc, 'Retiro No: ', retreatInfo.number.toString(), 5, 30);
-    this.addStyledText(doc, 'Fecha: ', new Date().toLocaleDateString('es-ES'), 5, 35);
+    this.addStyledText(doc, 'Fecha: ', new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }), 5, 35);
 
     // Espacio para la tabla
     doc.setFontSize(10);

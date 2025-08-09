@@ -63,7 +63,7 @@ export class RequestClass {
   get displayWeddingDate(): string {
     if (this._displayWeddingDate === null) {
       const weddingDate = new Date(this.wedding_date as string);
-      this._displayWeddingDate = weddingDate.toLocaleDateString();
+      this._displayWeddingDate = weddingDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
     return this._displayWeddingDate;
   }
@@ -166,7 +166,7 @@ export class RequestClass {
       have_children: couple.have_children || false,
       identity_type: couple.identity_type || '',
       birth_date: birthDate || new Date(),
-      birth_date_display: birthDate.toLocaleDateString() || '',
+      birth_date_display: birthDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) || '',
       church_name: couple.church_name || '',
       home_phone: couple.home_phone || '',
       email: couple.email || '',
@@ -216,7 +216,7 @@ export class RequestClass {
       }
 
       const dialogRef = dialogService.open(RequestView, {
-        header: `Solicitud para el Retiro No. ${this.retreatData?.displayNumber} - ${this.displayCoupleNames}`,
+        header: `Solicitud para el Retiro No. ${this.retreatData?.displayNumber}`,
         width: '90vw',
         modal: true,
         draggable: false,

@@ -21,15 +21,18 @@
     </div>
 
     <!-- fecha de nacimiento -->
+    @if(isComplete){
     <view-item title="Fecha de nacimiento:" icon="pi pi-calendar" [isRow]="true" [content]="couple().birth_date_display ?? ''"> </view-item>
-
+    }
     <!-- documento de identidad -->
+    @if(isComplete){
     <view-item title="Documento de identidad:" icon="pi pi-id-card" [isRow]="true">
       <div class="flex items-center gap-1">
         <small class="text-black/50 font-medium mb-0">({{couple().identity_type}})</small>
         <p class="text-gray-800 font-medium mb-0">{{couple().identity_number}}</p>
       </div>
     </view-item>
+    }
 
     <!-- correo electrónico -->
     <view-item title="Correo electrónico:" icon="pi pi-envelope" [isRow]="true" [content]="couple().email"> </view-item>
@@ -46,10 +49,9 @@
 
     <divider-line separatorClass="my-0 mx-1" color="bg-gray-200" />
 
-    
     <!-- dirección -->
     <view-item title="Dirección:" icon="pi pi-map" [isRow]="true" [content]="couple().address"> </view-item>
-    
+
     <!-- ciudad de residencia -->
     <view-item title="Ciudad de residencia:" icon="pi pi-map-marker" [isRow]="true" [content]="couple().city_of_residence"> </view-item>
 

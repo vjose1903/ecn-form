@@ -100,7 +100,7 @@ export class RetreatClass {
       if (this.start_date && this.end_date) {
         const startDate = new Date(this.start_date);
         const endDate = new Date(this.end_date);
-        this._displayDateRange = `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
+        this._displayDateRange = `${startDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })} - ${endDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
       } else {
         this._displayDateRange = 'Fechas no definidas';
       }

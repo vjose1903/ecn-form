@@ -205,7 +205,7 @@ export class RetreatView implements OnInit, OnDestroy {
    */
   getMaxRequestDateFormatted(): string {
     if (this.retreat.max_request_date) {
-      return new Date(this.retreat.max_request_date).toLocaleDateString();
+      return new Date(this.retreat.max_request_date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
     return 'No definida';
   }
