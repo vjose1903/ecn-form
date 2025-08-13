@@ -193,13 +193,20 @@ export class RequestClass {
       have_wedding_date: this.have_wedding_date,
       who_invited_you: this.who_invited_you,
       who_invited_you_phone: this.who_invited_you_phone,
-      wedding_date: this.wedding_date,
+      wedding_date: this.wedding_date ? new Date(this.wedding_date) : null,
       dating_period_year: this.dating_period_year,
       dating_period_month: this.dating_period_month,
       how_find_us_other: this.how_find_us_other,
-      she: this.she,
-      he: this.he,
+      she: {
+        ...this.she,
+        birth_date: this.she.birth_date ? new Date(fun.convertFirebaseTimestamp(this.she.birth_date)) : new Date(),
+      },
+      he: {
+        ...this.he,
+        birth_date: this.he.birth_date ? new Date(fun.convertFirebaseTimestamp(this.he.birth_date)) : new Date(),
+      },
       is_active: this.is_active,
+      status: this.status,
     };
   }
 

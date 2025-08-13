@@ -311,9 +311,10 @@ export class FormPage implements OnInit {
       this.formGroup.get(FormControlName.id)?.setValue(this.request?.id ?? '');
       await this.onRetreatChange(this.request?.retreat);
 
-      console.log('request', this.request);
+      let data = this.request;
+      if (data instanceof RequestClass) data = data.asJson();
 
-      this.formGroup.patchValue(this.request as any);
+      this.formGroup.patchValue(data as any);
     }
 
     return Promise.resolve();
@@ -506,10 +507,11 @@ export class FormPage implements OnInit {
     const previousRequests = (await retreat?.getRequests()) ?? [];
     this.previousRequests.set(previousRequests);
 
-    // Verificar que el signal se actualizó correctamente
-
     // Actualizar validadores de campos que dependen de solicitudes anteriores
     this.updatePreviousRequestValidators();
+
+    // Forzar la validación de todos los campos que ya tienen valores para mostrar errores inmediatamente
+    this.forceValidationOnExistingValues();
   }
 
   /**
@@ -536,7 +538,9 @@ export class FormPage implements OnInit {
 
           // Aplicar los validadores filtrados
           control.setValidators(filteredValidators);
-          control.updateValueAndValidity({ emitEvent: false });
+
+          // Forzar la validación y emitir eventos para que se actualice la UI
+          control.updateValueAndValidity();
         }
       });
     });
@@ -567,7 +571,38 @@ export class FormPage implements OnInit {
 
           // Aplicar los validadores actualizados
           control.setValidators(newValidators);
-          control.updateValueAndValidity({ emitEvent: false });
+
+          // Forzar la validación y emitir eventos para que se muestren los mensajes de error
+          control.updateValueAndValidity();
+
+          // Marcar como touched para que se muestren los errores si ya tiene valor
+          if (control.value && control.invalid) {
+            control.markAsTouched();
+          }
+        }
+      });
+    });
+  }
+
+  /**
+   * Fuerza la validación de todos los campos que ya tienen valores para mostrar errores inmediatamente
+   */
+  private forceValidationOnExistingValues() {
+    // Campos que necesitan validación de solicitudes anteriores
+    const fieldsToValidate = [FormControlName.email, FormControlName.cell_phone, FormControlName.identity_number];
+
+    // Forzar validación para ambos grupos (she y he)
+    [FormGroupFields.she, FormGroupFields.he].forEach(groupName => {
+      const group = this.formGroup.get(groupName);
+
+      fieldsToValidate.forEach(fieldName => {
+        const control = group?.get(fieldName);
+        if (control && control.value) {
+          // Forzar la validación del campo
+          control.updateValueAndValidity();
+
+          // Si el campo es inválido, marcarlo como touched para mostrar el error
+          if (control.invalid) control.markAsTouched();
         }
       });
     });
