@@ -16,6 +16,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MenuModule } from 'primeng/menu';
 import { MenuItem } from 'primeng/api';
 import { FormPage } from '@pages/form-page/form-page';
+import { PdfReportType, PdfService } from '@pages/retreat-list/utils/pdf.service';
 
 @Component({
   selector: 'app-request-view',
@@ -27,6 +28,7 @@ export class RequestView implements OnInit {
   private ref = inject(DynamicDialogRef);
   private config = inject(DynamicDialogConfig);
   requestService = inject(RequestService);
+  pdfService = inject(PdfService);
 
   loading = signal(false);
   private _request = signal<RequestClass | null>(null);
@@ -43,6 +45,11 @@ export class RequestView implements OnInit {
           label: 'Editar solicitud',
           icon: 'pi pi-pencil',
           command: () => this.editRequest(),
+        },
+        {
+          label: 'Exportar solicitud',
+          icon: 'pi pi-file-pdf',
+          command: () => this.exportSingleRequestReport(this.request()!),
         },
       ],
     },
@@ -95,11 +102,11 @@ export class RequestView implements OnInit {
       closable: true,
       contentStyle: { padding: '0' },
       focusOnShow: false,
-              data: {
-          request: this.request(),
-          formType: 'update',
-          user_id: Ss.authService.current_user()?.id,
-        },
+      data: {
+        request: this.request(),
+        formType: 'update',
+        user_id: Ss.authService.current_user()?.id,
+      },
       breakpoints: { '960px': '80vw', '640px': '90vw' },
     });
 
@@ -115,5 +122,34 @@ export class RequestView implements OnInit {
         console.log('Modal cerrado sin datos');
       }
     });
+  }
+
+  async exportSingleRequestReport(request: RequestClass): Promise<void> {
+    try {
+      // Información del retiro para el reporte
+      const retreatInfo = {
+        name: this.retreat.displayCommunityName,
+        number: this.retreat.displayNumber,
+        modality: this.retreat.displayModality,
+        dateRange: this.retreat.displayDateRange,
+      };
+
+      // Obtener información de la ciudad desde el layout
+      const cityInfo = Ss.authService.current_user()?.cityData;
+
+      // Generar el PDF
+      await this.pdfService.generateReport(PdfReportType.SINGLE_REQUEST_REPORT, { request, retreatInfo }, cityInfo);
+
+      Ss.toastService.success({
+        message: 'Reporte de solicitud individual generado',
+        title: 'PDF Exportado',
+      });
+    } catch (error) {
+      console.error('Error al exportar PDF:', error);
+      Ss.toastService.error({
+        message: 'Error al generar el reporte PDF',
+        title: 'Error',
+      });
+    }
   }
 }
