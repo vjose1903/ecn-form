@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import jsPDF from 'jspdf';
 import { PdfTemplate, CityInfo, RetreatInfo } from '../pdf.service';
+import { fun } from '@core/services/functions.service';
 
 @Injectable()
 export class SingleRequestReportTemplate implements PdfTemplate {
@@ -8,6 +9,8 @@ export class SingleRequestReportTemplate implements PdfTemplate {
 
   async generateContent(doc: jsPDF, data: { request: any; retreatInfo: RetreatInfo }, cityInfo?: CityInfo): Promise<void> {
     const { request, retreatInfo } = data;
+
+    const { she, he } = request;
 
     // Título del documento
     doc.setFontSize(16);
@@ -21,162 +24,160 @@ export class SingleRequestReportTemplate implements PdfTemplate {
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    
+
     this.addField(doc, 'Rango de Fechas:', retreatInfo.dateRange, 5, 52);
 
     // Información de la Novia
+
+    // Información Personal de la Novia
+    this.addPersonalInfo(doc, she, 70, 'Información de la Novia');
+
+    // Salto de página para la información del novio
+    doc.addPage();
+    
+    // Información del Novio en nueva página
+    this.addPersonalInfo(doc, he, 30, 'Información del Novio');
+  }
+
+  /**
+   * Agrega la información personal completa de una persona (she o he)
+   * @param doc - Documento PDF
+   * @param person - Objeto con la información de la persona (she o he)
+   * @param initialY - Posición Y inicial
+   * @param sectionTitle - Título de la sección
+   * @returns La posición Y final después de agregar toda la información
+   */
+  private addPersonalInfo(doc: jsPDF, person: any, initialY: number, sectionTitle: string): number {
+    let currentY = initialY;
+
+    // Título de la sección
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text('Información de la Novia', 5, 65);
+    doc.text(sectionTitle, 5, currentY);
+    currentY += 7;
 
+    // Nombre completo
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    this.addField(doc, 'Nombre Completo:', request.she?.full_name, 5, 72);
+    this.addField(doc, 'Nombre Completo:', person?.full_name, 5, currentY);
+    currentY += 7;
 
     // Cédula y Fecha de Nacimiento en dos columnas
-    // Columna izquierda - Cédula
-    this.addColumn(doc, 3, 77, 50, { type: 'field', label: 'Cédula:', value: request.she?.cedula });
-
-    // Columna derecha - Fecha de Nacimiento
-    this.addColumn(doc, 100, 77, 140, { type: 'field', label: 'Fecha de Nacimiento:', value: request.she?.birth_date });
-
-    this.addField(doc, 'Teléfono:', request.she?.phone, 5, 86);
-    this.addField(doc, 'Email:', request.she?.email, 5, 93);
-    this.addField(doc, 'Dirección:', request.she?.address, 5, 100);
-
-    // Contactos de Emergencia - Novia
-    if (request.she?.emergency_full_name) {
-      this.addField(doc, 'Contacto de Emergencia:', request.she.emergency_full_name, 5, 107);
-      // Columna izquierda - Parentesco
-      this.addColumn(doc, 3, 112, 100, { type: 'field', label: 'Parentesco:', value: request.she.emergency_relationship });
-      // Columna derecha - Teléfono
-      this.addColumn(doc, 60, 112, 150, { type: 'field', label: 'Teléfono:', value: request.she.emergency_phone });
+    if (person?.identity_number || person?.cedula) {
+      const cedulaValue = person?.identity_number ? `${person.identity_number} (${person.identity_type})` : person?.cedula;
+      
+      // Columna izquierda - Cédula
+      this.addColumn(doc, 5, currentY, 300, { type: 'field', label: 'Cédula:', value: cedulaValue });
+      
+      // Columna derecha - Fecha de Nacimiento
+      this.addColumn(doc, 100, currentY, 140, { type: 'field', label: 'Fecha de Nacimiento:', value: person?.birth_date });
+      currentY += 7;
     }
 
-    // Información Familiar - Novia
-    if (request.she?.family_information && request.she.family_information.length > 0) {
+    // Teléfonos en columnas
+    if (person?.cell_phone || person?.phone) {
+      const phoneValue = person?.cell_phone || person?.phone;
+      
+      // Columna izquierda - Celular/Teléfono principal
+      this.addColumn(doc, 5, currentY, 100, { type: 'field', label: 'Celular:', value: phoneValue });
+      
+      // Columna centro - casa (si existe)
+      if (fun.hasValue(person?.home_phone)) {
+        this.addColumn(doc, 60, currentY, 100, { type: 'field', label: 'Tel. Casa:', value: person?.home_phone });
+      }
+      
+      // Columna derecha - trabajo (si existe)
+      if (fun.hasValue(person?.work_phone)) {
+        const workPhoneX = person?.home_phone ? 120 : 60;
+        this.addColumn(doc, workPhoneX, currentY, 100, { type: 'field', label: 'Tel. Trabajo:', value: person?.work_phone });
+      }
+      currentY += 7;
+    }
+
+    // Email
+    if (person?.email) {
+      this.addField(doc, 'Email:', person.email, 5, currentY);
+      currentY += 7;
+    }
+
+    // Dirección
+    if (person?.address) {
+      this.addField(doc, 'Dirección:', person.address, 5, currentY);
+      currentY += 7;
+    }
+
+    // Ciudad
+    if (person?.city_of_residence) {
+      this.addField(doc, 'Ciudad:', person.city_of_residence, 5, currentY);
+      currentY += 7;
+    }
+
+    // Campos booleanos específicos de she
+    if (person?.are_you_married !== undefined) {
+      this.addField(doc, '¿Ha estado casado por la Iglesia?:', person.are_you_married ? 'Sí' : 'No', 5, currentY);
+      currentY += 7;
+    }
+
+    if (person?.have_children !== undefined) {
+      this.addField(doc, '¿Tiene hijos?:', person.have_children ? 'Sí' : 'No', 5, currentY);
+      currentY += 7;
+    }
+
+    if (person?.religion) {
+      this.addField(doc, 'Religión:', person.religion, 5, currentY);
+      currentY += 7;
+    }
+
+    if (person?.church_name) {
+      this.addField(doc, 'Parroquia:', person.church_name, 5, currentY);
+      currentY += 15;
+    }
+
+    // Contactos de Emergencia
+    if (person?.emergency_full_name) {
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text('Información Familiar', 5, 122);
+      doc.text('Contacto de Emergencia', 5, currentY);
+      currentY += 7;
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      
+      this.addField(doc, 'Nombre:', person.emergency_full_name, 5, currentY);
+      currentY += 7;
+      
+      // Columna izquierda - Parentesco
+      this.addColumn(doc, 5, currentY, 100, { type: 'field', label: 'Parentesco:', value: person.emergency_relationship });
+      // Columna derecha - Teléfono
+      this.addColumn(doc, 60, currentY, 150, { type: 'field', label: 'Teléfono:', value: person.emergency_phone });
+      currentY += 15;
+    }
+
+    // Información Familiar
+    if (person?.family_information && person.family_information.length > 0) {
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Información Familiar', 5, currentY);
+      currentY += 7;
 
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
 
-      request.she.family_information.forEach((family: any, index: number) => {
-        const yPos = 129 + (index * 16);
+      person.family_information.forEach((family: any, index: number) => {
+        const yPos = currentY + index * 16;
         this.addField(doc, `Familiar ${index + 1}:`, family.familiar_full_name, 5, yPos);
         // Columna izquierda - Parentesco
-        this.addColumn(doc, 3, (yPos + 4), 100, { type: 'field', label: 'Parentesco:', value: family.familiar_relationship });
+        this.addColumn(doc, 5, yPos + 6, 100, { type: 'field', label: 'Parentesco:', value: family.familiar_relationship });
         // Columna derecha - Teléfono
-        this.addColumn(doc, 60, (yPos + 4), 150, { type: 'field', label: 'Teléfono:', value: family.familiar_phone });
-    
-        // this.addField(doc, 'Parentesco:', family.familiar_relationship, 5, yPos + 7);
-        // this.addField(doc, 'Teléfono:', family.familiar_phone, 5, yPos + 14);
+        this.addColumn(doc, 60, yPos + 6, 150, { type: 'field', label: 'Teléfono:', value: family.familiar_phone });
       });
+      
+      currentY += person.family_information.length * 14;
     }
 
-    // Información del Novio
-    const novioYStart = this.calculateNovioYStart(request.she);
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Información del Novio', 5, novioYStart);
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    this.addField(doc, 'Nombre Completo:', request.he?.full_name, 5, novioYStart + 10);
-    // Cédula y Fecha de Nacimiento en dos columnas
-    const heColumnWidth = 35; // Ancho de cada columna
-    const heSpacing = 10; // Espacio entre columnas
-
-    // Columna izquierda - Cédula
-    this.addColumn(doc, 5, novioYStart + 5, heColumnWidth, {
-      type: 'field',
-      label: 'Cédula:',
-      value: request.he?.cedula,
-    });
-
-    // Columna derecha - Fecha de Nacimiento
-    this.addColumn(doc, 20 + heColumnWidth + heSpacing, novioYStart + 5, heColumnWidth, {
-      type: 'field',
-      label: 'Fecha de Nacimiento:',
-      value: request.he?.birth_date,
-    });
-    this.addField(doc, 'Teléfono:', request.he?.phone, 5, novioYStart + 40);
-    this.addField(doc, 'Email:', request.he?.email, 5, novioYStart + 50);
-    this.addField(doc, 'Dirección:', request.he?.address, 5, novioYStart + 60);
-
-    // Contactos de Emergencia - Novio
-    if (request.he?.emergency_full_name) {
-      this.addField(doc, 'Contacto de Emergencia:', request.he.emergency_full_name, 5, novioYStart + 70);
-      this.addField(doc, 'Parentesco:', request.he.emergency_relationship, 5, novioYStart + 80);
-      this.addField(doc, 'Teléfono:', request.he.emergency_phone, 5, novioYStart + 90);
-    }
-
-    // Información Familiar - Novio
-    if (request.he?.family_information && request.he.family_information.length > 0) {
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Información Familiar - Novio', 5, novioYStart + 110);
-
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-
-      request.he.family_information.forEach((family: any, index: number) => {
-        const yPos = novioYStart + 120 + index * 30;
-        this.addField(doc, `Familiar ${index + 1}:`, family.familiar_full_name, 5, yPos);
-        this.addField(doc, 'Parentesco:', family.familiar_relationship, 5, yPos + 10);
-        this.addField(doc, 'Teléfono:', family.familiar_phone, 5, yPos + 20);
-      });
-    }
-
-    // Información de la Solicitud
-    const requestYStart = this.calculateRequestYStart(request);
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Información de la Solicitud', 5, requestYStart);
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    this.addField(doc, 'Estado:', request.status, 5, requestYStart + 10);
-    this.addField(doc, 'Fecha de Solicitud:', request.created_at, 5, requestYStart + 20);
-
-    if (request.notes) {
-      this.addField(doc, 'Notas:', request.notes, 5, requestYStart + 30);
-    }
-
-    // Fecha de generación del reporte
-    doc.setFontSize(8);
-    doc.text(`Reporte generado el: ${new Date().toLocaleDateString('es-ES')}`, 5, doc.internal.pageSize.height - 20);
+    return currentY;
   }
 
-  private calculateNovioYStart(sheInfo: any): number {
-    let baseY = 215; // Posición base después de la información del retiro
-
-    if (sheInfo?.emergency_full_name) {
-      baseY += 30; // Espacio para contacto de emergencia
-    }
-
-    if (sheInfo?.family_information && sheInfo.family_information.length > 0) {
-      baseY += 30 + sheInfo.family_information.length * 30; // Título + campos de familiares
-    }
-
-    return baseY + 20; // Espacio adicional antes de la información del novio
-  }
-
-  private calculateRequestYStart(request: any): number {
-    let baseY = this.calculateNovioYStart(request.she);
-    baseY += 80; // Espacio para información básica del novio
-
-    if (request.he?.emergency_full_name) {
-      baseY += 30; // Espacio para contacto de emergencia del novio
-    }
-
-    if (request.he?.family_information && request.he.family_information.length > 0) {
-      baseY += 30 + request.he.family_information.length * 30; // Título + campos de familiares del novio
-    }
-
-    return baseY + 20; // Espacio adicional antes de la información de la solicitud
-  }
 
   private addField(doc: jsPDF, label: string, value: any, x: number, y: number): void {
     // Convertir el valor a string
@@ -242,134 +243,6 @@ export class SingleRequestReportTemplate implements PdfTemplate {
   }
 
   /**
-   * Ejemplo de uso del método addColumn para crear un layout de dos columnas
-   */
-  private createTwoColumnLayout(doc: jsPDF, request: any, retreatInfo: any): void {
-    const pageWidth = doc.internal.pageSize.width;
-    const leftColumnWidth = pageWidth * 0.45; // 45% del ancho de la página
-    const rightColumnWidth = pageWidth * 0.45; // 45% del ancho de la página
-    const margin = 20;
-    const spacing = pageWidth * 0.1; // 10% de espacio entre columnas
-
-    let currentY = 50; // Posición Y inicial después del header
-
-    // Columna izquierda - Información del retiro
-    currentY = this.addColumn(
-      doc,
-      margin,
-      currentY,
-      leftColumnWidth,
-      {
-        type: 'text',
-        value: 'Información del Retiro',
-        fontSize: 14,
-        fontStyle: 'bold',
-      },
-      {
-        backgroundColor: [240, 240, 240],
-        border: true,
-        align: 'center',
-      }
-    );
-
-    currentY = this.addColumn(doc, margin, currentY + 5, leftColumnWidth, {
-      type: 'field',
-      label: 'Nombre:',
-      value: retreatInfo.name,
-    });
-
-    currentY = this.addColumn(doc, margin, currentY + 2, leftColumnWidth, {
-      type: 'field',
-      label: 'Número:',
-      value: retreatInfo.number,
-    });
-
-    currentY = this.addColumn(doc, margin, currentY + 2, leftColumnWidth, {
-      type: 'field',
-      label: 'Modalidad:',
-      value: retreatInfo.modality,
-    });
-
-    // Columna derecha - Información de la solicitud
-    const rightColumnX = margin + leftColumnWidth + spacing;
-    let rightColumnY = 50;
-
-    rightColumnY = this.addColumn(
-      doc,
-      rightColumnX,
-      rightColumnY,
-      rightColumnWidth,
-      {
-        type: 'text',
-        value: 'Estado de la Solicitud',
-        fontSize: 14,
-        fontStyle: 'bold',
-      },
-      {
-        backgroundColor: [240, 240, 240],
-        border: true,
-        align: 'center',
-      }
-    );
-
-    rightColumnY = this.addColumn(doc, rightColumnX, rightColumnY + 5, rightColumnWidth, {
-      type: 'field',
-      label: 'Estado:',
-      value: request.status,
-    });
-
-    rightColumnY = this.addColumn(doc, rightColumnX, rightColumnY + 2, rightColumnWidth, {
-      type: 'field',
-      label: 'Fecha:',
-      value: request.created_at,
-    });
-
-    // Ejemplo de imagen (si existe)
-    if (request.she?.profile_image) {
-      rightColumnY = this.addColumn(
-        doc,
-        rightColumnX,
-        rightColumnY + 5,
-        rightColumnWidth,
-        {
-          type: 'image',
-          src: request.she.profile_image,
-          width: 40,
-          height: 40,
-        },
-        {
-          align: 'center',
-          border: true,
-        }
-      );
-    }
-
-    // Ejemplo de contenido personalizado
-    rightColumnY = this.addColumn(
-      doc,
-      rightColumnX,
-      rightColumnY + 5,
-      rightColumnWidth,
-      {
-        type: 'custom',
-        height: 30,
-        render: (doc: jsPDF, x: number, y: number, maxWidth: number) => {
-          // Dibujar un gráfico simple o contenido personalizado
-          doc.setFillColor(200, 200, 200);
-          doc.rect(x, y, maxWidth, 20, 'F');
-          doc.setFontSize(8);
-          doc.text('Contenido personalizado aquí', x + 5, y + 12);
-          return y + 20;
-        },
-      },
-      {
-        border: true,
-        align: 'center',
-      }
-    );
-  }
-
-  /**
    * Agrega una columna con contenido flexible
    * @param doc - Documento PDF
    * @param x - Posición X inicial
@@ -380,75 +253,75 @@ export class SingleRequestReportTemplate implements PdfTemplate {
    * @returns La posición Y final después de agregar el contenido
    */
   private addColumn(doc: jsPDF, x: number, y: number, columnWidth: number, content: ColumnContent, options: ColumnOptions = {}): number {
-    const { padding = 2, align = 'left', valign = 'top', backgroundColor, border = false, borderColor = [0, 0, 0], borderWidth = 0.1 } = options;
+    const { align = 'left', valign = 'top', backgroundColor, border = false, borderColor = [0, 0, 0], borderWidth = 0.1 } = options;
 
     let currentY = y;
 
     // Dibujar fondo si se especifica
     if (backgroundColor) {
       doc.setFillColor(...backgroundColor);
-      doc.rect(x, y, columnWidth, this.calculateContentHeight(content, columnWidth, padding), 'F');
+      doc.rect(x, y, columnWidth, this.calculateContentHeight(content, columnWidth), 'F');
     }
 
     // Dibujar borde si se especifica
     if (border) {
       doc.setDrawColor(...borderColor);
       doc.setLineWidth(borderWidth);
-      doc.rect(x, y, columnWidth, this.calculateContentHeight(content, columnWidth, padding), 'S');
+      doc.rect(x, y, columnWidth, this.calculateContentHeight(content, columnWidth), 'S');
     }
 
     // Calcular posición X basada en alineación
-    let contentX = x + padding;
+    let contentX = x;
     if (align === 'center') {
       contentX = x + columnWidth / 2;
     } else if (align === 'right') {
-      contentX = x + columnWidth - padding;
+      contentX = x + columnWidth;
     }
 
     // Calcular posición Y basada en alineación vertical
-    let contentY = y + padding;
+    let contentY = y;
     if (valign === 'middle') {
-      const contentHeight = this.calculateContentHeight(content, columnWidth, padding);
+      const contentHeight = this.calculateContentHeight(content, columnWidth);
       contentY = y + contentHeight / 2;
     } else if (valign === 'bottom') {
-      const contentHeight = this.calculateContentHeight(content, columnWidth, padding);
-      contentY = y + contentHeight - padding;
+      const contentHeight = this.calculateContentHeight(content, columnWidth);
+      contentY = y + contentHeight;
     }
 
     // Renderizar el contenido según su tipo
-    currentY = this.renderContent(doc, content, contentX, contentY, columnWidth - padding * 2, align);
+    currentY = this.renderContent(doc, content, contentX, contentY, columnWidth * 2, align);
 
-    return currentY + padding;
+    return currentY;
   }
 
   /**
    * Calcula la altura necesaria para el contenido de la columna
    */
-  private calculateContentHeight(content: ColumnContent, columnWidth: number, padding: number): number {
-    const availableWidth = columnWidth - padding * 2;
+  private calculateContentHeight(content: ColumnContent, columnWidth: number): number {
+    const availableWidth = columnWidth * 2;
 
     if (typeof content === 'string') {
       // Para texto, calcular altura basada en el ancho disponible
       const lines = this.splitTextIntoLines(content, availableWidth);
-      return lines.length * 12 + padding * 2; // 12mm por línea
+      return lines.length * 12 * 2; // 12mm por línea
     }
 
     if (content.type === 'text') {
       const textContent = content as TextContent;
       const lines = this.splitTextIntoLines(textContent.value, availableWidth);
-      return lines.length * (textContent.fontSize || 12) + padding * 2;
+      return lines.length * (textContent.fontSize || 12) * 2;
     }
 
     if (content.type === 'image') {
       const imageContent = content as ImageContent;
-      return (imageContent.height || 20) + padding * 2;
+      return (imageContent.height || 20) * 2;
     }
 
     if (content.type === 'field') {
       const fieldContent = content as FieldContent;
       const labelHeight = 12;
       const valueHeight = this.calculateTextHeight(fieldContent.value, availableWidth);
-      return labelHeight + valueHeight + padding * 2;
+      return labelHeight + valueHeight * 2;
     }
 
     if (content.type === 'custom') {
@@ -634,7 +507,6 @@ export interface CustomContent extends ColumnContent {
 }
 
 export interface ColumnOptions {
-  padding?: number;
   align?: 'left' | 'center' | 'right';
   valign?: 'top' | 'middle' | 'bottom';
   backgroundColor?: [number, number, number];

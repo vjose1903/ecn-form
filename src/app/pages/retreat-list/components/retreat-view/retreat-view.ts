@@ -106,6 +106,8 @@ export class RetreatView implements OnInit, OnDestroy {
         this.requests.set(requests);
         this.updateRequestStats(requests);
         this.fetchingRequests.set(false);
+
+        requests[0]
       });
     } catch (error) {
       Ss.toastService.error({ message: 'Error al obtener las solicitudes', title: 'Error' });
