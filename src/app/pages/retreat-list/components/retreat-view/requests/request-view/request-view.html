@@ -1,10 +1,11 @@
-<div *ngIf="request">
+@if (request(); as req) {
+<div>
   <!-- Información básica -->
   <div class="grid grid-cols-12 gap-6">
     <!-- Estado -->
     <div class="col-span-12">
-      <view-item title="Estado" icon="pi pi-info-circle" [isRow]="true" [content]="request.statusInfo.label">
-        <p-tag [severity]="request.statusInfo.severity" [value]="request.statusInfo.label" [rounded]="true" />
+      <view-item title="Estado" icon="pi pi-info-circle" [isRow]="true" [content]="req.statusInfo.label">
+        <p-tag [severity]="req.statusInfo.severity" [value]="req.statusInfo.label" [rounded]="true" />
       </view-item>
     </div>
 
@@ -14,7 +15,7 @@
 
     <!-- Tiempo de Noviazgo -->
     <div class="col-span-12 md:col-span-6">
-      <view-item title="Tiempo de Noviazgo" icon="pi pi-id-card" [content]="request.displayDatingPeriod" />
+      <view-item title="Tiempo de Noviazgo" icon="pi pi-id-card" [content]="req.displayDatingPeriod" />
     </div>
 
     <div class="col-span-12 md:hidden">
@@ -22,14 +23,14 @@
     </div>
 
     <!-- Tiene fecha de boda -->
-    <div class="col-span-6 {{request.have_wedding_date ? 'md:col-span-3' : ''}} ">
-      <view-item title="Tiene fecha boda" icon="pi pi-check-circle" [content]="request.have_wedding_date ? 'Si' : 'No'" />
+    <div class="col-span-6 {{req.have_wedding_date ? 'md:col-span-3' : ''}} ">
+      <view-item title="Tiene fecha boda" icon="pi pi-check-circle" [content]="req.have_wedding_date ? 'Si' : 'No'" />
     </div>
 
     <!-- Fecha de boda -->
-    @if (request.have_wedding_date) {
+    @if (req.have_wedding_date) {
     <div class="col-span-6 md:col-span-3">
-      <view-item title="Fecha de boda" icon="pi pi-calendar" [content]="request.displayWeddingDate" />
+      <view-item title="Fecha de boda" icon="pi pi-calendar" [content]="req.displayWeddingDate" />
     </div>
     }
 
@@ -39,7 +40,7 @@
 
     <!-- Como se enteraron del retiro -->
     <div class="col-span-12 md:col-span-6">
-      <view-item title="Como se enteraron del retiro" icon="pi pi-megaphone" [content]="request.displayHowFindUs" />
+      <view-item title="Como se enteraron del retiro" icon="pi pi-megaphone" [content]="req.displayHowFindUs" />
     </div>
 
     <div class="col-span-12 md:hidden">
@@ -47,16 +48,16 @@
     </div>
 
     <!-- Quien los invitó al Retiro -->
-    <div class="col-span-6 {{request.who_invited_you_phone ? 'md:col-span-3' : ''}} ">
-      @if (request.who_invited_you) {
-        <view-item title="Quien los invitó al Retiro" icon="pi pi-user-plus" [content]="request.who_invited_you" />
+    <div class="col-span-6 {{req.who_invited_you_phone ? 'md:col-span-3' : ''}} ">
+      @if (req.who_invited_you) {
+      <view-item title="Quien los invitó al Retiro" icon="pi pi-user-plus" [content]="req.who_invited_you" />
       }
     </div>
 
     <!-- Telefono de quien los invitó -->
-    @if (request.who_invited_you_phone) {
+    @if (req.who_invited_you_phone) {
     <div class="col-span-6 md:col-span-3">
-      <view-item title="Telefono de quien los invitó" icon="pi pi-phone" [content]="request.who_invited_you_phone" />
+      <view-item title="Telefono de quien los invitó" icon="pi pi-phone" [content]="req.who_invited_you_phone" />
     </div>
     }
 
@@ -65,7 +66,7 @@
     </div>
 
     <div class="col-span-12 md:col-span-6">
-      <couple-view [couple]="request.she" [coupleType]="CoupleType.SHE" />
+      <couple-view [couple]="req.she" [coupleType]="CoupleType.SHE" />
     </div>
 
     <div class="col-span-12 md:hidden">
@@ -73,7 +74,7 @@
     </div>
 
     <div class="col-span-12 md:col-span-6">
-      <couple-view [couple]="request.he" [coupleType]="CoupleType.HE" />
+      <couple-view [couple]="req.he" [coupleType]="CoupleType.HE" />
     </div>
 
     <div class="col-span-12"></div>
@@ -82,8 +83,16 @@
   <!-- Mensaje cuando no hay información completa -->
 
   <!-- Acciones -->
-  <div class="flex justify-end gap-3 w-full pt-4 border-t border-gray-200">
-    <p-button type="button" label="Aceptar solicitud" severity="success" [disabled]="loading() || request.status == RequestStatus.ACCEPTED" icon="pi pi-check" class="w-auto" (onClick)="toggleStatus(RequestStatus.ACCEPTED)" size="small" />
-    <p-button type="button" label="Rechazar solicitud" severity="danger" [disabled]="loading() || request.status == RequestStatus.REJECTED" icon="pi pi-times" class="w-auto" (onClick)="toggleStatus(RequestStatus.REJECTED)" size="small" />
+  <div class="flex justify-between gap-3 w-full pt-4 border-t border-gray-200">
+    <div>
+      <p-button icon="pi pi-bars" severity="secondary" (click)="menu.toggle($event)" />
+      <p-menu #menu [model]="actions" [popup]="true" [appendTo]="'body'" [autoZIndex]="true" />
+    </div>
+
+    <div class="flex gap-3">
+      <p-button type="button" label="Aceptar solicitud" severity="success" [disabled]="loading() || req.status == RequestStatus.ACCEPTED" icon="pi pi-check" class="w-auto" (onClick)="toggleStatus(RequestStatus.ACCEPTED)" size="small" />
+      <p-button type="button" label="Rechazar solicitud" severity="danger" [disabled]="loading() || req.status == RequestStatus.REJECTED" icon="pi pi-times" class="w-auto" (onClick)="toggleStatus(RequestStatus.REJECTED)" size="small" />
+    </div>
   </div>
 </div>
+}

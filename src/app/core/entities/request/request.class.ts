@@ -58,12 +58,13 @@ export class RequestClass {
         .join(' ');
     }
     return this._displayDatingPeriod;
+    
   }
 
   get displayWeddingDate(): string {
     if (this._displayWeddingDate === null) {
       const weddingDate = new Date(this.wedding_date as string);
-      this._displayWeddingDate = weddingDate.toLocaleDateString();
+      this._displayWeddingDate = weddingDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
     return this._displayWeddingDate;
   }
@@ -166,7 +167,7 @@ export class RequestClass {
       have_children: couple.have_children || false,
       identity_type: couple.identity_type || '',
       birth_date: birthDate || new Date(),
-      birth_date_display: birthDate.toLocaleDateString() || '',
+      birth_date_display: birthDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) || '',
       church_name: couple.church_name || '',
       home_phone: couple.home_phone || '',
       email: couple.email || '',
@@ -193,13 +194,20 @@ export class RequestClass {
       have_wedding_date: this.have_wedding_date,
       who_invited_you: this.who_invited_you,
       who_invited_you_phone: this.who_invited_you_phone,
-      wedding_date: this.wedding_date,
+      wedding_date: this.wedding_date ? new Date(this.wedding_date) : null,
       dating_period_year: this.dating_period_year,
       dating_period_month: this.dating_period_month,
       how_find_us_other: this.how_find_us_other,
-      she: this.she,
-      he: this.he,
+      she: {
+        ...this.she,
+        birth_date: this.she.birth_date ? new Date(fun.convertFirebaseTimestamp(this.she.birth_date)) : new Date(),
+      },
+      he: {
+        ...this.he,
+        birth_date: this.he.birth_date ? new Date(fun.convertFirebaseTimestamp(this.he.birth_date)) : new Date(),
+      },
       is_active: this.is_active,
+      status: this.status,
     };
   }
 
@@ -216,7 +224,7 @@ export class RequestClass {
       }
 
       const dialogRef = dialogService.open(RequestView, {
-        header: `Solicitud para el Retiro No. ${this.retreatData?.displayNumber} - ${this.displayCoupleNames}`,
+        header: `Solicitud para el Retiro No. ${this.retreatData?.displayNumber}`,
         width: '90vw',
         modal: true,
         draggable: false,

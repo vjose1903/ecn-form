@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SkeletonModule } from 'primeng/skeleton';
 
@@ -10,4 +10,5 @@ import { SkeletonModule } from 'primeng/skeleton';
 })
 export class FormSkeletonComponent {
   // No additional logic needed for skeleton
+  @Input() formType: 'new' | 'update' = 'new';
 }

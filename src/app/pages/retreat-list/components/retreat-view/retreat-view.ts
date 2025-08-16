@@ -18,7 +18,7 @@ import { FormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { RequestService } from '@core/entities/request/request.service';
 import { ViewItem } from '@core/components/view-item/view-item';
-import { PdfService, CoupleInfo } from '../../utils/pdf.service';
+import { PdfService, CoupleInfo, PdfReportType } from '../../utils/pdf.service';
 
 @Component({
   selector: 'app-retreat-view',
@@ -106,6 +106,8 @@ export class RetreatView implements OnInit, OnDestroy {
         this.requests.set(requests);
         this.updateRequestStats(requests);
         this.fetchingRequests.set(false);
+
+        requests[0]
       });
     } catch (error) {
       Ss.toastService.error({ message: 'Error al obtener las solicitudes', title: 'Error' });
@@ -205,7 +207,7 @@ export class RetreatView implements OnInit, OnDestroy {
    */
   getMaxRequestDateFormatted(): string {
     if (this.retreat.max_request_date) {
-      return new Date(this.retreat.max_request_date).toLocaleDateString();
+      return new Date(this.retreat.max_request_date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
     return 'No definida';
   }
@@ -214,12 +216,9 @@ export class RetreatView implements OnInit, OnDestroy {
     try {
       // Obtener las solicitudes aceptadas para el reporte
       const acceptedRequests = this.requests().filter(request => request.status === RequestStatus.ACCEPTED);
-      
+
       if (acceptedRequests.length === 0) {
-        Ss.toastService.warning({ 
-          message: 'No hay solicitudes aceptadas para exportar', 
-          title: 'Sin datos' 
-        });
+        Ss.toastService.warning({ message: 'No hay solicitudes aceptadas para exportar', title: 'Sin datos' });
         return;
       }
 
@@ -231,19 +230,19 @@ export class RetreatView implements OnInit, OnDestroy {
             {
               name: request.she.family_information[0]?.familiar_full_name || '',
               relationship: request.she.family_information[0]?.familiar_relationship || '',
-              phone: request.she.family_information[0]?.familiar_phone || ''
+              phone: request.she.family_information[0]?.familiar_phone || '',
             },
             {
               name: request.she.family_information[1]?.familiar_full_name || '',
               relationship: request.she.family_information[1]?.familiar_relationship || '',
-              phone: request.she.family_information[1]?.familiar_phone || ''
-            }
+              phone: request.she.family_information[1]?.familiar_phone || '',
+            },
           ],
           emergencyContact: {
             name: request.she.emergency_full_name || '',
             relationship: request.she.emergency_relationship || '',
-            phone: request.she.emergency_phone || ''
-          }
+            phone: request.she.emergency_phone || '',
+          },
         },
         novio: {
           name: request.he.full_name,
@@ -251,20 +250,20 @@ export class RetreatView implements OnInit, OnDestroy {
             {
               name: request.he.family_information[0]?.familiar_full_name || '',
               relationship: request.he.family_information[0]?.familiar_relationship || '',
-              phone: request.he.family_information[0]?.familiar_phone || ''
+              phone: request.he.family_information[0]?.familiar_phone || '',
             },
             {
               name: request.he.family_information[1]?.familiar_full_name || '',
               relationship: request.he.family_information[1]?.familiar_relationship || '',
-              phone: request.he.family_information[1]?.familiar_phone || ''
-            }
+              phone: request.he.family_information[1]?.familiar_phone || '',
+            },
           ],
           emergencyContact: {
             name: request.he.emergency_full_name || '',
             relationship: request.he.emergency_relationship || '',
-            phone: request.he.emergency_phone || ''
-          }
-        }
+            phone: request.he.emergency_phone || '',
+          },
+        },
       }));
 
       // Información del retiro para el reporte
@@ -272,25 +271,24 @@ export class RetreatView implements OnInit, OnDestroy {
         name: this.retreat.displayCommunityName,
         number: this.retreat.displayNumber,
         modality: this.retreat.displayModality,
-        dateRange: this.retreat.displayDateRange
+        dateRange: this.retreat.displayDateRange,
       };
 
       // Obtener información de la ciudad desde el layout
       const cityInfo = Ss.authService.current_user()?.cityData;
-      
+
       // Generar el PDF
-      await this.pdfService.generateCouplesReport(couples, retreatInfo, cityInfo);
-      
-      Ss.toastService.success({ 
-        message: `Reporte generado con ${couples.length} parejas`, 
-        title: 'PDF Exportado' 
+      await this.pdfService.generateReport(PdfReportType.COUPLES_REPORT, { couples, retreatInfo }, cityInfo);
+
+      Ss.toastService.success({
+        message: `Reporte generado con ${couples.length} parejas`,
+        title: 'PDF Exportado',
       });
-      
     } catch (error) {
       console.error('Error al exportar PDF:', error);
-      Ss.toastService.error({ 
-        message: 'Error al generar el reporte PDF', 
-        title: 'Error' 
+      Ss.toastService.error({
+        message: 'Error al generar el reporte PDF',
+        title: 'Error',
       });
     }
   }

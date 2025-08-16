@@ -1,0 +1,90 @@
+// Estilos para controlar el ripple effect del accordion en modales
+.form-in-modal {
+  .accordion-modal-container {
+    // Crear un contexto de stacking para el ripple
+    position: relative;
+    z-index: 1;
+    
+    // Contener el ripple dentro del accordion
+    ::ng-deep .p-accordion {
+      .p-accordion-header {
+        position: relative;
+        overflow: hidden;
+        
+        // Asegurar que el ripple se mantenga dentro del header
+        .p-ripple {
+          position: absolute !important;
+          border-radius: inherit;
+          overflow: hidden;
+        }
+        
+        // Limitar el alcance del ripple effect
+        .p-ink {
+          display: block;
+          position: absolute !important;
+          background: rgba(255, 255, 255, 0.5);
+          border-radius: 100%;
+          transform: scale(0);
+          pointer-events: none;
+          // Forzar que se mantenga dentro del contenedor padre
+          max-width: 100%;
+          max-height: 100%;
+        }
+        
+        .p-ink-active {
+          animation: ripple-contained 0.4s linear;
+        }
+      }
+      
+      // Prevenir que el ripple se escape del contenedor
+      .accordion-header-modal {
+        isolation: isolate;
+        contain: layout style paint;
+        
+        &::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: -1;
+        }
+        
+        // Forzar contención del ripple
+        .p-ripple-disabled {
+          overflow: hidden;
+        }
+      }
+    }
+  }
+}
+
+// Para formularios que NO están en modal, mantener comportamiento normal
+.accordion-modal-container:not(.form-in-modal .accordion-modal-container) {
+  ::ng-deep .p-accordion {
+    .p-accordion-header {
+      position: relative;
+    }
+  }
+}
+
+// Animación del ripple contenida específicamente para modales
+@keyframes ripple-contained {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2);
+  }
+}
+
+// Animación del ripple normal
+@keyframes ripple {
+  100% {
+    opacity: 0;
+    transform: scale(2.5);
+  }
+}

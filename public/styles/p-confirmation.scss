@@ -1,0 +1,28 @@
+/* Estilos para mejorar el diálogo de confirmación en móviles */
+@media (max-width: 768px) {
+  .p-confirmdialog {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    margin: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    max-height: 90vh !important;
+    position: fixed !important;
+  }
+
+  .p-confirmdialog .p-dialog-header {
+    padding: 1rem !important;
+    font-size: 1.1rem !important;
+  }
+
+  .p-confirmdialog .p-dialog-footer {
+    padding: 1rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .p-confirmdialog .p-dialog-footer .p-button {
+    flex: 1 !important;
+    font-size: 0.9rem !important;
+    padding: 0.75rem !important;
+  }
+}

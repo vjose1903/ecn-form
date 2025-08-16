@@ -1,13 +1,14 @@
-import { Component, computed, effect, inject, Input, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, Input, OnInit, signal } from '@angular/core';
 import { CommonModule, NgTemplateOutlet } from '@angular/common';
 import { AccordionModule } from 'primeng/accordion';
 import { InputTextModule } from 'primeng/inputtext';
-import { AbstractControl, FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { TextareaModule } from 'primeng/textarea';
 import { InputMaskModule } from 'primeng/inputmask';
 import { ButtonModule } from 'primeng/button';
+import { PopoverModule } from 'primeng/popover';
 
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { DividerLine } from '../../core/components/divider-line/divider-line';
@@ -30,11 +31,14 @@ import { fun } from '@core/services/functions.service';
 import { UserService } from '@core/entities/user/user.service';
 import { UserC } from '@core/entities/user/user.class';
 import { RequestClass } from '@core/entities/request/request.class';
-import { CityClass } from '@core/entities/city/city.class';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputNumberModule } from 'primeng/inputnumber';
-import { formDataMuck } from './form-page.muck';
+
+import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { FormStatsUtils } from './utils/form-stats';
+import { CheckboxModule } from 'primeng/checkbox';
+import { DialogModule } from 'primeng/dialog';
 
 @Component({
   selector: 'app-form-page',
@@ -59,6 +63,9 @@ import { formDataMuck } from './form-page.muck';
     InputGroupModule,
     InputGroupAddonModule,
     InputNumberModule,
+    PopoverModule,
+    CheckboxModule,
+    DialogModule,
   ],
   templateUrl: './form-page.html',
   styleUrl: './form-page.scss',
@@ -67,6 +74,8 @@ export class FormPage implements OnInit {
   @Input() user_id: string = '';
 
   submission_success = signal(false);
+  confirmationDialogVisible = signal(false);
+  hasReadInformation = signal(false);
 
   deviceDetectorService = inject(DeviceDetectorService);
   retreatService = inject(RetreatService);
@@ -177,6 +186,12 @@ export class FormPage implements OnInit {
   retreatSelected = signal<RetreatClass | null>(null);
   userSelected = signal<UserC | null>(null);
 
+  private ref = inject(DynamicDialogRef, { optional: true });
+  private config = inject(DynamicDialogConfig, { optional: true });
+
+  formType: 'new' | 'update' = 'new';
+  request: RequestI | null = null;
+
   requestRefString = computed(() => {
     const retreatSelected = this.retreatSelected();
     const user = this.userSelected();
@@ -196,6 +211,14 @@ export class FormPage implements OnInit {
 
   get isDesktop() {
     return this.deviceDetectorService.getDeviceInfo().device === DeviceE.desktop;
+  }
+
+  get isUpdate() {
+    return this.formType === 'update';
+  }
+
+  isInModal() {
+    return this.ref !== null && this.ref !== undefined;
   }
 
   get sheGroup() {
@@ -227,12 +250,21 @@ export class FormPage implements OnInit {
     return ambosCero;
   }
 
+  get currentRequestId() {
+    return this.formGroup.get(FormControlName.id)?.value;
+  }
+
   async ngOnInit(): Promise<void> {
+    if (this.ref && this.config) {
+      this.formType = this.config.data.formType;
+      this.request = this.config.data.request;
+      this.user_id = this.config.data.user_id;
+    }
+
     await this.getUser();
 
     this.subscribeToFormChanges();
-    this.processInitForm();
-    // this.patchForm();
+    this.processInitComponent();
   }
 
   addFamilyMember(groupName: FormGroupFields.she | FormGroupFields.he) {
@@ -273,8 +305,19 @@ export class FormPage implements OnInit {
 
     return Number(value) == 1 ? addons[formControlName].singular : addons[formControlName].plural;
   }
-  patchForm() {
-    this.formGroup.patchValue(formDataMuck as any);
+
+  async patchForm() {
+    if (fun.hasValue(this.request)) {
+      this.formGroup.get(FormControlName.id)?.setValue(this.request?.id ?? '');
+      await this.onRetreatChange(this.request?.retreat);
+
+      let data = this.request;
+      if (data instanceof RequestClass) data = data.asJson();
+
+      this.formGroup.patchValue(data as any);
+    }
+
+    return Promise.resolve();
   }
 
   test() {}
@@ -283,17 +326,19 @@ export class FormPage implements OnInit {
     window.location.reload();
   }
 
-  processInitForm() {
+  processInitComponent() {
     this.initialized.set(false);
 
-    const getRequiredInfo = () => new Promise<[UserC | null, RetreatClass[] | null]>(resolve => resolve([this.userSelected(), this.retreats()]));
-    const reintentarSi = (requiredInfo: [UserC | null, RetreatClass[] | null]) => requiredInfo.some((info: UserC | RetreatClass[] | null) => info === null);
+    const getRequiredInfo = () => new Promise<any>(resolve => resolve([this.userSelected(), this.retreats()]));
+    const reintentarSi = (requiredInfo: any) => requiredInfo.some((info: any) => fun.isEmpty(info));
     const noLoadedRequiredInfo = () => {
       this.error.set(true);
       this.initialized.set(true);
     };
 
-    const initializeForm = () => {
+    const initializeForm = async () => {
+      if (this.formType === 'update') await this.patchForm();
+
       this.initialized.set(true);
     };
 
@@ -403,13 +448,14 @@ export class FormPage implements OnInit {
       this.removeRequiredControl(identityNumberControl, '');
 
       if (identityType === IdentityType.cedula) {
-        identityNumberControl?.addValidators([Validators.required, CedulaValidator.validate, PreviousRequestValidator.validate(this.previousRequests(), FormControlName.identity_number)]);
+        identityNumberControl?.addValidators([Validators.required, CedulaValidator.validate, PreviousRequestValidator.validate(this.previousRequests(), FormControlName.identity_number, this.currentRequestId)]);
       } else {
-        identityNumberControl?.addValidators([Validators.required, PreviousRequestValidator.validate(this.previousRequests(), FormControlName.identity_number)]);
+        identityNumberControl?.addValidators([Validators.required, PreviousRequestValidator.validate(this.previousRequests(), FormControlName.identity_number, this.currentRequestId)]);
       }
 
       identityNumberControl?.markAsPristine();
       identityNumberControl?.markAsUntouched();
+      identityNumberControl?.setErrors(null);
       identityNumberControl?.updateValueAndValidity({ emitEvent: false });
     });
   }
@@ -446,8 +492,11 @@ export class FormPage implements OnInit {
     this.openedAccordionPanel.sort((a, b) => a - b);
   }
 
-  async onRetreatChange() {
-    const retreatId = this.formGroup.get(FormControlName.retreat)?.value;
+  async onRetreatChange(retreatId?: string | null) {
+    retreatId ??= this.formGroup.get(FormControlName.retreat)?.value;
+
+    if (fun.isEmpty(retreatId)) return;
+
     const retreat = this.retreats()?.find(r => r.id === retreatId);
 
     this.retreatSelected.set(retreat ?? null);
@@ -458,10 +507,11 @@ export class FormPage implements OnInit {
     const previousRequests = (await retreat?.getRequests()) ?? [];
     this.previousRequests.set(previousRequests);
 
-    // Verificar que el signal se actualizó correctamente
-
     // Actualizar validadores de campos que dependen de solicitudes anteriores
     this.updatePreviousRequestValidators();
+
+    // Forzar la validación de todos los campos que ya tienen valores para mostrar errores inmediatamente
+    this.forceValidationOnExistingValues();
   }
 
   /**
@@ -488,7 +538,9 @@ export class FormPage implements OnInit {
 
           // Aplicar los validadores filtrados
           control.setValidators(filteredValidators);
-          control.updateValueAndValidity({ emitEvent: false });
+
+          // Forzar la validación y emitir eventos para que se actualice la UI
+          control.updateValueAndValidity();
         }
       });
     });
@@ -515,11 +567,42 @@ export class FormPage implements OnInit {
           const currentValidators = control.validator ? [control.validator] : [];
 
           // Agregar el validador de solicitudes anteriores con el array directamente
-          const newValidators = [...currentValidators, PreviousRequestValidator.validate(currentRequests, fieldName)];
+          const newValidators = [...currentValidators, PreviousRequestValidator.validate(currentRequests, fieldName, this.currentRequestId)];
 
           // Aplicar los validadores actualizados
           control.setValidators(newValidators);
-          control.updateValueAndValidity({ emitEvent: false });
+
+          // Forzar la validación y emitir eventos para que se muestren los mensajes de error
+          control.updateValueAndValidity();
+
+          // Marcar como touched para que se muestren los errores si ya tiene valor
+          if (control.value && control.invalid) {
+            control.markAsTouched();
+          }
+        }
+      });
+    });
+  }
+
+  /**
+   * Fuerza la validación de todos los campos que ya tienen valores para mostrar errores inmediatamente
+   */
+  private forceValidationOnExistingValues() {
+    // Campos que necesitan validación de solicitudes anteriores
+    const fieldsToValidate = [FormControlName.email, FormControlName.cell_phone, FormControlName.identity_number];
+
+    // Forzar validación para ambos grupos (she y he)
+    [FormGroupFields.she, FormGroupFields.he].forEach(groupName => {
+      const group = this.formGroup.get(groupName);
+
+      fieldsToValidate.forEach(fieldName => {
+        const control = group?.get(fieldName);
+        if (control && control.value) {
+          // Forzar la validación del campo
+          control.updateValueAndValidity();
+
+          // Si el campo es inválido, marcarlo como touched para mostrar el error
+          if (control.invalid) control.markAsTouched();
         }
       });
     });
@@ -636,48 +719,99 @@ export class FormPage implements OnInit {
     this.submission_success.set(false);
   }
 
-  getFormStats(event: Event, type: 'incomplete' | 'invalid') {
-    event.stopPropagation();
+  // Variables para manejar el estado del popover
+  private popoverTimeout: any;
+  private isMouseOverPopover = false;
 
-    if (type === 'incomplete') {
-    } else if (type === 'invalid') {
+  onPopoverShow() {
+    // Cancelar cualquier timeout pendiente cuando se muestra el popover
+    if (this.popoverTimeout) {
+      clearTimeout(this.popoverTimeout);
+      this.popoverTimeout = null;
     }
   }
 
-  onSubmit() {
-    this.loading.set(true);
-    const formData = this.formGroup.getRawValue() as unknown as RequestI;
+  onPopoverHide() {
+    // Limpiar el timeout cuando se oculta el popover
+    if (this.popoverTimeout) {
+      clearTimeout(this.popoverTimeout);
+      this.popoverTimeout = null;
+    }
+  }
 
-    if (!this.retreatSelected() || !this.userSelected()) {
-      setTimeout(() => {
-        this.error.set(true);
-        this.loading.set(false);
-      }, 2000);
+  onPopoverMouseLeave(popover: any) {
+    // Dar un pequeño delay antes de cerrar para permitir que el usuario mueva el cursor al popover
+    this.popoverTimeout = setTimeout(() => {
+      if (!this.isMouseOverPopover) {
+        popover.hide();
+      }
+    }, 100);
+  }
+
+  onPopoverContentMouseEnter() {
+    // El usuario está sobre el contenido del popover
+    this.isMouseOverPopover = true;
+
+    // Cancelar cualquier timeout de cierre
+    if (this.popoverTimeout) {
+      clearTimeout(this.popoverTimeout);
+      this.popoverTimeout = null;
+    }
+  }
+
+  onPopoverContentMouseLeave(popover: any) {
+    // El usuario salió del contenido del popover
+    this.isMouseOverPopover = false;
+
+    // Cerrar el popover después de un pequeño delay
+    this.popoverTimeout = setTimeout(() => {
+      popover.hide();
+    }, 100);
+  }
+
+  /**
+   * Obtiene los campos faltantes de una sección específica
+   * @param section - El grupo a verificar: 'general', 'she', o 'he'
+   * @returns Array de nombres de campos faltantes
+   */
+  getMissingFields(section: FormGroupFields): string[] {
+    return FormStatsUtils.getMissingFields(this.formGroup, section, this.datingPeriodError);
+  }
+
+  /**
+   * Obtiene los campos con errores de una sección específica
+   * @param section - El grupo a verificar: 'general', 'she', o 'he'
+   * @returns Array de nombres de campos con errores
+   */
+  getInvalidFields(section: FormGroupFields): string[] {
+    return FormStatsUtils.getInvalidFields(this.formGroup, section);
+  }
+
+  onSubmit() {
+    this.loading.set(false); // No ponemos loading hasta confirmar
+    this.hasReadInformation.set(false); // Reset checkbox
+    this.confirmationDialogVisible.set(true);
+  }
+
+  onConfirmSubmit() {
+    if (!this.hasReadInformation()) {
+      Ss.toastService.warning({
+        message: 'Debes confirmar que has leído la información antes de enviar',
+        title: 'Confirmación requerida',
+      });
       return;
     }
 
-    Ss.confirmationService.confirm({
-      message: `
-      <div class="flex flex-col gap-5">
-        <div class="bg-gray-200/70 p-2 rounded-r-md relative overflow-hidden border-l-4 border-red-500">
-          <span class="font-semibold"> <span class="text-lg text-red-600 font-bold">IMPORTANTE:</span> Solo se permite el envío de un formulario por pareja. </span>
-        </div>
-        <span class="text-md font-regular">Por favor, revisa cuidadosamente toda la información proporcionada antes de confirmar el envío. Una vez enviado, no podrás realizar cambios.</span> <br />
-      </div>
-      `,
-      header: '¿Estás seguro de querer enviar este formulario?',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Enviar',
-      rejectLabel: 'Cancelar',
-      acceptIcon: 'pi pi-send',
-      rejectIcon: 'pi pi-times',
-      acceptButtonStyleClass: 'p-button-success',
-      rejectButtonStyleClass: 'p-button-secondary',
-      accept: () => this.processFormSubmission(formData),
-      reject: () => {
-        this.loading.set(false);
-      },
-    });
+    this.loading.set(true);
+
+    const formData = this.formGroup.getRawValue() as unknown as RequestI;
+    this.processFormSubmission(formData);
+  }
+
+  onCancelSubmit() {
+    this.confirmationDialogVisible.set(false);
+    this.hasReadInformation.set(false);
+    this.loading.set(false);
   }
 
   private async processFormSubmission(formData: RequestI): Promise<RequestI | null> {
@@ -689,19 +823,31 @@ export class FormPage implements OnInit {
 
     try {
       let request: RequestI | null = null;
+
       if (formData.id) {
-        // request = await this.requestService.updateRequest(formData, retreat);
+        request = await this.requestService.updateRequest(formData, retreat);
       } else {
         request = await this.requestService.createRequest({ payload: formData, refString: this.requestRefString() });
       }
 
-      this.submission_success.set(true);
-      this.loading.set(false);
+      this.confirmationDialogVisible.set(false);
+
+      if (!this.isInModal()) {
+        this.submission_success.set(true);
+        this.loading.set(false);
+      } else {
+        this.ref?.close(request);
+        Ss.toastService.success({ message: 'Solicitud actualizada correctamente', title: 'Solicitud actualizada' });
+      }
 
       return request;
     } catch (error) {
       console.error(error);
-      this.loading.set(false);
+      if (!this.isInModal()) {
+        this.loading.set(false);
+      } else {
+        Ss.toastService.error({ message: 'Error al actualizar la solicitud', title: 'Error' });
+      }
       return null;
     }
   }
