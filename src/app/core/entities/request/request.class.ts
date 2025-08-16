@@ -58,6 +58,7 @@ export class RequestClass {
         .join(' ');
     }
     return this._displayDatingPeriod;
+    
   }
 
   get displayWeddingDate(): string {
