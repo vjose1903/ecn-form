@@ -43,6 +43,11 @@ export enum PdfReportType {
   SINGLE_REQUEST_REPORT = 'single_request',
 }
 
+export enum ExportType {
+  PDF = 'pdf',
+  EXCEL = 'excel',
+}
+
 @Injectable({
   providedIn: 'root',
 })

@@ -16,7 +16,8 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MenuModule } from 'primeng/menu';
 import { MenuItem } from 'primeng/api';
 import { FormPage } from '@pages/form-page/form-page';
-import { PdfReportType, PdfService } from '@pages/retreat-list/utils/pdf.service';
+import { ExportType, PdfReportType, PdfService } from '@pages/retreat-list/utils/pdf.service';
+import { ExcelService, ExcelReportType } from '@pages/retreat-list/utils/excel.service';
 
 @Component({
   selector: 'app-request-view',
@@ -29,6 +30,7 @@ export class RequestView implements OnInit {
   private config = inject(DynamicDialogConfig);
   requestService = inject(RequestService);
   pdfService = inject(PdfService);
+  excelService = inject(ExcelService);
 
   loading = signal(false);
   private _request = signal<RequestClass | null>(null);
@@ -46,10 +48,23 @@ export class RequestView implements OnInit {
           icon: 'pi pi-pencil',
           command: () => this.editRequest(),
         },
+      ],
+    },
+    {
+      separator: true,
+    },
+    {
+      label: 'Exportar',
+      items: [
         {
-          label: 'Exportar solicitud',
+          label: 'Exportar en PDF',
           icon: 'pi pi-file-pdf',
-          command: () => this.exportSingleRequestReport(this.request()!),
+          command: () => this.exportSingleRequestReport({ request: this.request()!, type: ExportType.PDF }),
+        },
+        {
+          label: 'Exportar en Excel',
+          icon: 'pi pi-file-excel',
+          command: () => this.exportSingleRequestReport({ request: this.request()!, type: ExportType.EXCEL }),
         },
       ],
     },
@@ -124,7 +139,8 @@ export class RequestView implements OnInit {
     });
   }
 
-  async exportSingleRequestReport(request: RequestClass): Promise<void> {
+  async exportSingleRequestReport(args: { request: RequestClass; type: ExportType }): Promise<void> {
+    const { request, type } = args;
     try {
       // Información del retiro para el reporte
       const retreatInfo = {
@@ -137,17 +153,24 @@ export class RequestView implements OnInit {
       // Obtener información de la ciudad desde el layout
       const cityInfo = Ss.authService.current_user()?.cityData;
 
-      // Generar el PDF
-      await this.pdfService.generateReport(PdfReportType.SINGLE_REQUEST_REPORT, { request, retreatInfo }, cityInfo);
-
-      Ss.toastService.success({
-        message: 'Reporte de solicitud individual generado',
-        title: 'PDF Exportado',
-      });
+      // Generar el reporte según el tipo
+      if (type === ExportType.EXCEL) {
+        await this.excelService.generateReport(ExcelReportType.SINGLE_REQUEST_REPORT, { request, retreatInfo }, cityInfo);
+        Ss.toastService.success({
+          message: 'Reporte de solicitud individual generado',
+          title: 'Excel Exportado',
+        });
+      } else {
+        await this.pdfService.generateReport(PdfReportType.SINGLE_REQUEST_REPORT, { request, retreatInfo }, cityInfo);
+        Ss.toastService.success({
+          message: 'Reporte de solicitud individual generado',
+          title: 'PDF Exportado',
+        });
+      }
     } catch (error) {
-      console.error('Error al exportar PDF:', error);
+      console.error(`Error al exportar ${type === ExportType.EXCEL ? 'Excel' : 'PDF'}:`, error);
       Ss.toastService.error({
-        message: 'Error al generar el reporte PDF',
+        message: `Error al generar el reporte ${type === ExportType.EXCEL ? 'Excel' : 'PDF'}`,
         title: 'Error',
       });
     }

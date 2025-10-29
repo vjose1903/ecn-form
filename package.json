@@ -23,6 +23,7 @@
     "@tailwindcss/postcss": "^4.1.10",
     "@twogate/ngx-photo-gallery": "^1.8.0",
     "angular-svg-icon": "^19.1.1",
+    "exceljs": "^4.4.0",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "postcss": "^8.5.6",
