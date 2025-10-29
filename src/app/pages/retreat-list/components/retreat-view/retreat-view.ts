@@ -18,11 +18,15 @@ import { FormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { RequestService } from '@core/entities/request/request.service';
 import { ViewItem } from '@core/components/view-item/view-item';
-import { PdfService, CoupleInfo, PdfReportType } from '../../utils/pdf.service';
+import { PdfService, CoupleInfo } from '../../utils/pdf.service';
+import { ExcelService } from '../../utils/excel.service';
+import { MenuItem } from 'primeng/api';
+import { MenuModule } from 'primeng/menu';
+import { ExportType, ReportType } from '@pages/retreat-list/utils/export.utils';
 
 @Component({
   selector: 'app-retreat-view',
-  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, DividerLine, BadgeModule, RequestCard, SelectModule, FormsModule, LowerCasePipe, InputTextModule, ViewItem],
+  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, DividerLine, BadgeModule, RequestCard, SelectModule, FormsModule, LowerCasePipe, InputTextModule, ViewItem, MenuModule],
   templateUrl: './retreat-view.html',
   styleUrl: './retreat-view.scss',
 })
@@ -30,6 +34,7 @@ export class RetreatView implements OnInit, OnDestroy {
   requests = signal<RequestClass[]>([]);
   requestsService = inject(RequestService);
   pdfService = inject(PdfService);
+  excelService = inject(ExcelService);
 
   requestFiltered = computed(() => {
     const word = this.filterWord();
@@ -78,6 +83,24 @@ export class RetreatView implements OnInit, OnDestroy {
   retreat!: RetreatClass;
   loading = signal(false);
 
+  exportActions: MenuItem[] = [
+    {
+      label: 'Exportar',
+      items: [
+        {
+          label: 'Exportar en PDF',
+          icon: 'pi pi-file-pdf',
+          command: () => this.exportCouplesCallInfo({ type: ExportType.PDF }),
+        },
+        {
+          label: 'Exportar en Excel',
+          icon: 'pi pi-file-excel',
+          command: () => this.exportCouplesCallInfo({ type: ExportType.EXCEL }),
+        },
+      ],
+    },
+  ];
+
   private destroy$ = new Subject<void>();
 
   get keys() {
@@ -107,7 +130,7 @@ export class RetreatView implements OnInit, OnDestroy {
         this.updateRequestStats(requests);
         this.fetchingRequests.set(false);
 
-        requests[0]
+        requests[0];
       });
     } catch (error) {
       Ss.toastService.error({ message: 'Error al obtener las solicitudes', title: 'Error' });
@@ -212,7 +235,8 @@ export class RetreatView implements OnInit, OnDestroy {
     return 'No definida';
   }
 
-  async exportCouplesCallInfo(): Promise<void> {
+  async exportCouplesCallInfo(args: { type: ExportType }): Promise<void> {
+    const { type } = args;
     try {
       // Obtener las solicitudes aceptadas para el reporte
       const acceptedRequests = this.requests().filter(request => request.status === RequestStatus.ACCEPTED);
@@ -277,17 +301,24 @@ export class RetreatView implements OnInit, OnDestroy {
       // Obtener información de la ciudad desde el layout
       const cityInfo = Ss.authService.current_user()?.cityData;
 
-      // Generar el PDF
-      await this.pdfService.generateReport(PdfReportType.COUPLES_REPORT, { couples, retreatInfo }, cityInfo);
-
-      Ss.toastService.success({
-        message: `Reporte generado con ${couples.length} parejas`,
-        title: 'PDF Exportado',
-      });
+      // Generar el reporte según el tipo
+      if (type === ExportType.EXCEL) {
+        await this.excelService.generateReport(ReportType.COUPLES_REPORT, { couples, retreatInfo }, cityInfo);
+        Ss.toastService.success({
+          message: `Reporte Excel generado con ${couples.length} parejas`,
+          title: 'Excel Exportado',
+        });
+      } else {
+        await this.pdfService.generateReport(ReportType.COUPLES_REPORT, { couples, retreatInfo }, cityInfo);
+        Ss.toastService.success({
+          message: `Reporte generado con ${couples.length} parejas`,
+          title: 'PDF Exportado',
+        });
+      }
     } catch (error) {
-      console.error('Error al exportar PDF:', error);
+      console.error(`Error al exportar ${type === ExportType.EXCEL ? 'Excel' : 'PDF'}:`, error);
       Ss.toastService.error({
-        message: 'Error al generar el reporte PDF',
+        message: `Error al generar el reporte ${type === ExportType.EXCEL ? 'Excel' : 'PDF'}`,
         title: 'Error',
       });
     }

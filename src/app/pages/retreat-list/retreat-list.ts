@@ -132,16 +132,6 @@ export class RetreatList implements OnInit, OnDestroy {
       // El observable retreats$ emitirá automáticamente cuando se carguen los datos
       // El observable loadingRetreats$ se encargará de mostrar el estado de carga
       await this.retreatService.getAll();
-
-      // TODO: Temporal
-      // Obtener el primer retiro activo
-      const firstRetreat = this.retreatService.retreats.find(retreat => retreat.is_active);
-      if (firstRetreat) {
-        // Abrir el formulario de retiro con el primer retiro activo
-        firstRetreat.openView()
-
-        
-      }
     } catch (error) {
       console.error('Error al inicializar datos:', error);
     }
