@@ -134,8 +134,6 @@ export class RequestView implements OnInit {
           this._request.set(newRequest);
           this.config.data.request = newRequest;
         }
-      } else {
-        console.log('Modal cerrado sin datos');
       }
     });
   }

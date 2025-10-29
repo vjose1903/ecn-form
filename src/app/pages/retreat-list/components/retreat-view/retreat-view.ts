@@ -303,14 +303,12 @@ export class RetreatView implements OnInit, OnDestroy {
 
       // Generar el reporte según el tipo
       if (type === ExportType.EXCEL) {
-        console.log('%c ---- Exportando en Excel ---- ', 'color: lime; font-weight: bold;');
         await this.excelService.generateReport(ReportType.COUPLES_REPORT, { couples, retreatInfo }, cityInfo);
         Ss.toastService.success({
           message: `Reporte Excel generado con ${couples.length} parejas`,
           title: 'Excel Exportado',
         });
       } else {
-        console.log('%c ---- Exportando en Pdf ---- ', 'color: red; font-weight: bold;');
         await this.pdfService.generateReport(ReportType.COUPLES_REPORT, { couples, retreatInfo }, cityInfo);
         Ss.toastService.success({
           message: `Reporte generado con ${couples.length} parejas`,
