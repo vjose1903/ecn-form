@@ -18,10 +18,11 @@ import { FormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { RequestService } from '@core/entities/request/request.service';
 import { ViewItem } from '@core/components/view-item/view-item';
-import { PdfService, CoupleInfo, PdfReportType, ExportType } from '../../utils/pdf.service';
-import { ExcelService, ExcelReportType } from '../../utils/excel.service';
+import { PdfService, CoupleInfo } from '../../utils/pdf.service';
+import { ExcelService } from '../../utils/excel.service';
 import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
+import { ExportType, ReportType } from '@pages/retreat-list/utils/export.utils';
 
 @Component({
   selector: 'app-retreat-view',
@@ -302,13 +303,15 @@ export class RetreatView implements OnInit, OnDestroy {
 
       // Generar el reporte según el tipo
       if (type === ExportType.EXCEL) {
-        await this.excelService.generateReport(ExcelReportType.COUPLES_REPORT, { couples, retreatInfo }, cityInfo);
+        console.log('%c ---- Exportando en Excel ---- ', 'color: lime; font-weight: bold;');
+        await this.excelService.generateReport(ReportType.COUPLES_REPORT, { couples, retreatInfo }, cityInfo);
         Ss.toastService.success({
           message: `Reporte Excel generado con ${couples.length} parejas`,
           title: 'Excel Exportado',
         });
       } else {
-        await this.pdfService.generateReport(PdfReportType.COUPLES_REPORT, { couples, retreatInfo }, cityInfo);
+        console.log('%c ---- Exportando en Pdf ---- ', 'color: red; font-weight: bold;');
+        await this.pdfService.generateReport(ReportType.COUPLES_REPORT, { couples, retreatInfo }, cityInfo);
         Ss.toastService.success({
           message: `Reporte generado con ${couples.length} parejas`,
           title: 'PDF Exportado',

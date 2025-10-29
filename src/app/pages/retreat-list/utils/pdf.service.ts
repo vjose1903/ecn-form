@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { CouplesReportTemplate, SingleRequestReportTemplate } from './templates';
+import { ExportType, getFileName, ReportType } from './export.utils';
 
 export interface ParticipantInfo {
   name: string;
@@ -38,35 +39,25 @@ export interface PdfTemplate {
   generateContent(doc: jsPDF, data: any, cityInfo?: CityInfo): Promise<void>;
 }
 
-export enum PdfReportType {
-  COUPLES_REPORT = 'couples',
-  SINGLE_REQUEST_REPORT = 'single_request',
-}
-
-export enum ExportType {
-  PDF = 'pdf',
-  EXCEL = 'excel',
-}
-
 @Injectable({
   providedIn: 'root',
 })
 export class PdfService {
-  private templates: Map<PdfReportType, PdfTemplate> = new Map();
+  private templates: Map<ReportType, PdfTemplate> = new Map();
 
   constructor() {
     this.initializeTemplates();
   }
 
   private initializeTemplates(): void {
-    this.templates.set(PdfReportType.COUPLES_REPORT, new CouplesReportTemplate());
-    this.templates.set(PdfReportType.SINGLE_REQUEST_REPORT, new SingleRequestReportTemplate());
+    this.templates.set(ReportType.COUPLES_REPORT, new CouplesReportTemplate());
+    this.templates.set(ReportType.SINGLE_REQUEST_REPORT, new SingleRequestReportTemplate());
   }
 
   /**
    * Genera un PDF genérico basado en el tipo de reporte especificado
    */
-  async generateReport(reportType: PdfReportType, data: any, cityInfo?: CityInfo): Promise<void> {
+  async generateReport(reportType: ReportType, data: any, cityInfo?: CityInfo): Promise<void> {
     const template = this.templates.get(reportType);
     if (!template) {
       throw new Error(`Template no encontrado para el tipo: ${reportType}`);
@@ -80,11 +71,15 @@ export class PdfService {
     // Generar el contenido específico del template
     await template.generateContent(doc, data, cityInfo);
 
-    // Abrir el PDF en una nueva pestaña
+    // Descargar el PDF directamente
     const pdfBlob = doc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
-
-    window.open(pdfUrl, '_blank');
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.download = getFileName(reportType, ExportType.PDF, data);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
     // Limpiar la URL del objeto después de un tiempo
     setTimeout(() => URL.revokeObjectURL(pdfUrl), 1000);
@@ -94,14 +89,14 @@ export class PdfService {
    * Genera un PDF con la información de las parejas en formato de tabla
    */
   async generateCouplesReport(couples: CoupleInfo[], retreatInfo: RetreatInfo, cityInfo?: CityInfo): Promise<void> {
-    await this.generateReport(PdfReportType.COUPLES_REPORT, { couples, retreatInfo }, cityInfo);
+    await this.generateReport(ReportType.COUPLES_REPORT, { couples, retreatInfo }, cityInfo);
   }
 
   /**
    * Genera un PDF con la información de una solicitud específica
    */
   async generateSingleRequestReport(request: any, retreatInfo: RetreatInfo, cityInfo?: CityInfo): Promise<void> {
-    await this.generateReport(PdfReportType.SINGLE_REQUEST_REPORT, { request, retreatInfo }, cityInfo);
+    await this.generateReport(ReportType.SINGLE_REQUEST_REPORT, { request, retreatInfo }, cityInfo);
   }
 
   /**

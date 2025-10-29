@@ -16,8 +16,9 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MenuModule } from 'primeng/menu';
 import { MenuItem } from 'primeng/api';
 import { FormPage } from '@pages/form-page/form-page';
-import { ExportType, PdfReportType, PdfService } from '@pages/retreat-list/utils/pdf.service';
-import { ExcelService, ExcelReportType } from '@pages/retreat-list/utils/excel.service';
+import { PdfService } from '@pages/retreat-list/utils/pdf.service';
+import { ExcelService } from '@pages/retreat-list/utils/excel.service';
+import { ExportType, ReportType } from '@pages/retreat-list/utils/export.utils';
 
 @Component({
   selector: 'app-request-view',
@@ -155,13 +156,13 @@ export class RequestView implements OnInit {
 
       // Generar el reporte según el tipo
       if (type === ExportType.EXCEL) {
-        await this.excelService.generateReport(ExcelReportType.SINGLE_REQUEST_REPORT, { request, retreatInfo }, cityInfo);
+        await this.excelService.generateReport(ReportType.SINGLE_REQUEST_REPORT, { request, retreatInfo }, cityInfo);
         Ss.toastService.success({
           message: 'Reporte de solicitud individual generado',
           title: 'Excel Exportado',
         });
       } else {
-        await this.pdfService.generateReport(PdfReportType.SINGLE_REQUEST_REPORT, { request, retreatInfo }, cityInfo);
+        await this.pdfService.generateReport(ReportType.SINGLE_REQUEST_REPORT, { request, retreatInfo }, cityInfo);
         Ss.toastService.success({
           message: 'Reporte de solicitud individual generado',
           title: 'PDF Exportado',
