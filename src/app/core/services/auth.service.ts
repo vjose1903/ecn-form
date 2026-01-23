@@ -5,7 +5,6 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   signInWithPopup,
-  GoogleAuthProvider,
   UserCredential,
   AuthError,
   AuthErrorCodes,
@@ -235,52 +234,6 @@ export class AuthService implements OnDestroy {
               title: authResult.title ?? 'Error',
             });
             reject(error);
-          });
-      });
-    });
-  }
-
-  /**
-   * Inicia sesión con Google
-   */
-  async loginWithGooglePopup(): Promise<void> {
-    return runInInjectionContext(this.injector, () => {
-      return new Promise<void>((resolve, reject) => {
-        this.isLoading.set(true);
-
-        const provider = new GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
-
-        signInWithPopup(this.auth, provider)
-          .then(async (userCredential: UserCredential) => {
-            try {
-              // El listener de onAuthStateChanged se encargará del resto
-              resolve();
-            } catch (error) {
-              console.error('❌ [AuthService] Error en login con Google:', error);
-              reject(error);
-            }
-          })
-          .catch(error => {
-            console.error('❌ [AuthService] Error de autenticación con Google:', error);
-
-            // Ignorar errores de cancelación de popup
-            const ignoreErrors = [AuthErrorCodes.POPUP_CLOSED_BY_USER, AuthErrorCodes.POPUP_BLOCKED, AuthErrorCodes.EXPIRED_POPUP_REQUEST, AuthErrorCodes.USER_CANCELLED];
-
-            if (ignoreErrors.includes(error.code)) {
-              resolve();
-              return;
-            }
-
-            const authResult = this.getAuthMessage(error);
-            this.toastService.error({
-              message: authResult.message ?? 'Error al iniciar sesión con Google',
-              title: authResult.title ?? 'Error',
-            });
-            reject(error);
-          })
-          .finally(() => {
-            this.isLoading.set(false);
           });
       });
     });

@@ -31,7 +31,7 @@ export class Login implements OnInit, OnDestroy {
 
   // Usar el signal de loading del AuthService
   isLoading = this.auth.isLoading;
-  isGoogleLoading = signal(false);
+
   isSubmitting = signal(false);
 
   private destroy$ = new Subject<void>();
@@ -74,24 +74,6 @@ export class Login implements OnInit, OnDestroy {
       } finally {
         this.isSubmitting.set(false);
       }
-    }
-  }
-
-  async onGoogleLogin() {
-    if (this.isSubmitting()) return;
-    
-    this.isSubmitting.set(true);
-    this.isGoogleLoading.set(true);
-
-    try {
-      await this.auth.loginWithGooglePopup();
-      // El efecto se encargará de la redirección
-    } catch (error) {
-      console.error('❌ [Login] Error en login con Google:', error);
-      // El error ya se maneja en el AuthService
-    } finally {
-      this.isSubmitting.set(false);
-      this.isGoogleLoading.set(false);
     }
   }
 

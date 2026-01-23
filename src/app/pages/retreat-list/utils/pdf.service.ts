@@ -103,7 +103,7 @@ export class PdfService {
    * Configura el header común para todos los PDFs
    */
   private async setupCommonHeader(doc: jsPDF, cityInfo?: CityInfo): Promise<void> {
-    const img = await this.loadImage('/images/Logo_ECN.png');
+    const img = await this.loadImage('/images/logo-ecn-horizontal.png');
     const cityLabel = cityInfo?.large_label || 'Ciudad';
     const baseColor = [193, 0, 7] as [number, number, number];
     const accentColor = [235, 187, 193];

@@ -3,10 +3,11 @@
   --p-accordion-border-radius: 6px;
 }
 
-@import 'tailwindcss';
+@import "tailwindcss";
+
 
 @theme {
-  --color-ecn-primary: #1a365d;
+  --color-brand-primary: #a83044;
 }
 
 @layer utilities {
