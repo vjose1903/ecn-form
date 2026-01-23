@@ -25,7 +25,7 @@
     [ngClass]="{'text-red-700 bg-red-100 hover:bg-red-200': severity === 'danger','text-black hover:bg-gray-100': severity === 'contrast' }"
     (click)="executeCommand(item)"
     [routerLink]="item.link"
-    [routerLinkActive]="'bg-gray-200 hover:bg-gray-300 font-bold'">
+    [routerLinkActive]="'bg-brand-primary/20 hover:!bg-brand-primary/30 font-bold text-brand-primary'">
     <i class="{{ icon }} opacity-40 group-hover:opacity-100 transition-opacity" style="font-size: 1.2rem" [routerLinkActive]="'opacity-100'"></i>
     <span>{{ label }}</span>
   </div>

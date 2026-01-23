@@ -56,32 +56,6 @@
         </p-button>
       </div>
 
-      <!-- Google Login -->
-      <div class="flex justify-center">
-        <p-button 
-          type="button" 
-          [disabled]="isLoading() || isGoogleLoading()" 
-          [rounded]="true" 
-          severity="secondary" 
-          [outlined]="true" 
-          styleClass="w-10 h-10 relative" 
-          [loading]="isLoading() || isGoogleLoading()"
-          (onClick)="onGoogleLogin()"
-        >
-          @if(!isLoading()) {
-            <img src="icons/google-icon.svg" class="absolute w-5 h-5" />
-          }
-        </p-button>
-      </div>
-
-      <!-- Loading message for Google -->
-      @if(isGoogleLoading()) {
-        <div class="text-center text-sm text-gray-600">
-          <p>Redirigiendo a Google...</p>
-          <p class="text-xs mt-1">Si no se abre automáticamente, revisa tu navegador</p>
-        </div>
-      }
-
       <!-- Sign up link -->
       <!-- <div class="text-center">
         <p class="text-sm text-gray-600">
