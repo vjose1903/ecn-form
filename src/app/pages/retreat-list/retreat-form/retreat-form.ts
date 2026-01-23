@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, effect, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule, TitleCasePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
@@ -22,15 +22,17 @@ import { RetreatClass } from '@core/entities/retreat/retreat.class';
 import { fun } from '@core/services/functions.service';
 import { yesNoOptions } from '@core/typescript/constants';
 import { SelectButtonModule } from 'primeng/selectbutton';
+import { SkeletonModule } from 'primeng/skeleton';
 import { UserService } from '@core/entities/user/user.service';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-retreat-form',
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, FormsModule, DatePickerModule, InputNumberModule, TextareaModule, FormErrorMsgComponent, SelectModule, TitleCasePipe, SelectButtonModule],
+  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, FormsModule, DatePickerModule, InputNumberModule, TextareaModule, FormErrorMsgComponent, SelectModule, TitleCasePipe, SelectButtonModule, SkeletonModule],
   templateUrl: './retreat-form.html',
   styleUrl: './retreat-form.scss',
 })
-export class RetreatForm implements OnInit {
+export class RetreatForm implements OnInit, OnDestroy {
   private deviceDetectorService = inject(DeviceDetectorService);
   private retreatService = inject(RetreatService);
   private retreatHomeService = inject(RetreatHomeService);
@@ -50,6 +52,8 @@ export class RetreatForm implements OnInit {
   retreatHomes = signal<RetreatHomeClass[]>([]);
   mixedModalityDates = signal<{ date: string; label: string }[]>([]);
   mixedModalityData = signal<{ [key: string]: RetreatModalityType }>({});
+  retreatHomesLoading = signal(true);
+  private destroy$ = new Subject<void>();
 
   // Opciones para el dropdown de modalidad
   modalityOptions = [
@@ -94,14 +98,19 @@ export class RetreatForm implements OnInit {
     this.setupFormEffects();
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     if (this.config?.data?.retreat) {
       this.retreat = this.config.data.retreat;
     }
+    this.loadRetreatHomes();
 
     this.createForm(this.retreat);
     this.subscribeToForm();
-    this.getRetreatHomes();
+    this.setupRetreatHomeStreams();
+  }
+
+  get showSkeleton(): boolean {
+    return !this.form || this.retreatHomesLoading();
   }
 
   createForm(retreat: RetreatClass | undefined) {
@@ -122,13 +131,40 @@ export class RetreatForm implements OnInit {
     this.formGroup.set(form);
   }
 
-  getRetreatHomes() {
-    this.retreatHomeService.loadingRetreatHomes$.subscribe(loading => {
-      if (!loading) {
-        const activeRetreatHomes = this.retreatHomeService.retreatHomes.filter(retreatHome => retreatHome.is_active);
-        this.retreatHomes.set(activeRetreatHomes);
-      }
+  private async loadRetreatHomes(): Promise<void> {
+    if (this.retreatHomeService.retreatHomes.length === 0) {
+      this.retreatHomesLoading.set(true);
+    }
+
+    try {
+      await this.retreatHomeService.getAll();
+    } catch (error) {
+      console.error('Error al cargar casas de retiro:', error);
+    } finally {
+      this.retreatHomesLoading.set(this.retreatHomeService.loadingRetreatHomes);
+    }
+  }
+
+  private setupRetreatHomeStreams(): void {
+    this.retreatHomeService.retreatHomes$.pipe(takeUntil(this.destroy$)).subscribe(retreatHomes => {
+      const activeRetreatHomes = retreatHomes.filter(retreatHome => retreatHome.is_active);
+      this.retreatHomes.set(activeRetreatHomes);
     });
+
+    this.retreatHomeService.loadingRetreatHomes$.pipe(takeUntil(this.destroy$)).subscribe(loading => {
+      this.retreatHomesLoading.set(loading);
+    });
+
+    if (this.retreatHomeService.retreatHomes.length > 0) {
+      const activeRetreatHomes = this.retreatHomeService.retreatHomes.filter(retreatHome => retreatHome.is_active);
+      this.retreatHomes.set(activeRetreatHomes);
+      this.retreatHomesLoading.set(false);
+    }
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   test() {
@@ -142,6 +178,7 @@ export class RetreatForm implements OnInit {
   private setupFormEffects(): void {
     effect(() => {
       const form = this.formGroup();
+
       if (form) {
         if (this.loading()) {
           // Deshabilitar todos los campos del formulario

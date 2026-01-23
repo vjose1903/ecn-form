@@ -84,7 +84,7 @@ export class RetreatList implements OnInit, OnDestroy {
     sorting: {
       enabled: true,
       field: 'number',
-      order: 'asc',
+      order: 'desc',
       options: this.sortOptions,
       onSortChange: sorting => this.onSortingChanged(sorting),
     },
