@@ -161,7 +161,7 @@ export class ReferenceResolver {
       await this.processBatchesParallel(uncachedRefs, result);
     }
 
-    return result;
+    return Promise.all(result.map(value => (this.isPromise(value) ? value : value)));
   }
 
   /**
@@ -184,6 +184,10 @@ export class ReferenceResolver {
     for (let i = concurrentBatches; i < batches.length; i++) {
       await this.processBatch(batches[i], result);
     }
+  }
+
+  private isPromise(value: any): value is Promise<any> {
+    return !!value && typeof value.then === 'function';
   }
 
   /**
