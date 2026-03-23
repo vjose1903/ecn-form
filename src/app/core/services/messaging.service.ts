@@ -12,6 +12,8 @@ export class MessagingService {
   private readonly tokenStorageKey = 'ecn_web_push_token';
   private readonly swUrl = '/firebase-messaging-sw.js';
   private readonly swScope = '/firebase-cloud-messaging-push-scope';
+  private readonly notificationIcon = '/icons/icon-192x192.png';
+  private readonly notificationBadge = '/icons/notification-badge.svg';
 
   private firestore = inject(Firestore);
   private messaging = inject(Messaging);
@@ -129,8 +131,8 @@ export class MessagingService {
 
       const notification = new Notification(title, {
         body,
-        icon: '/icons/icon-192x192.png',
-        badge: '/icons/icon-72x72.png',
+        icon: this.notificationIcon,
+        badge: this.notificationBadge,
         data: { url },
       });
 

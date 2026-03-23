@@ -39,6 +39,8 @@ import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { FormStatsUtils } from './utils/form-stats';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
+import { environment } from 'environments/environment';
+import { formDataMuck } from './form-page.muck';
 
 @Component({
   selector: 'app-form-page',
@@ -91,6 +93,7 @@ export class FormPage implements OnInit {
 
   openedAccordionPanel: number[] = [0, 1, 2];
   previousRequests = signal<RequestClass[]>([]);
+  readonly showDevTestButton = !environment.production;
 
   formGroup = this.fb.group({
     [FormControlName.id]: [''],
@@ -320,7 +323,76 @@ export class FormPage implements OnInit {
     return Promise.resolve();
   }
 
-  test() {}
+  async test(): Promise<void> {
+    const retreats = this.retreats();
+
+    if (!retreats?.length) {
+      Ss.toastService.warning({
+        title: 'Sin retiros',
+        message: 'No hay retiros disponibles para cargar datos de prueba.',
+      });
+      return;
+    }
+
+    const retreatId = this.formGroup.get(FormControlName.retreat)?.value || this.retreatSelected()?.id || retreats[0]?.id;
+
+    if (!retreatId) {
+      Ss.toastService.warning({
+        title: 'Retiro no disponible',
+        message: 'No se pudo seleccionar un retiro para la prueba.',
+      });
+      return;
+    }
+
+    const mockRequest = this.getMockRequest(retreatId);
+
+    this.formGroup.patchValue(mockRequest as any);
+    await this.onRetreatChange(retreatId);
+    this.openedAccordionPanel = [0, 1, 2];
+
+    Ss.toastService.success({
+      title: 'Formulario completado',
+      message: 'Se cargaron los datos de prueba en el formulario.',
+    });
+  }
+
+  private getMockRequest(retreatId: string): RequestI {
+    return {
+      ...formDataMuck,
+      retreat: retreatId,
+      wedding_date: this.parseMockDate(formDataMuck.wedding_date),
+      she: {
+        ...formDataMuck.she,
+        birth_date: this.parseMockDate(formDataMuck.she.birth_date) ?? '',
+        family_information: formDataMuck.she.family_information.map(member => ({ ...member })),
+      },
+      he: {
+        ...formDataMuck.he,
+        birth_date: this.parseMockDate(formDataMuck.he.birth_date) ?? '',
+        family_information: formDataMuck.he.family_information.map(member => ({ ...member })),
+      },
+    };
+  }
+
+  private parseMockDate(value: Date | string | { seconds: number; nanoseconds: number } | null | undefined): Date | null {
+    if (!value) {
+      return null;
+    }
+
+    if (value instanceof Date) {
+      return value;
+    }
+
+    if (typeof value === 'string' || typeof value === 'number') {
+      return new Date(value);
+    }
+
+    if (typeof value === 'object' && 'seconds' in value) {
+      return new Date(value.seconds * 1000);
+    }
+
+    return null;
+  }
 
   onRetry() {
     window.location.reload();

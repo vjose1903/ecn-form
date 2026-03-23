@@ -22,7 +22,7 @@ export const formDataMuck: RequestI = {
     have_children: false,
     city_of_residence: 'La Vega',
     address: 'Por ahi',
-    email: 'vjvasquez1903@gmail.com',
+    email: 'vjose1903@outlook.es',
     cell_phone: '(809) 876-3373',
     home_phone: '',
     work_phone: '',
