@@ -14,15 +14,13 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  if (payload.notification) {
-    return;
-  }
-
-  const title = payload.data?.title || 'Nueva solicitud recibida';
+  const title = payload.notification?.title || payload.data?.title || 'Nueva solicitud recibida';
   const options = {
-    body: payload.data?.body || 'Tienes una nueva solicitud para revisar.',
+    body: payload.notification?.body || payload.data?.body || 'Tienes una nueva solicitud para revisar.',
     icon: '/icons/icon-192x192.png',
     badge: '/icons/notification-badge.svg',
+    tag: payload.data?.tag || payload.notification?.tag || 'ecn-retreat-request',
+    renotify: false,
     data: {
       url: payload.data?.url || '/retiros',
       ...payload.data,
