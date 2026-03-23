@@ -14,11 +14,15 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  const title = payload.notification?.title || 'Nueva solicitud recibida';
+  if (payload.notification) {
+    return;
+  }
+
+  const title = payload.data?.title || 'Nueva solicitud recibida';
   const options = {
-    body: payload.notification?.body || 'Tienes una nueva solicitud para revisar.',
+    body: payload.data?.body || 'Tienes una nueva solicitud para revisar.',
     icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-72x72.png',
+    badge: '/icons/notification-badge.svg',
     data: {
       url: payload.data?.url || '/retiros',
       ...payload.data,
