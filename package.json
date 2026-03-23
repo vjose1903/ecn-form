@@ -21,6 +21,7 @@
     "@angular/forms": "^21.2.5",
     "@angular/platform-browser": "^21.2.5",
     "@angular/router": "^21.2.5",
+    "@angular/service-worker": "^21.2.5",
     "@primeuix/themes": "^2.0.3",
     "@twogate/ngx-photo-gallery": "^1.8.0",
     "angular-svg-icon": "^19.1.1",
