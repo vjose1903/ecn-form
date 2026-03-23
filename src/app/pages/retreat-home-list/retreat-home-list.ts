@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -11,7 +11,7 @@ import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-retreat-home-list',
-  imports: [CommonModule, ButtonModule, DynamicDataviewComponent],
+  imports: [ButtonModule, DynamicDataviewComponent],
   templateUrl: './retreat-home-list.html',
   styleUrl: './retreat-home-list.scss',
 })

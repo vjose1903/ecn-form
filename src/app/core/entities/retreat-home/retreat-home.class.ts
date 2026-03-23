@@ -232,6 +232,11 @@ export class RetreatHomeClass {
         breakpoints: { '960px': '75vw', '640px': '90vw' },
       });
 
+      if (!ref) {
+        resolve();
+        return;
+      }
+
       ref.onClose.subscribe((result: RetreatHomeI) => {
         resolve();
       });

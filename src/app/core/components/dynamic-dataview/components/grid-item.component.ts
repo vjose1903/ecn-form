@@ -1,10 +1,10 @@
 import { Component, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 
 @Component({
   selector: 'grid-item',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   template: `
     <div class="grid-item p-3 border rounded shadow-sm">
       <div class="text-center">

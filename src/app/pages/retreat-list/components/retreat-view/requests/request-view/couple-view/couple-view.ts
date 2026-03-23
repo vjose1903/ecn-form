@@ -1,5 +1,5 @@
 import { Component, computed, input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { TagModule } from 'primeng/tag';
 import { DividerLine } from '@core/components/divider-line/divider-line';
 import { ViewItem } from '@core/components/view-item/view-item';
@@ -9,7 +9,7 @@ import { BadgeModule } from 'primeng/badge';
 
 @Component({
   selector: 'couple-view',
-  imports: [CommonModule, TagModule, DividerLine, AngularSvgIconModule, BadgeModule, ViewItem],
+  imports: [TagModule, DividerLine, AngularSvgIconModule, BadgeModule, ViewItem],
   templateUrl: './couple-view.html',
   styleUrl: './couple-view.scss',
 })

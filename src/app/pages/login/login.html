@@ -34,35 +34,37 @@
 
       <!-- Remember me & Forgot password -->
       <!-- <div class="flex items-center justify-end">
-        <div class="text-sm">
-          <a href="#" class="font-medium text-red-500 hover:text-red-800 transition-colors"> ¿Olvidaste tu contraseña? </a>
-        </div>
-      </div> -->
+      <div class="text-sm">
+        <a href="#" class="font-medium text-red-500 hover:text-red-800 transition-colors"> ¿Olvidaste tu contraseña? </a>
+      </div>
+    </div> -->
 
-      <!-- Submit Button -->
-      <div class="mt-15">
-        <!-- <p-button type="button" label="test" (onClick)="onTest()" /> -->
+    <!-- Submit Button -->
+    <div class="mt-15">
+      <!-- <p-button type="button" label="test" (onClick)="onTest()" /> -->
 
-        <p-button [disabled]="isLoading() || !formGroup.valid" type="submit" styleClass="w-full" [loading]="isLoading()">
-          <span *ngIf="!isLoading()" class="absolute left-0 inset-y-0 flex items-center pl-3">
+      <p-button [disabled]="isLoading() || !formGroup.valid" type="submit" styleClass="w-full" [loading]="isLoading()">
+        @if (!isLoading()) {
+          <span class="absolute left-0 inset-y-0 flex items-center pl-3">
             <i class="pi pi-user text-red-200 group-hover:text-red-100"></i>
           </span>
+        }
 
-          @if(isLoading()) {
+        @if(isLoading()) {
           <span>Iniciando sesión...</span>
-          } @else {
+        } @else {
           <span> Iniciar Sesión </span>
-          }
-        </p-button>
-      </div>
+        }
+      </p-button>
+    </div>
 
-      <!-- Sign up link -->
-      <!-- <div class="text-center">
-        <p class="text-sm text-gray-600">
-          ¿No tienes una cuenta?
-          <a href="#" class="font-medium text-red-600 hover:text-red-500 transition-colors"> Regístrate aquí </a>
-        </p>
-      </div> -->
-    </form>
-  </div>
+    <!-- Sign up link -->
+    <!-- <div class="text-center">
+    <p class="text-sm text-gray-600">
+      ¿No tienes una cuenta?
+      <a href="#" class="font-medium text-red-600 hover:text-red-500 transition-colors"> Regístrate aquí </a>
+    </p>
+  </div> -->
+</form>
+</div>
 </div>

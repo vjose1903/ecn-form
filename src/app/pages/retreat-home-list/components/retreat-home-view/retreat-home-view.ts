@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal, OnDestroy } from '@angular/core';
 import { RetreatHomeClass } from '@core/entities/retreat-home/retreat-home.class';
-import { CommonModule } from '@angular/common';
+
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
@@ -15,7 +15,7 @@ import { ViewItem } from '@core/components/view-item/view-item';
 
 @Component({
   selector: 'app-retreat-home-view',
-  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, GalleriaModule, DividerLine, GalleryComponent, ViewItem],
+  imports: [ButtonModule, CardModule, TooltipModule, TagModule, GalleriaModule, DividerLine, GalleryComponent, ViewItem],
   templateUrl: './retreat-home-view.html',
   styleUrl: './retreat-home-view.scss',
 })

@@ -1,11 +1,11 @@
 import { Component, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { SkeletonModule } from 'primeng/skeleton';
 
 @Component({
   selector: 'app-form-skeleton',
   standalone: true,
-  imports: [CommonModule, SkeletonModule],
+  imports: [SkeletonModule],
   templateUrl: './form-skeleton.component.html',
 })
 export class FormSkeletonComponent {

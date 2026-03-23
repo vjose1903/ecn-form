@@ -30,22 +30,28 @@
     <!-- Información del retiro -->
     <div class="space-y-2 text-xs text-gray-600 mb-3">
       <!-- Casa de retiro -->
-      <div *ngIf="item.hasRetreatHome" class="flex items-center gap-1">
-        <i class="pi pi-home mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-        <span class="line-clamp-2" [title]="item.retreatHomeName"> {{ item.retreatHomeName }} </span>
-      </div>
+      @if (item.hasRetreatHome) {
+        <div class="flex items-center gap-1">
+          <i class="pi pi-home mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
+          <span class="line-clamp-2" [title]="item.retreatHomeName"> {{ item.retreatHomeName }} </span>
+        </div>
+      }
 
       <!-- Modalidad -->
-      <div *ngIf="item.hasModality" class="flex items-center gap-1">
-        <i class="pi pi-globe mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-        <span class="truncate" [title]="item.displayModality"> {{ item.displayModality }} </span>
-      </div>
+      @if (item.hasModality) {
+        <div class="flex items-center gap-1">
+          <i class="pi pi-globe mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
+          <span class="truncate" [title]="item.displayModality"> {{ item.displayModality }} </span>
+        </div>
+      }
 
       <!-- Fechas -->
-      <div *ngIf="item.hasDates" class="flex items-center gap-1">
-        <i class="pi pi-calendar mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-        <span class="line-clamp-2" [title]="item.displayDateRange"> {{ item.displayDateRange }} </span>
-      </div>
+      @if (item.hasDates) {
+        <div class="flex items-center gap-1">
+          <i class="pi pi-calendar mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
+          <span class="line-clamp-2" [title]="item.displayDateRange"> {{ item.displayDateRange }} </span>
+        </div>
+      }
 
       <!-- Estado de solicitudes -->
       <div class="flex items-center gap-1">
@@ -54,42 +60,46 @@
       </div>
 
       <!-- cantidad de solicitudes -->
-      <div *ngIf="item.requestCount > 0" class="flex items-center gap-1">
-        <i class="pi pi-users mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-        <span class="truncate" [title]="item.requestCount"> {{ item.requestCount }} Solicitudes </span>
-      </div>
+      @if (item.requestCount > 0) {
+        <div class="flex items-center gap-1">
+          <i class="pi pi-users mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
+          <span class="truncate" [title]="item.requestCount"> {{ item.requestCount }} Solicitudes </span>
+        </div>
+      }
     </div>
   </div>
 
   <!-- Acciones -->
   <ng-template #footer>
-    <div *ngIf="showActions" class="flex justify-end items-center w-full">
-      <div class="flex items-center gap-1">
-        <p-button
-          *ngIf="item.is_active"
-          type="button"
-          icon="pi pi-pencil"
-          severity="secondary"
-          variant="text"
-          size="small"
-          [disabled]="loading()"
-          (onClick)="openEditForm()"
-          pTooltip="Editar"
-          tooltipPosition="top"
-          [attr.aria-label]="'Editar ' + item.displayNumber" />
-
-        <p-button
-          type="button"
-          [icon]="item.is_active ? 'pi pi-trash' : 'pi pi-undo'"
-          [severity]="item.is_active ? 'danger' : 'success'"
-          variant="text"
-          size="small"
-          [disabled]="loading()"
-          (onClick)="confirmToggleStatus()"
-          [pTooltip]="item.is_active ? 'Desactivar' : 'Activar'"
-          tooltipPosition="top"
-          [attr.aria-label]="(item.is_active ? 'Desactivar' : 'Activar') + ' ' + item.displayNumber" />
+    @if (showActions) {
+      <div class="flex justify-end items-center w-full">
+        <div class="flex items-center gap-1">
+          @if (item.is_active) {
+            <p-button
+              type="button"
+              icon="pi pi-pencil"
+              severity="secondary"
+              variant="text"
+              size="small"
+              [disabled]="loading()"
+              (onClick)="openEditForm()"
+              pTooltip="Editar"
+              tooltipPosition="top"
+              [attr.aria-label]="'Editar ' + item.displayNumber" />
+          }
+          <p-button
+            type="button"
+            [icon]="item.is_active ? 'pi pi-trash' : 'pi pi-undo'"
+            [severity]="item.is_active ? 'danger' : 'success'"
+            variant="text"
+            size="small"
+            [disabled]="loading()"
+            (onClick)="confirmToggleStatus()"
+            [pTooltip]="item.is_active ? 'Desactivar' : 'Activar'"
+            tooltipPosition="top"
+            [attr.aria-label]="(item.is_active ? 'Desactivar' : 'Activar') + ' ' + item.displayNumber" />
+        </div>
       </div>
-    </div>
+    }
   </ng-template>
 </p-card>

@@ -12,13 +12,19 @@
     <div class="flex items-center gap-x-3 flex-1 min-w-0">
       <!-- Imagen con lazy loading y fallback -->
       <div class="hidden md:block aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 w-22 h-22 flex-shrink-0">
-        <div *ngIf="!imageLoaded()" class="w-full h-full flex items-center justify-center">
-          <i class="pi pi-image text-gray-400 text-2xl"></i>
-        </div>
-        <img *ngIf="imageLoaded() && !imageError()" [src]="item.mainImageUrl" [alt]="'Imagen de ' + item.displayName" class="w-full h-full object-cover transition-opacity duration-200" loading="lazy" (error)="imageError.set(true)" />
-        <div *ngIf="imageError()" class="w-full h-full flex items-center justify-center bg-gray-200">
-          <i class="pi pi-image text-gray-500 text-xl"></i>
-        </div>
+        @if (!imageLoaded()) {
+          <div class="w-full h-full flex items-center justify-center">
+            <i class="pi pi-image text-gray-400 text-2xl"></i>
+          </div>
+        }
+        @if (imageLoaded() && !imageError()) {
+          <img [src]="item.mainImageUrl" [alt]="'Imagen de ' + item.displayName" class="w-full h-full object-cover transition-opacity duration-200" loading="lazy" (error)="imageError.set(true)" />
+        }
+        @if (imageError()) {
+          <div class="w-full h-full flex items-center justify-center bg-gray-200">
+            <i class="pi pi-image text-gray-500 text-xl"></i>
+          </div>
+        }
       </div>
 
       <!-- Información principal -->
@@ -34,22 +40,28 @@
         <!-- Información de contacto -->
         <div class="flex flex-wrap gap-x-7 gap-y-2 text-sm text-gray-600">
           <!-- Dirección -->
-          <span *ngIf="item.displayAddress" class="flex items-center min-w-0">
-            <i class="pi pi-map-marker mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-            <span class="line-clamp-2 truncate" [title]="item.displayAddress"> {{ item.displayAddress }} </span>
-          </span>
+          @if (item.displayAddress) {
+            <span class="flex items-center min-w-0">
+              <i class="pi pi-map-marker mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
+              <span class="line-clamp-2 truncate" [title]="item.displayAddress"> {{ item.displayAddress }} </span>
+            </span>
+          }
 
           <!-- Teléfono -->
-          <span *ngIf="item.hasPhone" class="flex items-center min-w-0">
-            <i class="pi pi-phone mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-            <span class="truncate" [title]="item.phone"> {{ item.phone }} </span>
-          </span>
+          @if (item.hasPhone) {
+            <span class="flex items-center min-w-0">
+              <i class="pi pi-phone mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
+              <span class="truncate" [title]="item.phone"> {{ item.phone }} </span>
+            </span>
+          }
 
           <!-- Indicador de imágenes -->
-          <span *ngIf="item.hasImages" class="flex items-center min-w-0">
-            <i class="pi pi-images mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-            <span> {{ item.imagesData.length }} imagen{{ item.imagesData.length !== 1 ? 'es' : '' }} </span>
-          </span>
+          @if (item.hasImages) {
+            <span class="flex items-center min-w-0">
+              <i class="pi pi-images mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
+              <span> {{ item.imagesData.length }} imagen{{ item.imagesData.length !== 1 ? 'es' : '' }} </span>
+            </span>
+          }
         </div>
       </div>
     </div>
@@ -57,19 +69,20 @@
     <!-- Acciones -->
     <div class="flex gap-2 justify-end w-full md:w-auto flex-shrink-0">
       <!-- Botón de editar (solo si está activo) -->
-      <p-button
-        *ngIf="item.is_active"
-        [disabled]="loading()"
-        type="button"
-        icon="pi pi-pencil"
-        severity="secondary"
-        size="small"
-        [text]="true"
-        pTooltip="Editar casa de retiro"
-        tooltipPosition="left"
-        (onClick)="$event.stopPropagation(); openEditForm()"
-        [attr.aria-label]="'Editar ' + item.displayName">
-      </p-button>
+      @if (item.is_active) {
+        <p-button
+          [disabled]="loading()"
+          type="button"
+          icon="pi pi-pencil"
+          severity="secondary"
+          size="small"
+          [text]="true"
+          pTooltip="Editar casa de retiro"
+          tooltipPosition="left"
+          (onClick)="$event.stopPropagation(); openEditForm()"
+          [attr.aria-label]="'Editar ' + item.displayName">
+        </p-button>
+      }
 
       <!-- Botón de cambiar estado -->
       <p-button

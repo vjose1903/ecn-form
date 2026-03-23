@@ -1,5 +1,5 @@
 import { Component, effect, inject, signal, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
@@ -14,7 +14,7 @@ import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-login',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, PasswordModule, FormErrorMsgComponent, ButtonModule],
+  imports: [FormsModule, ReactiveFormsModule, InputTextModule, PasswordModule, FormErrorMsgComponent, ButtonModule],
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })

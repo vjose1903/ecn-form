@@ -1,5 +1,5 @@
 import { Ss } from '@core/services/singleton.service';
-import { CommonModule } from '@angular/common';
+
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { DividerLine } from '@core/components/divider-line/divider-line';
 import { RequestClass } from '@core/entities/request/request.class';
@@ -22,7 +22,7 @@ import { ExportType, ReportType } from '@pages/retreat-list/utils/export.utils';
 
 @Component({
   selector: 'app-request-view',
-  imports: [CommonModule, TagModule, DividerLine, ButtonModule, ViewItem, CoupleView, TooltipModule, MenuModule],
+  imports: [TagModule, DividerLine, ButtonModule, ViewItem, CoupleView, TooltipModule, MenuModule],
   templateUrl: './request-view.html',
   styleUrl: './request-view.scss',
 })
@@ -126,7 +126,10 @@ export class RequestView implements OnInit {
       breakpoints: { '960px': '80vw', '640px': '90vw' },
     });
 
-    // Aquí capturas lo que retorna el modal
+    if (!dialogRef) {
+      return;
+    }
+
     dialogRef.onClose.subscribe((result: RequestI | undefined) => {
       if (result) {
         if (result && result.id) {
