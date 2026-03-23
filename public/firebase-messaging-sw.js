@@ -31,7 +31,7 @@ messaging.onBackgroundMessage((payload) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const targetUrl = event.notification?.data?.url || '/retiros';
+  const targetUrl = new URL(event.notification?.data?.url || '/retiros', self.location.origin).href;
 
   event.waitUntil(
     self.clients.matchAll({
@@ -39,8 +39,12 @@ self.addEventListener('notificationclick', (event) => {
       includeUncontrolled: true,
     }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url.includes(targetUrl) && 'focus' in client) {
-          return client.focus();
+        if ('focus' in client && 'navigate' in client) {
+          if (client.url === targetUrl) {
+            return client.focus();
+          }
+
+          return client.navigate(targetUrl).then((navigatedClient) => navigatedClient?.focus());
         }
       }
 

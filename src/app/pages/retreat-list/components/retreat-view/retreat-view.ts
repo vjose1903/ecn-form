@@ -102,6 +102,8 @@ export class RetreatView implements OnInit, OnDestroy {
   ];
 
   private destroy$ = new Subject<void>();
+  private autoOpenRequestId: string | null = null;
+  private autoOpenHandled = false;
 
   get keys() {
     return Object.keys;
@@ -111,6 +113,7 @@ export class RetreatView implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.retreat = this.config.data.retreat;
+    this.autoOpenRequestId = this.config.data.autoOpenRequestId ?? null;
     this.getRequests();
   }
 
@@ -129,12 +132,32 @@ export class RetreatView implements OnInit, OnDestroy {
         this.requests.set(requests);
         this.updateRequestStats(requests);
         this.fetchingRequests.set(false);
-
-        requests[0];
+        this.tryAutoOpenRequest(requests);
       });
     } catch (error) {
       Ss.toastService.error({ message: 'Error al obtener las solicitudes', title: 'Error' });
     }
+  }
+
+  private tryAutoOpenRequest(requests: RequestClass[]): void {
+    if (this.autoOpenHandled || !this.autoOpenRequestId) {
+      return;
+    }
+
+    const requestToOpen = requests.find(request => request.id === this.autoOpenRequestId);
+    this.autoOpenHandled = true;
+
+    if (!requestToOpen) {
+      Ss.toastService.warning({
+        title: 'Solicitud no encontrada',
+        message: 'La solicitud enlazada no está disponible en este retiro.',
+      });
+      return;
+    }
+
+    queueMicrotask(() => {
+      void requestToOpen.openView();
+    });
   }
 
   /**

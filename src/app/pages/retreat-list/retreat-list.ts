@@ -1,5 +1,6 @@
 
 import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Ss } from '@core/services/singleton.service';
 import { ButtonModule } from 'primeng/button';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -18,7 +19,11 @@ import { Subject, takeUntil } from 'rxjs';
 })
 export class RetreatList implements OnInit, OnDestroy {
   private retreatService = inject(RetreatService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private destroy$ = new Subject<void>();
+  private pendingDeepLink: { retreatId: string; requestId: string | null } | null = null;
+  private openingDeepLink = false;
 
   loading = signal(false);
   ref: DynamicDialogRef | undefined;
@@ -116,11 +121,31 @@ export class RetreatList implements OnInit, OnDestroy {
     // Suscribirse a cambios en el caché de retiros para actualizar el dataview automáticamente
     this.retreatService.retreats$.pipe(takeUntil(this.destroy$)).subscribe(retreats => {
       this.updateDataviewData(retreats);
+      void this.tryOpenDeepLinkedRequest();
     });
 
     // Suscribirse al estado de carga
     this.retreatService.loadingRetreats$.pipe(takeUntil(this.destroy$)).subscribe(loading => {
       this.loading.set(loading);
+    });
+
+    this.route.queryParamMap.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      const retreatId = params.get('retreatId')?.trim();
+      const requestId = params.get('requestId')?.trim() || null;
+      const shouldOpenRetreat = params.get('openRetreat') === '1' || Boolean(retreatId);
+      const shouldOpenRequest = params.get('openRequest') === '1' || Boolean(requestId);
+
+      if (!shouldOpenRetreat || !retreatId) {
+        this.pendingDeepLink = null;
+        return;
+      }
+
+      this.pendingDeepLink = {
+        retreatId,
+        requestId: shouldOpenRequest ? requestId : null,
+      };
+
+      void this.tryOpenDeepLinkedRequest();
     });
   }
 
@@ -143,6 +168,51 @@ export class RetreatList implements OnInit, OnDestroy {
   private updateDataviewData(retreats: RetreatClass[]): void {
     const filteredData = this.filterAndSortData(retreats);
     this.dataviewConfig.setData(filteredData);
+  }
+
+  private async tryOpenDeepLinkedRequest(): Promise<void> {
+    if (this.openingDeepLink || !this.pendingDeepLink) {
+      return;
+    }
+
+    const deepLink = this.pendingDeepLink;
+    this.openingDeepLink = true;
+
+    try {
+      const retreat = await this.retreatService.getRetreatById(deepLink.retreatId);
+
+      if (!retreat) {
+        Ss.toastService.warning({
+          title: 'Retiro no encontrado',
+          message: 'El retiro enlazado no está disponible para este usuario.',
+        });
+        await this.clearDeepLinkParams();
+        return;
+      }
+
+      this.ref?.close();
+      this.ref = retreat.openView({ autoOpenRequestId: deepLink.requestId });
+      await this.clearDeepLinkParams();
+    } catch (error) {
+      console.error('Error al abrir el deep-link del retiro:', error);
+    } finally {
+      this.pendingDeepLink = null;
+      this.openingDeepLink = false;
+    }
+  }
+
+  private async clearDeepLinkParams(): Promise<void> {
+    await this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        openRetreat: null,
+        retreatId: null,
+        openRequest: null,
+        requestId: null,
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   /**

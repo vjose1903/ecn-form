@@ -8,6 +8,7 @@ import { RetreatView } from 'app/pages/retreat-list/components/retreat-view/retr
 import { fun } from '@core/services/functions.service';
 import { RequestClass } from '../request/request.class';
 import { RequestService } from '../request/request.service';
+import { DynamicDialogRef } from 'primeng/dynamicdialog';
 
 export class RetreatClass {
   id: string = '';
@@ -349,12 +350,12 @@ export class RetreatClass {
   /**
    * Abre la vista detallada del retiro
    */
-  openView(): void {
+  openView(args: { autoOpenRequestId?: string | null } = {}): DynamicDialogRef | undefined {
     const dialogService = Ss.dialogService;
 
     if (!dialogService) {
       console.error('DialogService no disponible');
-      return;
+      return undefined;
     }
 
     const dialogRef = dialogService.open(RetreatView, {
@@ -367,11 +368,13 @@ export class RetreatClass {
       focusOnShow: false,
       data: {
         retreat: this,
+        autoOpenRequestId: args.autoOpenRequestId ?? null,
       },
       breakpoints: { '960px': '75vw', '640px': '90vw' },
     });
 
     dialogRef?.onClose.subscribe();
+    return dialogRef ?? undefined;
   }
 
   /**
