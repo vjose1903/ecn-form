@@ -1,95 +1,98 @@
-<div *ngIf="retreatHome" class="space-y-6">
-  <!-- Información básica -->
-  <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-    <!-- Estado -->
-    <div class="flex items-center gap-3 col-span-12 md:col-span-6">
-      <view-item title="Estado:" icon="pi pi-info-circle" [isRow]="true">
-        <p-tag [severity]="retreatHome.statusSeverity" [value]="retreatHome.statusText" [rounded]="true" [attr.aria-label]="'Estado: ' + retreatHome.statusText" />
-      </view-item>
+@if (retreatHome) {
+  <div class="space-y-6">
+    <!-- Información básica -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+      <!-- Estado -->
+      <div class="flex items-center gap-3 col-span-12 md:col-span-6">
+        <view-item title="Estado:" icon="pi pi-info-circle" [isRow]="true">
+          <p-tag [severity]="retreatHome.statusSeverity" [value]="retreatHome.statusText" [rounded]="true" [attr.aria-label]="'Estado: ' + retreatHome.statusText" />
+        </view-item>
+      </div>
+      <div class="col-span-12 md:hidden">
+        <divider-line separatorClass="my-0" />
+      </div>
+      <!-- Teléfono -->
+      <div class="flex flex-col gap-3 col-span-12 md:col-span-6">
+        <view-item title="Teléfono:" icon="pi pi-phone" [content]="retreatHome.displayPhone" />
+      </div>
+      <div class="col-span-12">
+        <divider-line separatorClass="my-0" />
+      </div>
+      <!-- Dirección -->
+      <div class="flex flex-col gap-3 col-span-12">
+        <view-item title="Dirección:" icon="pi pi-map-marker" [content]="retreatHome.displayAddress" />
+      </div>
+      <div class="col-span-12">
+        <divider-line separatorClass="my-0" />
+      </div>
+      <!-- Ubicación -->
+      <div class="flex items-center gap-3 mb-6 col-span-12 md:col-span-6">
+        <view-item title="Ubicación:" icon="pi pi-map" [isRow]="true">
+          @if (retreatHome.hasLocation) {
+            <p-button type="button" severity="contrast" variant="text" (onClick)="openOnGoogleMaps()" class="w-auto" [attr.aria-label]="'Abrir ubicación de ' + retreatHome.displayName + ' en Google Maps'">
+              <span class="flex items-center justify-center gap-2">
+                <span class="whitespace-nowrap">Ver en Google Maps</span>
+                <img src="icons/google-maps-icon.svg" alt="Google Maps" class="w-6 h-6" />
+              </span>
+            </p-button>
+          }
+        </view-item>
+        @if (!retreatHome.hasLocation) {
+          <span class="text-gray-500 text-sm"> No disponible </span>
+        }
+      </div>
     </div>
-
     <div class="col-span-12 md:hidden">
       <divider-line separatorClass="my-0" />
     </div>
-
-    <!-- Teléfono -->
-    <div class="flex flex-col gap-3 col-span-12 md:col-span-6">
-      <view-item title="Teléfono:" icon="pi pi-phone" [content]="retreatHome.displayPhone" />
-    </div>
-
-    <div class="col-span-12">
-      <divider-line separatorClass="my-0" />
-    </div>
-
-    <!-- Dirección -->
-    <div class="flex flex-col gap-3 col-span-12">
-      <view-item title="Dirección:" icon="pi pi-map-marker" [content]="retreatHome.displayAddress" />
-    </div>
-
-    <div class="col-span-12">
-      <divider-line separatorClass="my-0" />
-    </div>
-
-    <!-- Ubicación -->
-    <div class="flex items-center gap-3 mb-6 col-span-12 md:col-span-6">
-      <view-item title="Ubicación:" icon="pi pi-map" [isRow]="true">
-        <p-button *ngIf="retreatHome.hasLocation" type="button" severity="contrast" variant="text" (onClick)="openOnGoogleMaps()" class="w-auto" [attr.aria-label]="'Abrir ubicación de ' + retreatHome.displayName + ' en Google Maps'">
-          <span class="flex items-center justify-center gap-2">
-            <span class="whitespace-nowrap">Ver en Google Maps</span>
-            <img src="icons/google-maps-icon.svg" alt="Google Maps" class="w-6 h-6" />
-          </span>
-        </p-button>
-      </view-item>
-
-      <span *ngIf="!retreatHome.hasLocation" class="text-gray-500 text-sm"> No disponible </span>
-    </div>
-  </div>
-
-  <div class="col-span-12 md:hidden">
-    <divider-line separatorClass="my-0" />
-  </div>
-
-  <!-- Galería de imágenes -->
-  <div class="space-y-4" *ngIf="retreatHome.hasImages">
-    <div class="flex items-center justify-between">
-      <h3 class="text-xl font-semibold text-gray-900 mb-0">Galería de Imágenes</h3>
-    </div>
-
-    <divider-line separatorClass="py-4" />
-
-    <!-- Vista previa de imágenes -->
-    <div class="min-h-[200px] bg-gray-100/50 rounded-lg p-2 md:p-4 border border-gray-200/50 flex">
-      <div *ngIf="!allImagesLoaded" class="flex items-center justify-center w-full flex-1">
-        <div class="text-center">
-          <i class="pi pi-spinner pi-spin text-3xl text-red-500 mb-2"></i>
-          <p class="text-gray-600">Cargando galería...</p>
+    <!-- Galería de imágenes -->
+    @if (retreatHome.hasImages) {
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xl font-semibold text-gray-900 mb-0">Galería de Imágenes</h3>
+        </div>
+        <divider-line separatorClass="py-4" />
+        <!-- Vista previa de imágenes -->
+        <div class="min-h-[200px] bg-gray-100/50 rounded-lg p-2 md:p-4 border border-gray-200/50 flex">
+          @if (!allImagesLoaded) {
+            <div class="flex items-center justify-center w-full flex-1">
+              <div class="text-center">
+                <i class="pi pi-spinner pi-spin text-3xl text-red-500 mb-2"></i>
+                <p class="text-gray-600">Cargando galería...</p>
+              </div>
+            </div>
+          }
+          @if (allImagesLoaded) {
+            <gallery classColumns="columns-2 md:columns-3 lg:columns-6" [galleryImgs]="retreatHome.imagesData" />
+          }
         </div>
       </div>
-
-      <gallery *ngIf="allImagesLoaded" classColumns="columns-2 md:columns-3 lg:columns-6" [galleryImgs]="retreatHome.imagesData" />
+    }
+    <!-- Mensaje cuando no hay imágenes -->
+    @if (!retreatHome.hasImages) {
+      <div class="relative flex items-center justify-center py-12">
+        <div class="text-center text-gray-500">
+          <div class="text-4xl md:text-6xl mb-2">📷</div>
+          <p class="text-lg font-medium">No hay imágenes seleccionadas</p>
+          <p class="text-sm">Esta casa de retiro no tiene imágenes en su galería</p>
+        </div>
+      </div>
+    }
+    <!-- Acciones -->
+    <div class="flex justify-end gap-3 w-full pt-4 border-t border-gray-200">
+      <p-button type="button" [label]="getStatusButtonText()" [severity]="getStatusButtonSeverity()" [disabled]="loading()" [icon]="getStatusButtonIcon()" class="w-auto" (onClick)="confirmToggleStatus()" size="small" />
+      @if (retreatHome.is_active) {
+        <p-button type="button" label="Editar" severity="secondary" [disabled]="loading()" icon="pi pi-pencil" class="w-auto" (onClick)="openEditForm()" size="small" />
+      }
     </div>
+    <!-- Indicador de carga general -->
+    @if (loading()) {
+      <div class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg z-20">
+        <div class="text-center">
+          <i class="pi pi-spinner pi-spin text-3xl text-blue-600 mb-2"></i>
+          <p class="text-gray-600">Procesando...</p>
+        </div>
+      </div>
+    }
   </div>
-
-  <!-- Mensaje cuando no hay imágenes -->
-  <div *ngIf="!retreatHome.hasImages" class="relative flex items-center justify-center py-12">
-    <div class="text-center text-gray-500">
-      <div class="text-4xl md:text-6xl mb-2">📷</div>
-      <p class="text-lg font-medium">No hay imágenes seleccionadas</p>
-      <p class="text-sm">Esta casa de retiro no tiene imágenes en su galería</p>
-    </div>
-  </div>
-
-  <!-- Acciones -->
-  <div class="flex justify-end gap-3 w-full pt-4 border-t border-gray-200">
-    <p-button type="button" [label]="getStatusButtonText()" [severity]="getStatusButtonSeverity()" [disabled]="loading()" [icon]="getStatusButtonIcon()" class="w-auto" (onClick)="confirmToggleStatus()" size="small" />
-    <p-button *ngIf="retreatHome.is_active" type="button" label="Editar" severity="secondary" [disabled]="loading()" icon="pi pi-pencil" class="w-auto" (onClick)="openEditForm()" size="small" />
-  </div>
-
-  <!-- Indicador de carga general -->
-  <div *ngIf="loading()" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg z-20">
-    <div class="text-center">
-      <i class="pi pi-spinner pi-spin text-3xl text-blue-600 mb-2"></i>
-      <p class="text-gray-600">Procesando...</p>
-    </div>
-  </div>
-</div>
+}

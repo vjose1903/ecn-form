@@ -69,7 +69,6 @@ export class Menu implements OnInit, OnDestroy {
       breakpoints: { '960px': '75vw', '640px': '90vw' },
     });
 
-    // Limpiar referencia cuando se cierre
-    dialogRef.onClose.subscribe();
+    dialogRef?.onClose.subscribe();
   }
 }

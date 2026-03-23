@@ -10,7 +10,7 @@ export interface AuthResult {
   success: boolean;
   message?: string;
   title?: string;
-  severity?: 'success' | 'error' | 'warning' | 'info';
+  severity?: 'success' | 'error' | 'warn' | 'info';
 }
 
 export const errorMessages: Record<string, AuthResult> = {
@@ -60,7 +60,7 @@ export const errorMessages: Record<string, AuthResult> = {
     success: false,
     message: 'Demasiados intentos fallidos. Intenta más tarde.',
     title: 'Demasiados intentos',
-    severity: 'warning',
+    severity: 'warn',
   },
   [AuthErrorCodes.USER_DISABLED]: {
     success: false,
@@ -78,7 +78,7 @@ export const errorMessages: Record<string, AuthResult> = {
     success: false,
     message: 'El popup fue bloqueado. Permite popups para este sitio.',
     title: 'Popup bloqueado',
-    severity: 'warning',
+    severity: 'warn',
   },
   error: {
     success: false,

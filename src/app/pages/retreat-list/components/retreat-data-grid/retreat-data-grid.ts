@@ -1,5 +1,5 @@
 import { Component, inject, Input, signal, OnDestroy, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
@@ -12,7 +12,7 @@ import { Subject, debounceTime } from 'rxjs';
 @Component({
   selector: 'app-retreat-data-grid',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule],
+  imports: [ButtonModule, CardModule, TooltipModule, TagModule],
   templateUrl: './retreat-data-grid.html',
   providers: [DialogService],
 })

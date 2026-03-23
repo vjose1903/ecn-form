@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { Ss } from '@core/services/singleton.service';
 import { ButtonModule } from 'primeng/button';
@@ -12,7 +12,7 @@ import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-retreat-list',
-  imports: [CommonModule, ButtonModule, DynamicDataviewComponent],
+  imports: [ButtonModule, DynamicDataviewComponent],
   templateUrl: './retreat-list.html',
   styleUrl: './retreat-list.scss',
 })

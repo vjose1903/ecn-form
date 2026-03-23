@@ -1,5 +1,5 @@
 import { Component, inject, Input, signal, OnDestroy, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
@@ -13,7 +13,7 @@ import { Subject, takeUntil } from 'rxjs';
 @Component({
   selector: 'app-retreat-home-data-list',
   standalone: true,
-  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule],
+  imports: [ButtonModule, CardModule, TooltipModule, TagModule],
   templateUrl: './retreat-home-data-list.html',
   providers: [DialogService],
 })
@@ -29,7 +29,7 @@ export class RetreatHomeDataList implements OnInit, OnDestroy {
   loading = signal(false);
   imageLoaded = signal(false);
   imageError = signal(false);
-  dialogRef: DynamicDialogRef | undefined;
+  dialogRef: DynamicDialogRef | null = null;
 
   constructor() {}
 
@@ -74,7 +74,7 @@ export class RetreatHomeDataList implements OnInit, OnDestroy {
   openRetreatHomeView(): void {
     if (this.loading()) return;
 
-    this.dialogRef = this.dialogService.open(RetreatHomeView, {
+    const dialogRef = this.dialogService.open(RetreatHomeView, {
       header: this.item.displayName,
       width: '70vw',
       modal: true,
@@ -88,9 +88,14 @@ export class RetreatHomeDataList implements OnInit, OnDestroy {
       breakpoints: { '960px': '75vw', '640px': '90vw' },
     });
 
-    // Limpiar referencia cuando se cierre
-    this.dialogRef.onClose.pipe(takeUntil(this.destroy$)).subscribe(() => {
-      this.dialogRef = undefined;
+    this.dialogRef = dialogRef;
+
+    if (!dialogRef) {
+      return;
+    }
+
+    dialogRef.onClose.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this.dialogRef = null;
     });
   }
 

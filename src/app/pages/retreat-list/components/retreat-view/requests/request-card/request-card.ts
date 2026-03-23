@@ -4,12 +4,12 @@ import { RequestStatusInfo } from '@core/entities/request/request.model';
 import { CardModule } from 'primeng/card';
 import { TagModule } from 'primeng/tag';
 import { SkeletonModule } from 'primeng/skeleton';
-import { CommonModule } from '@angular/common';
+
 import { RetreatClass } from '@core/entities/retreat/retreat.class';
 
 @Component({
   selector: 'request-card',
-  imports: [CardModule, TagModule, SkeletonModule, CommonModule],
+  imports: [CardModule, TagModule, SkeletonModule],
   templateUrl: './request-card.html',
   styleUrl: './request-card.scss',
 })

@@ -1,5 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -15,7 +15,7 @@ import { InputMaskModule } from 'primeng/inputmask';
 
 @Component({
   selector: 'app-account',
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, SelectModule, FormErrorMsgComponent, InputMaskModule],
+  imports: [ReactiveFormsModule, ButtonModule, InputTextModule, SelectModule, FormErrorMsgComponent, InputMaskModule],
   templateUrl: './account.html',
   styleUrl: './account.scss',
 })

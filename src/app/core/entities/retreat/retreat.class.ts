@@ -216,8 +216,8 @@ export class RetreatClass {
   /**
    * Obtiene la severidad del estado de solicitudes
    */
-  get requestsStatusSeverity(): 'success' | 'warning' {
-    return this.accept_requests ? 'success' : 'warning';
+  get requestsStatusSeverity(): 'success' | 'warn' {
+    return this.accept_requests ? 'success' : 'warn';
   }
 
   /**
@@ -335,6 +335,11 @@ export class RetreatClass {
         breakpoints: { '960px': '75vw', '640px': '90vw' },
       });
 
+      if (!ref) {
+        resolve();
+        return;
+      }
+
       ref.onClose.subscribe((result: RetreatI) => {
         resolve();
       });
@@ -366,8 +371,7 @@ export class RetreatClass {
       breakpoints: { '960px': '75vw', '640px': '90vw' },
     });
 
-    // Limpiar referencia cuando se cierre
-    dialogRef.onClose.subscribe();
+    dialogRef?.onClose.subscribe();
   }
 
   /**

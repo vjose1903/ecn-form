@@ -1,10 +1,10 @@
 import { Component, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 
 @Component({
   selector: 'list-item',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   template: `
     <div class="list-item p-3 border-bottom">
       <div class="flex align-items-center">

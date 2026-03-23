@@ -20,6 +20,7 @@ import { ToastService } from './toast.service';
 import { UserService } from '@core/entities/user/user.service';
 import { UserC } from '@core/entities/user/user.class';
 import { Subject } from 'rxjs';
+import { MessagingService } from './messaging.service';
 
 @Injectable({
   providedIn: 'root',
@@ -30,6 +31,7 @@ export class AuthService implements OnDestroy {
   private toastService = inject(ToastService);
   private injector = inject(Injector);
   private userService = inject(UserService);
+  private messagingService = inject(MessagingService);
 
   // Signals para el estado de autenticación
   current_user = signal<UserC | null>(null);
@@ -82,6 +84,8 @@ export class AuthService implements OnDestroy {
               // Guardar en localStorage
               localStorage.setItem(environment.X_TOKEN, firebaseUser.uid);
               localStorage.setItem(environment.X_EMAIL, firebaseUser.email!);
+
+              void this.messagingService.syncTokenOnLogin(user);
 
               // Iniciar verificación periódica de token
               this.startTokenExpirationCheck();
@@ -244,6 +248,12 @@ export class AuthService implements OnDestroy {
    */
   logout(): Promise<void> {
     return runInInjectionContext(this.injector, () => {
+      const currentUser = this.current_user();
+
+      if (currentUser) {
+        void this.messagingService.unregisterCurrentToken(currentUser);
+      }
+
       return signOut(this.auth)
         .then(() => {
           this.handleLogout();

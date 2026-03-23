@@ -238,8 +238,12 @@ export class RequestClass {
         breakpoints: { '960px': '75vw', '640px': '90vw' },
       });
 
-      // Limpiar referencia cuando se cierre
-      dialogRef.onClose.subscribe();
+      if (!dialogRef) {
+        resolve();
+        return;
+      }
+
+      dialogRef.onClose.subscribe(() => resolve());
     });
   }
 
