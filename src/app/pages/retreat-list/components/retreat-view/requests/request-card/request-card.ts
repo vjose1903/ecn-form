@@ -15,13 +15,21 @@ import { RetreatClass } from '@core/entities/retreat/retreat.class';
 })
 export class RequestCard {
   request = input<RequestClass>();
-  retreat = input<RetreatClass>();
+  retreat = input<RetreatClass | null>();
   status = input<RequestStatusInfo>();
   skeleton = input(false);
+  archived = input(false);
+  showStatus = input(true);
+  showRetreatMeta = input(false);
+  afterClose = input<(() => void | Promise<void>) | undefined>();
 
-  onCardClick(): void {
+  async onCardClick(): Promise<void> {
     if (this.request()) {
-      this.request()?.openView();
+      await this.request()?.openView({
+        retreat: this.retreat(),
+        isArchived: this.archived(),
+      });
+      await this.afterClose()?.();
     }
   }
 }

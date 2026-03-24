@@ -9,6 +9,16 @@
       </view-item>
     </div>
 
+    <div class="col-span-12 md:col-span-6">
+      <view-item title="Acción reciente" icon="pi pi-bolt" [content]="req.actionLabel" />
+    </div>
+
+    @if (isArchivedView()) {
+    <div class="col-span-12 md:col-span-6">
+      <view-item title="Fecha de archivado" icon="pi pi-inbox" [content]="req.displayArchivedAt" />
+    </div>
+    }
+
     <div class="col-span-12 md:hidden">
       <divider-line separatorClass="my-0" />
     </div>
@@ -90,8 +100,13 @@
     </div>
 
     <div class="flex gap-3">
+      @if (!isArchivedView()) {
       <p-button type="button" label="Aceptar solicitud" severity="success" [disabled]="loading() || req.status == RequestStatus.ACCEPTED" icon="pi pi-check" class="w-auto" (onClick)="toggleStatus(RequestStatus.ACCEPTED)" size="small" />
       <p-button type="button" label="Rechazar solicitud" severity="danger" [disabled]="loading() || req.status == RequestStatus.REJECTED" icon="pi pi-times" class="w-auto" (onClick)="toggleStatus(RequestStatus.REJECTED)" size="small" />
+      } @else {
+      <p-button type="button" label="Transferir solicitud" severity="help" [disabled]="loading()" icon="pi pi-send" class="w-auto" (onClick)="openTransferModal()" size="small" />
+      <p-button type="button" label="Desarchivar solicitud" severity="success" [disabled]="loading()" icon="pi pi-replay" class="w-auto" (onClick)="unarchiveRequest()" size="small" />
+      }
     </div>
   </div>
 </div>

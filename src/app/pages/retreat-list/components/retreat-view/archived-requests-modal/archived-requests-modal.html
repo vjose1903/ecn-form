@@ -1,0 +1,16 @@
+<div class="grid gap-4">
+  @if (loading()) {
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      @for (item of [1, 2, 3]; track item) {
+        <request-card [skeleton]="true" />
+      }
+    </div>
+  } @else if (archivedRequests().length > 0) {
+    <dynamic-dataview [config]="dataviewConfig" />
+  } @else {
+    <div class="text-center flex flex-col items-center gap-4 py-8">
+      <i class="pi pi-inbox text-gray-200" style="font-size: 4rem"></i>
+      <p class="text-lg font-medium text-gray-500">Este retiro no tiene solicitudes archivadas</p>
+    </div>
+  }
+</div>

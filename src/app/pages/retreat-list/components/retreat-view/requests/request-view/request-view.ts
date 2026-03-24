@@ -19,6 +19,8 @@ import { FormPage } from '@pages/form-page/form-page';
 import { PdfService } from '@pages/retreat-list/utils/pdf.service';
 import { ExcelService } from '@pages/retreat-list/utils/excel.service';
 import { ExportType, ReportType } from '@pages/retreat-list/utils/export.utils';
+import { RequestHistoryModal } from './request-history-modal/request-history-modal';
+import { TransferRequestModal } from './transfer-request-modal/transfer-request-modal';
 
 @Component({
   selector: 'app-request-view',
@@ -34,27 +36,24 @@ export class RequestView implements OnInit {
   excelService = inject(ExcelService);
 
   loading = signal(false);
+  isArchivedView = signal(false);
   private _request = signal<RequestClass | null>(null);
   request = computed(() => this._request());
-  retreat!: RetreatClass;
+  retreat: RetreatClass | null = null;
   CoupleType = CoupleType;
   RequestStatus = RequestStatus;
 
-  actions: MenuItem[] = [
-    {
-      label: 'Acciones',
-      items: [
-        {
-          label: 'Editar solicitud',
-          icon: 'pi pi-pencil',
-          command: () => this.editRequest(),
-        },
-      ],
-    },
-    {
-      separator: true,
-    },
-    {
+  actions: MenuItem[] = [];
+
+  ngOnInit(): void {
+    this._request.set(this.config.data.request);
+    this.retreat = this.config.data.retreat ?? null;
+    this.isArchivedView.set(Boolean(this.config.data.isArchivedView));
+    this.actions = this.buildActions();
+  }
+
+  private buildActions(): MenuItem[] {
+    const exportActions: MenuItem = {
       label: 'Exportar',
       items: [
         {
@@ -68,18 +67,52 @@ export class RequestView implements OnInit {
           command: () => this.exportSingleRequestReport({ request: this.request()!, type: ExportType.EXCEL }),
         },
       ],
-    },
-  ];
+    };
 
-  ngOnInit(): void {
-    this._request.set(this.config.data.request);
-    this.retreat = this.config.data.retreat;
+    if (this.isArchivedView()) {
+      return [exportActions];
+    }
+
+    return [
+      {
+        label: 'Acciones',
+        items: [
+          {
+            label: 'Editar solicitud',
+            icon: 'pi pi-pencil',
+            command: () => this.editRequest(),
+          },
+          {
+            label: 'Archivar solicitud',
+            icon: 'pi pi-inbox',
+            command: () => this.archiveRequest(),
+          },
+          {
+            label: 'Transferir solicitud',
+            icon: 'pi pi-send',
+            command: () => this.openTransferModal(),
+          },
+        ],
+      },
+      {
+        separator: true,
+      },
+      exportActions,
+    ];
   }
 
   toggleStatus(status: RequestStatus) {
     this.loading.set(true);
     const currentRequest = this.request();
-    if (!currentRequest) return;
+    if (!currentRequest) {
+      this.loading.set(false);
+      return;
+    }
+    if (!this.retreat) {
+      Ss.toastService.error({ message: 'No se encontró el retiro asociado a la solicitud', title: 'Error' });
+      this.loading.set(false);
+      return;
+    }
     const payload = { id: currentRequest.id, status };
 
     this.requestService
@@ -98,6 +131,121 @@ export class RequestView implements OnInit {
         Ss.toastService.error({ message: 'Error al actualizar la solicitud', title: 'Error' });
         this.loading.set(false);
       });
+  }
+
+  unarchiveRequest() {
+    const currentRequest = this.request();
+
+    if (!currentRequest || !this.retreat) {
+      Ss.toastService.error({ message: 'No se encontró la información necesaria para desarchivar la solicitud', title: 'Error' });
+      return;
+    }
+
+    Ss.confirmationService.confirm({
+      message: 'La solicitud volverá al retiro original y se eliminará de solicitudes archivadas. ¿Deseas continuar?',
+      header: 'Desarchivar solicitud',
+      icon: 'pi pi-replay',
+      acceptLabel: 'Desarchivar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-success',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: async () => {
+        this.loading.set(true);
+
+        try {
+          await this.requestService.unarchiveRequest({ request: currentRequest, retreat: this.retreat! });
+          this.ref.close({ desarchived: true, requestId: currentRequest.id });
+        } catch (error) {
+          console.error('Error desarchivando la solicitud:', error);
+        } finally {
+          this.loading.set(false);
+        }
+      },
+    });
+  }
+
+  openHistoryModal() {
+    const dialogService = Ss.dialogService;
+
+    if (!dialogService || !this.request()) {
+      return;
+    }
+
+    dialogService.open(RequestHistoryModal, {
+      header: 'Trazo de la solicitud',
+      width: '40rem',
+      styleClass: 'request-history-dialog',
+      modal: true,
+      draggable: false,
+      resizable: false,
+      closable: true,
+      focusOnShow: false,
+      data: {
+        request: this.request(),
+      },
+      breakpoints: { '960px': '80vw', '640px': '95vw' },
+    });
+  }
+
+  openTransferModal() {
+    const dialogService = Ss.dialogService;
+
+    if (!dialogService || !this.request() || !this.retreat) {
+      return;
+    }
+
+    const dialogRef = dialogService.open(TransferRequestModal, {
+      header: 'Transferir solicitud',
+      width: '32rem',
+      modal: true,
+      draggable: false,
+      resizable: false,
+      closable: true,
+      focusOnShow: false,
+      data: {
+        request: this.request(),
+        retreat: this.retreat,
+        isArchivedView: this.isArchivedView(),
+      },
+      breakpoints: { '960px': '80vw', '640px': '95vw' },
+    });
+
+    dialogRef?.onClose.subscribe((result?: { transferred?: boolean }) => {
+      if (result?.transferred) {
+        this.ref.close(result);
+      }
+    });
+  }
+
+  archiveRequest() {
+    const currentRequest = this.request();
+
+    if (!currentRequest || !this.retreat) {
+      Ss.toastService.error({ message: 'No se encontró la información necesaria para archivar la solicitud', title: 'Error' });
+      return;
+    }
+
+    Ss.confirmationService.confirm({
+      message: 'La solicitud se moverá a solicitudes archivadas y dejará de aparecer en este retiro. ¿Deseas continuar?',
+      header: 'Archivar solicitud',
+      icon: 'pi pi-inbox',
+      acceptLabel: 'Archivar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-secondary',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: async () => {
+        this.loading.set(true);
+
+        try {
+          await this.requestService.archiveRequest({ request: currentRequest, retreat: this.retreat! });
+          this.ref.close({ archived: true, requestId: currentRequest.id });
+        } catch (error) {
+          console.error('Error archivando la solicitud:', error);
+        } finally {
+          this.loading.set(false);
+        }
+      },
+    });
   }
 
   editRequest() {
@@ -144,6 +292,14 @@ export class RequestView implements OnInit {
   async exportSingleRequestReport(args: { request: RequestClass; type: ExportType }): Promise<void> {
     const { request, type } = args;
     try {
+      if (!this.retreat) {
+        Ss.toastService.warning({
+          message: 'No se pudo obtener el retiro asociado para exportar este reporte',
+          title: 'Retiro no disponible',
+        });
+        return;
+      }
+
       // Información del retiro para el reporte
       const retreatInfo = {
         name: this.retreat.displayCommunityName,

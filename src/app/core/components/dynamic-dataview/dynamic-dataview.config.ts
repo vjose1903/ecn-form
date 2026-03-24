@@ -33,6 +33,9 @@ export interface DynamicDataviewConfigData<T = any> {
   
   // Configuración adicional del dataview
   layout?: 'list' | 'grid';
+
+  // Clave para persistir el layout en localStorage
+  layoutStorageKey?: string;
   
   // Propiedades adicionales que se pasarán a los componentes
   componentProps?: {
@@ -70,6 +73,7 @@ export class DynamicDataviewConfig<T = any> {
   readonly gridComponent = signal<Type<any>>(null!);
   readonly data = signal<T[]>([]);
   readonly layout = signal<'list' | 'grid'>('list');
+  readonly layoutStorageKey = signal<string | null>(null);
   readonly componentProps = signal<{[key: string]: any}>({});
   
   // Signals para filtros
@@ -116,6 +120,9 @@ export class DynamicDataviewConfig<T = any> {
     if (config.layout !== undefined) {
       this.layout.set(config.layout);
     }
+    if (config.layoutStorageKey !== undefined) {
+      this.layoutStorageKey.set(config.layoutStorageKey);
+    }
     if (config.componentProps !== undefined) {
       this.componentProps.set(config.componentProps);
     }
@@ -145,6 +152,10 @@ export class DynamicDataviewConfig<T = any> {
 
   setLayout(layout: 'list' | 'grid'): void {
     this.layout.set(layout);
+  }
+
+  setLayoutStorageKey(key: string | null): void {
+    this.layoutStorageKey.set(key);
   }
 
   setComponentProps(props: {[key: string]: any}): void {

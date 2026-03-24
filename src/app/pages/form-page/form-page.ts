@@ -24,7 +24,7 @@ import { RetreatClass } from '@core/entities/retreat/retreat.class';
 import { Ss } from '@core/services/singleton.service';
 import { FormSkeletonComponent } from './components/form-skeleton/form-skeleton.component';
 import { RequestService } from '@core/entities/request/request.service';
-import { RequestI, RequestStatus } from '@core/entities/request/request.model';
+import { RequestAction, RequestI, RequestStatus } from '@core/entities/request/request.model';
 import { RequestSend } from './components/request-send/request-send';
 import { ErrorMessage } from './components/error-message/error-message';
 import { fun } from '@core/services/functions.service';
@@ -98,6 +98,7 @@ export class FormPage implements OnInit {
   formGroup = this.fb.group({
     [FormControlName.id]: [''],
     [FormControlName.is_active]: [true],
+    [FormControlName.action]: [RequestAction.NEW],
     [FormControlName.status]: [RequestStatus.PENDING],
     [FormControlName.retreat]: ['', Validators.required],
     [FormControlName.dating_period_year]: [null, Validators.required],
@@ -897,8 +898,10 @@ export class FormPage implements OnInit {
       let request: RequestI | null = null;
 
       if (formData.id) {
-        request = await this.requestService.updateRequest(formData, retreat);
+        request = await this.requestService.updateRequest(formData, retreat, { previousRequest: this.request ?? undefined, trackAsEdited: true });
       } else {
+        console.log('formData ', formData);
+
         request = await this.requestService.createRequest({ payload: formData, refString: this.requestRefString() });
       }
 

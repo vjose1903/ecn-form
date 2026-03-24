@@ -67,6 +67,7 @@
                 </div>
               </div>
               <div class="flex items-center gap-2">
+                <p-button icon="pi pi-inbox" severity="secondary" pTooltip="Solicitudes archivadas" (click)="openArchivedRequestsModal()" />
                 <p-button icon="pi pi-download" severity="secondary" pTooltip="Exportar contactos de parejas" (click)="menu.toggle($event)" />
                 <p-menu #menu [model]="exportActions" [popup]="true" [appendTo]="'body'" [autoZIndex]="true" />
                 <div class="relative">

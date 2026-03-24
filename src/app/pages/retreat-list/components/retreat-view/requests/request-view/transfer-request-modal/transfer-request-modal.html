@@ -1,0 +1,27 @@
+<div class="grid gap-4">
+  @if (loading()) {
+    <div class="text-center py-6 text-gray-500">Cargando retiros...</div>
+  } @else {
+    <div class="grid gap-3">
+      <label class="text-sm font-medium text-gray-700">Retiro destino</label>
+      <p-select
+        [options]="availableRetreatOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="selectedRetreatId()"
+        (ngModelChange)="selectedRetreatId.set($event)"
+        placeholder="Selecciona un retiro"
+        appendTo="body"
+      />
+      <p class="text-sm text-gray-500">
+        La solicitud se transferirá desde
+        <strong>Retiro #{{ currentRetreat.displayNumber }} - {{ currentRetreat.displayCommunityName }}</strong>.
+      </p>
+    </div>
+
+    <div class="flex justify-end gap-3 pt-2">
+      <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="ref.close()" />
+      <p-button label="Transferir" icon="pi pi-send" severity="help" [loading]="saving()" (onClick)="transfer()" />
+    </div>
+  }
+</div>

@@ -67,6 +67,7 @@ export class RetreatHomeList implements OnInit, OnDestroy {
     listComponent: RetreatHomeDataList,
     gridComponent: RetreatHomeDataGrid,
     layout: 'list',
+    layoutStorageKey: 'retreat_homes',
     componentProps: { showActions: true, enableSelection: false },
     filters: {
       enabled: true,

@@ -1,0 +1,90 @@
+import { CommonModule } from '@angular/common';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { RetreatClass } from '@core/entities/retreat/retreat.class';
+import { RetreatService } from '@core/entities/retreat/retreat.service';
+import { RequestClass } from '@core/entities/request/request.class';
+import { RequestService } from '@core/entities/request/request.service';
+import { Ss } from '@core/services/singleton.service';
+import { ButtonModule } from 'primeng/button';
+import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { SelectModule } from 'primeng/select';
+
+@Component({
+  selector: 'app-transfer-request-modal',
+  imports: [CommonModule, FormsModule, ButtonModule, SelectModule],
+  templateUrl: './transfer-request-modal.html',
+  styleUrl: './transfer-request-modal.scss',
+})
+export class TransferRequestModal implements OnInit {
+  private config = inject(DynamicDialogConfig);
+  ref = inject(DynamicDialogRef);
+  private requestService = inject(RequestService);
+  private retreatService = inject(RetreatService);
+
+  loading = signal(true);
+  saving = signal(false);
+  request!: RequestClass;
+  currentRetreat!: RetreatClass;
+  isArchivedView = false;
+  retreats = signal<RetreatClass[]>([]);
+  selectedRetreatId = signal<string | null>(null);
+
+  availableRetreatOptions = computed(() =>
+    this.retreats().map(retreat => ({
+      label: `Retiro #${retreat.displayNumber} - ${retreat.displayCommunityName}`,
+      value: retreat.id,
+    }))
+  );
+
+  ngOnInit(): void {
+    this.request = this.config.data.request;
+    this.currentRetreat = this.config.data.retreat;
+    this.isArchivedView = Boolean(this.config.data.isArchivedView);
+    void this.loadRetreats();
+  }
+
+  private async loadRetreats(): Promise<void> {
+    try {
+      this.loading.set(true);
+      const retreats = await this.retreatService.getAll();
+      this.retreats.set(retreats.filter(retreat => retreat.id !== this.request.relatedRetreatId));
+    } catch (error) {
+      console.error('Error cargando retiros para transferir:', error);
+      Ss.toastService.error({
+        message: 'No se pudieron cargar los retiros disponibles',
+        title: 'Error',
+      });
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async transfer(): Promise<void> {
+    const selectedRetreat = this.retreats().find(retreat => retreat.id === this.selectedRetreatId());
+
+    if (!selectedRetreat) {
+      Ss.toastService.warning({
+        message: 'Debes seleccionar el retiro destino',
+        title: 'Selección requerida',
+      });
+      return;
+    }
+
+    try {
+      this.saving.set(true);
+      await this.requestService.transferRequest({
+        request: this.request,
+        fromRetreat: this.currentRetreat,
+        toRetreat: selectedRetreat,
+        isArchived: this.isArchivedView,
+      });
+
+      this.ref.close({ transferred: true, retreatId: selectedRetreat.id });
+    } catch (error) {
+      console.error('Error transfiriendo solicitud:', error);
+    } finally {
+      this.saving.set(false);
+    }
+  }
+}

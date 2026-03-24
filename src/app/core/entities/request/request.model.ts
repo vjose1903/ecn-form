@@ -14,6 +14,17 @@ export interface RequestI {
   he: CoupleI;
   is_active?: boolean;
   status: RequestStatus;
+  action: RequestAction;
+  archived_retreat_id?: string;
+  archived_at?: Date | string | null;
+}
+
+export enum RequestAction {
+  NEW = 'new',
+  UPDATED = 'updated',
+  ARCHIVED = 'archived',
+  DESARCHIVED = 'desarchived',
+  TRANSFERRED = 'transferred',
 }
 
 export enum CoupleType {
@@ -61,16 +72,39 @@ export enum RequestStatus {
   PENDING = 'pending',
   ACCEPTED = 'accepted',
   REJECTED = 'rejected',
+  ARCHIVED = 'archived',
 }
 
 export interface RequestStatusInfo {
   amount: number;
   tooltip: string;
-  severity: 'secondary' | 'success' | 'danger';
+  severity: 'secondary' | 'success' | 'danger' | 'warn';
   label: string;
   labelPlural: string;
 }
 
 export interface RequestStats {
   [prop: string]: RequestStatusInfo;
+}
+
+export interface RequestHistoryChangeI {
+  label: string;
+  previous_value: string;
+  next_value: string;
+}
+
+export interface RequestHistoryI {
+  id: string;
+  request_id: string;
+  action: RequestAction;
+  happened_at: Date | string | null;
+  retreat_id: string;
+  source_retreat_id?: string;
+  target_retreat_id?: string;
+  collection_state: 'request' | 'requests-archived';
+  changes?: Array<string | RequestHistoryChangeI>;
+  message?: string;
+  retreat_label?: string;
+  source_retreat_label?: string;
+  target_retreat_label?: string;
 }
