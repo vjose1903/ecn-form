@@ -1,0 +1,33 @@
+<div class="grid grid-rows-[min-content_1fr] gap-4 h-full p-2 md:p-4 lg:p-6">
+  <div class="flex justify-between items-center flex-wrap gap-2">
+    <h1 class="text-2xl font-bold">Solicitudes archivadas</h1>
+    <div class="flex items-center gap-3 ml-auto">
+      <p-button
+        type="button"
+        icon="pi pi-refresh"
+        severity="secondary"
+        [text]="true"
+        [loading]="loading()"
+        pTooltip="Refrescar datos"
+        (onClick)="refresh()"
+      />
+    </div>
+  </div>
+
+  <div class="overflow-y-auto overflow-x-hidden">
+    @if (loading()) {
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        @for (item of [1, 2, 3, 4, 5, 6]; track item) {
+          <request-card [skeleton]="true" />
+        }
+      </div>
+    } @else if (archivedRequestsWithRetreat().length > 0) {
+      <dynamic-dataview [config]="dataviewConfig" />
+    } @else {
+      <div class="text-center flex flex-col items-center gap-4 py-10">
+        <i class="pi pi-inbox text-gray-200" style="font-size: 4rem"></i>
+        <p class="text-lg font-medium text-gray-500">No hay solicitudes archivadas</p>
+      </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,96 @@
+<div class="history-modal">
+  @if (loading()) {
+  <div class="history-state-card">
+    <p class="history-state-card__title">Cargando trazo...</p>
+    <p class="history-state-card__description">Estamos preparando el historial reciente de la solicitud.</p>
+  </div>
+  } @else if (history().length > 0) {
+  <section class="history-summary">
+    <div>
+      <p class="history-summary__eyebrow">Seguimiento</p>
+      <h3 class="history-summary__title">Historial reciente</h3>
+      <p class="history-summary__description">Cambios y movimientos registrados.</p>
+    </div>
+    <div class="history-summary__counter">
+      <span>{{ history().length }}</span>
+      <small>{{ history().length === 1 ? 'evento' : 'eventos' }}</small>
+    </div>
+  </section>
+
+  <div class="history-timeline">
+    @for (item of history(); track item.id) {
+    <article class="history-card" [ngClass]="getActionCardClass(item.action)">
+      <div class="history-card__accent"></div>
+      <div class="history-card__content">
+        <div class="history-card__top">
+          <p-tag [value]="getActionLabel(item.action)" [severity]="getActionSeverity(item.action)" [rounded]="true" />
+          <span class="history-card__date">{{ formatHappenedAt(item.happened_at) }}</span>
+        </div>
+
+        @if (item.message) {
+        <p class="history-card__message">{{ item.message }}</p>
+        }
+
+        <div class="history-card__details">
+          @if (shouldShowRetreat(item)) {
+          <div class="history-detail-chip">
+            <span class="history-detail-chip__label">Retiro</span>
+            <span class="history-detail-chip__value">{{ item.retreat_label }}</span>
+          </div>
+          } @if (isTransferred(item)) {
+          <div class="history-detail-chip">
+            <span class="history-detail-chip__label">Retiro anterior</span>
+            <span class="history-detail-chip__value">{{ item.source_retreat_label || 'Origen no disponible' }}</span>
+          </div>
+          <div class="history-detail-chip history-detail-chip--destination">
+            <span class="history-detail-chip__label">Retiro destino</span>
+            <span class="history-detail-chip__value">{{ item.target_retreat_label || 'Destino no disponible' }}</span>
+          </div>
+          } @else if (item.source_retreat_label || item.target_retreat_label) {
+          <div class="history-detail-chip history-detail-chip--wide">
+            <span class="history-detail-chip__label">Movimiento</span>
+            <span class="history-detail-chip__value">
+              {{ item.source_retreat_label || 'Origen no disponible' }} @if (item.target_retreat_label) {
+              <span class="history-detail-chip__separator">→</span>
+              <span>{{ item.target_retreat_label }}</span>
+              }
+            </span>
+          </div>
+          }
+        </div>
+
+        @if (item.changes?.length) {
+        <div class="history-card__changes">
+          <p class="history-card__changes-title">Campos modificados</p>
+          <div class="history-card__changes-list">
+            @for (change of item.changes; track change) { @if (isDetailedChange(change)) {
+            <div class="history-change-row">
+              <p class="history-change-row__label">{{ change.label }}</p>
+              <div class="history-change-row__values">
+                <div class="history-change-row__value-block">
+                  <span class="history-change-row__caption">Antes</span>
+                  <span class="history-change-row__value">{{ change.previous_value }}</span>
+                </div>
+                <div class="history-change-row__value-block history-change-row__value-block--next">
+                  <span class="history-change-row__caption">Ahora</span>
+                  <span class="history-change-row__value">{{ change.next_value }}</span>
+                </div>
+              </div>
+            </div>
+            } @else {
+            <span class="history-change-pill">{{ change }}</span>
+            } }
+          </div>
+        </div>
+        }
+      </div>
+    </article>
+    }
+  </div>
+  } @else {
+  <div class="history-state-card">
+    <p class="history-state-card__title">Sin trazo registrado</p>
+    <p class="history-state-card__description">Esta solicitud todavía no tiene movimientos guardados en el historial.</p>
+  </div>
+  }
+</div>

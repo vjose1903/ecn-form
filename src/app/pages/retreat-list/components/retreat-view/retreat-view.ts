@@ -23,6 +23,7 @@ import { ExcelService } from '../../utils/excel.service';
 import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
 import { ExportType, ReportType } from '@pages/retreat-list/utils/export.utils';
+import { ArchivedRequestsModal } from './archived-requests-modal/archived-requests-modal';
 
 @Component({
   selector: 'app-retreat-view',
@@ -246,6 +247,29 @@ export class RetreatView implements OnInit, OnDestroy {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  openArchivedRequestsModal(): void {
+    const dialogService = Ss.dialogService;
+
+    if (!dialogService) {
+      console.error('DialogService no disponible');
+      return;
+    }
+
+    dialogService.open(ArchivedRequestsModal, {
+      header: `Solicitudes archivadas - Retiro No. ${this.retreat.displayNumber}`,
+      width: '70vw',
+      modal: true,
+      draggable: false,
+      resizable: false,
+      closable: true,
+      focusOnShow: false,
+      data: {
+        retreat: this.retreat,
+      },
+      breakpoints: { '960px': '80vw', '640px': '95vw' },
+    });
   }
 
   /**

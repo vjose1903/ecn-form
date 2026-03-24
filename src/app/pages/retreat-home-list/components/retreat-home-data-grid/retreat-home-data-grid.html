@@ -1,5 +1,5 @@
-<p-card
-  class="overflow-hidden relative cursor-pointer transition-all duration-200 hover:shadow-lg"
+<article
+  class="retreat-home-grid-card"
   [class]="getLoadingClass()"
   (click)="onCardClick($event)"
   [attr.aria-label]="'Casa de retiro: ' + item.displayName"
@@ -7,100 +7,96 @@
   tabindex="0"
   (keydown.enter)="openRetreatHomeView()"
   (keydown.space)="openRetreatHomeView()">
-  <ng-template #header>
-    <!-- Estado -->
-    <div class="absolute top-2 left-2 z-10">
+  <div class="retreat-home-grid-card__media">
+    @if (!item.mainImageUrl || !imageLoaded()) {
+      <div class="retreat-home-grid-card__media-placeholder">
+        <i class="pi pi-image"></i>
+      </div>
+    }
+
+    @if (item.mainImageUrl && imageLoaded() && !imageError()) {
+      <img [src]="item.mainImageUrl" [alt]="'Imagen de ' + item.displayName" class="retreat-home-grid-card__image" loading="lazy" (error)="imageError.set(true)" />
+    }
+
+    @if (item.mainImageUrl && imageError()) {
+      <div class="retreat-home-grid-card__media-placeholder retreat-home-grid-card__media-placeholder--error">
+        <i class="pi pi-home"></i>
+      </div>
+    }
+
+    <div class="retreat-home-grid-card__media-top">
       <p-tag [severity]="item.statusSeverity" [value]="item.statusText" [rounded]="true" [attr.aria-label]="'Estado: ' + item.statusText" />
-    </div>
 
-    <!-- Imagen con lazy loading y fallback -->
-    <div class="relative w-full h-48 bg-gray-100">
-      @if (!imageLoaded()) {
-        <div class="w-full h-full flex items-center justify-center">
-          <i class="pi pi-image text-gray-400 text-4xl"></i>
-        </div>
-      }
-      @if (imageLoaded() && !imageError()) {
-        <img [src]="item.mainImageUrl" [alt]="'Imagen de ' + item.displayName" class="w-full h-full object-cover transition-opacity duration-200" loading="lazy" (error)="imageError.set(true)" />
-      }
-      @if (imageError()) {
-        <div class="w-full h-full flex items-center justify-center bg-gray-200">
-          <i class="pi pi-image text-gray-500 text-3xl"></i>
-        </div>
-      }
-    </div>
-  </ng-template>
+      @if (showActions) {
+        <div class="retreat-home-grid-card__actions">
+          @if (item.is_active) {
+            <p-button
+              [disabled]="loading()"
+              type="button"
+              icon="pi pi-pencil"
+              severity="secondary"
+              size="small"
+              [text]="true"
+              pTooltip="Editar casa de retiro"
+              tooltipPosition="left"
+              (onClick)="$event.stopPropagation(); openEditForm()"
+              [attr.aria-label]="'Editar ' + item.displayName">
+            </p-button>
+          }
 
-  <div>
-    <!-- Nombre -->
-    <h3 class="text-md md:text-lg font-semibold mb-4 text-gray-900 line-clamp-2" [title]="item.displayName">{{ item.displayName }}</h3>
-
-    <!-- Información de contacto -->
-    <div class="space-y-2 text-xs text-gray-600 mb-3">
-      <!-- Dirección -->
-      @if (item.displayAddress) {
-        <div class="flex items-center gap-1">
-          <i class="pi pi-map-marker mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-          <span class="line-clamp-2" [title]="item.displayAddress"> {{ item.displayAddress }} </span>
-        </div>
-      }
-
-      <!-- Teléfono -->
-      @if (item.hasPhone) {
-        <div class="flex items-center gap-1">
-          <i class="pi pi-phone mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-          <span class="truncate" [title]="item.phone"> {{ item.phone }} </span>
-        </div>
-      }
-
-      <!-- Indicador de imágenes -->
-      @if (item.hasImages) {
-        <div class="flex items-center gap-1">
-          <i class="pi pi-images mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-          <span> {{ item.imagesData.length }} imagen{{ item.imagesData.length !== 1 ? 'es' : '' }} </span>
+          <p-button
+            [disabled]="loading()"
+            type="button"
+            [icon]="getStatusButtonIcon()"
+            [severity]="getStatusButtonSeverity()"
+            size="small"
+            [text]="true"
+            [pTooltip]="getStatusButtonText()"
+            tooltipPosition="left"
+            (onClick)="$event.stopPropagation(); confirmToggleStatus(item)"
+            [attr.aria-label]="getStatusButtonText() + ' ' + item.displayName">
+          </p-button>
         </div>
       }
     </div>
   </div>
 
-  <ng-template #footer>
-    <div class="flex gap-2 justify-end w-full">
-      <!-- Botón de editar (solo si está activo) -->
-      @if (item.is_active) {
-        <p-button
-          [disabled]="loading()"
-          type="button"
-          icon="pi pi-pencil"
-          severity="secondary"
-          size="small"
-          [text]="true"
-          pTooltip="Editar casa de retiro"
-          tooltipPosition="left"
-          (onClick)="$event.stopPropagation(); openEditForm()"
-          [attr.aria-label]="'Editar ' + item.displayName">
-        </p-button>
+  <div class="retreat-home-grid-card__body">
+    <span class="retreat-home-grid-card__eyebrow">Casa de retiro</span>
+    <h3 class="retreat-home-grid-card__title" [title]="item.displayName">{{ item.displayName }}</h3>
+
+    <div class="retreat-home-grid-card__detail-list">
+      @if (item.displayAddress) {
+        <div class="retreat-home-grid-card__detail">
+          <i class="pi pi-map-marker" aria-hidden="true"></i>
+          <span [title]="item.displayAddress">{{ item.displayAddress }}</span>
+        </div>
       }
 
-      <!-- Botón de cambiar estado -->
-      <p-button
-        [disabled]="loading()"
-        type="button"
-        [icon]="getStatusButtonIcon()"
-        [severity]="getStatusButtonSeverity()"
-        size="small"
-        [text]="true"
-        [pTooltip]="getStatusButtonText()"
-        tooltipPosition="left"
-        (onClick)="$event.stopPropagation(); confirmToggleStatus(item)"
-        [attr.aria-label]="getStatusButtonText() + ' ' + item.displayName">
-      </p-button>
+      @if (item.hasPhone) {
+        <div class="retreat-home-grid-card__detail">
+          <i class="pi pi-phone" aria-hidden="true"></i>
+          <span [title]="item.phone">{{ item.phone }}</span>
+        </div>
+      }
     </div>
-  </ng-template>
 
-  <!-- Indicador de carga -->
+    <div class="retreat-home-grid-card__footer">
+      <div class="retreat-home-grid-card__metric">
+        <span class="retreat-home-grid-card__metric-label">Galería</span>
+        <strong>{{ item.imagesData.length }}</strong>
+      </div>
+
+      <div class="retreat-home-grid-card__cta">
+        <span>Ver casa</span>
+        <i class="pi pi-arrow-up-right"></i>
+      </div>
+    </div>
+  </div>
+
   @if (loading()) {
-    <div class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg z-20">
-      <i class="pi pi-spinner pi-spin text-red-500"></i>
+    <div class="retreat-home-grid-card__loading">
+      <i class="pi pi-spinner pi-spin"></i>
     </div>
   }
-</p-card>
+</article>

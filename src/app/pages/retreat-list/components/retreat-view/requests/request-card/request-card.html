@@ -1,13 +1,29 @@
 <p-card class="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-102 h-full" (click)="onCardClick()">
   @if (!skeleton()) {
     <div class="flex flex-col gap-2">
+      @if (showStatus()) {
       <div class="w-fit">
         <p-tag [severity]="status()?.severity" [value]="status()?.label" [rounded]="true" />
       </div>
+      }
       <div>
         <small class="text-gray-500">Pareja</small>
         <h1 class="text-black font-bold text-lg">{{ request()?.displayCoupleNames }}</h1>
       </div>
+      @if (showRetreatMeta() && retreat()) {
+        <div>
+          <small class="text-gray-500">Retiro</small>
+          <p class="text-sm text-gray-700 font-medium">
+            #{{ retreat()?.displayNumber }} {{ retreat()?.displayCommunityName }}
+          </p>
+        </div>
+      }
+      @if (archived()) {
+        <div>
+          <small class="text-gray-500">Archivada</small>
+          <p class="text-sm text-gray-700">{{ request()?.displayArchivedAt }}</p>
+        </div>
+      }
     </div>
   } @else {
     <div class="flex flex-col gap-2">

@@ -1,7 +1,6 @@
 import { Component, inject, Input, signal, OnDestroy, OnInit } from '@angular/core';
 
 import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
 import { RetreatHomeClass } from '@core/entities/retreat-home/retreat-home.class';
 import { TagModule } from 'primeng/tag';
@@ -13,8 +12,9 @@ import { Subject, takeUntil } from 'rxjs';
 @Component({
   selector: 'app-retreat-home-data-grid',
   standalone: true,
-  imports: [ButtonModule, CardModule, TooltipModule, TagModule],
+  imports: [ButtonModule, TooltipModule, TagModule],
   templateUrl: './retreat-home-data-grid.html',
+  styleUrl: './retreat-home-data-grid.scss',
   providers: [DialogService],
 })
 export class RetreatHomeDataGrid implements OnInit, OnDestroy {

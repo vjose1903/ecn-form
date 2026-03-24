@@ -18,6 +18,7 @@ import { DynamicGridDirective } from './directives/dynamic-grid.directive';
   styleUrl: './dynamic-dataview.component.scss',
 })
 export class DynamicDataviewComponent implements OnInit, AfterViewInit, OnDestroy {
+  private static readonly LAYOUT_PREFERENCES_STORAGE_KEY = 'dataview_layout_preferences';
   config = input.required<DynamicDataviewConfig>();
 
   @ViewChildren(DynamicListDirective) listDirectives!: QueryList<DynamicListDirective>;
@@ -133,6 +134,14 @@ export class DynamicDataviewComponent implements OnInit, AfterViewInit, OnDestro
   }
 
   ngOnInit() {
+    const persistedLayout = this.getPersistedLayout();
+
+    if (persistedLayout) {
+      this.layout.set(persistedLayout);
+      this.config().setLayout(persistedLayout);
+      return;
+    }
+
     const configLayout = this.config().layout();
     if (configLayout) {
       this.layout.set(configLayout);
@@ -166,6 +175,8 @@ export class DynamicDataviewComponent implements OnInit, AfterViewInit, OnDestro
 
   onLayoutChange(event: any) {
     this.layout.set(event.value);
+    this.config().setLayout(event.value);
+    this.persistLayout(event.value);
     this.loadTrigger.update(v => v + 1);
   }
 
@@ -297,5 +308,52 @@ export class DynamicDataviewComponent implements OnInit, AfterViewInit, OnDestro
     }
 
     return componentRef;
+  }
+
+  private getPersistedLayout(): 'list' | 'grid' | null {
+    const viewKey = this.config().layoutStorageKey();
+    if (!viewKey || typeof localStorage === 'undefined') {
+      return null;
+    }
+
+    try {
+      const rawPreferences = localStorage.getItem(DynamicDataviewComponent.LAYOUT_PREFERENCES_STORAGE_KEY);
+      if (!rawPreferences) {
+        return null;
+      }
+
+      const preferences = JSON.parse(rawPreferences) as Record<string, string>;
+      const storedLayout = preferences[viewKey];
+
+      if (storedLayout === 'list') {
+        return 'list';
+      }
+
+      if (storedLayout === 'compact') {
+        return 'grid';
+      }
+    } catch (error) {
+      console.warn('No se pudieron leer las preferencias de visualizacion', error);
+    }
+
+    return null;
+  }
+
+  private persistLayout(layout: 'list' | 'grid'): void {
+    const viewKey = this.config().layoutStorageKey();
+    if (!viewKey || typeof localStorage === 'undefined') {
+      return;
+    }
+
+    try {
+      const rawPreferences = localStorage.getItem(DynamicDataviewComponent.LAYOUT_PREFERENCES_STORAGE_KEY);
+      const preferences = rawPreferences ? (JSON.parse(rawPreferences) as Record<string, string>) : {};
+
+      preferences[viewKey] = layout === 'list' ? 'list' : 'compact';
+
+      localStorage.setItem(DynamicDataviewComponent.LAYOUT_PREFERENCES_STORAGE_KEY, JSON.stringify(preferences));
+    } catch (error) {
+      console.warn('No se pudieron guardar las preferencias de visualizacion', error);
+    }
   }
 }

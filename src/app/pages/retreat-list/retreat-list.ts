@@ -75,6 +75,7 @@ export class RetreatList implements OnInit, OnDestroy {
     listComponent: RetreatDataList,
     gridComponent: RetreatDataGrid,
     layout: 'list',
+    layoutStorageKey: 'retreats',
     componentProps: { showActions: true, enableSelection: false },
     filters: {
       enabled: true,

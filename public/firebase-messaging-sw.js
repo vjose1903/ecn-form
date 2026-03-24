@@ -18,7 +18,6 @@ messaging.onBackgroundMessage((payload) => {
   const options = {
     body: payload.notification?.body || payload.data?.body || 'Tienes una nueva solicitud para revisar.',
     icon: '/icons/icon-192x192.png',
-    badge: '/icons/notification-badge.svg',
     tag: payload.data?.tag || payload.notification?.tag || 'ecn-retreat-request',
     renotify: false,
     data: {

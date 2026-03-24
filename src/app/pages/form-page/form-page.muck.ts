@@ -1,4 +1,4 @@
-import { RequestI, RequestStatus } from '@core/entities/request/request.model';
+import { RequestAction, RequestI, RequestStatus } from '@core/entities/request/request.model';
 
 export const formDataMuck: RequestI = {
   id: '',
@@ -12,10 +12,11 @@ export const formDataMuck: RequestI = {
   who_invited_you: 'Juan Perez',
   who_invited_you_phone: '(809) 878-7878',
   status: RequestStatus.PENDING,
+  action: RequestAction.NEW,
   she: {
-    full_name: 'Laura Mercedez',
+    full_name: 'Novia Prueba',
     nickname: '',
-    birth_date: '2020-01-14T04:00:00.000Z',
+    birth_date: '2000-12-26T04:00:00.000Z',
     identity_type: 'Pasaporte',
     identity_number: 'RD345638',
     are_you_married: false,
@@ -46,9 +47,9 @@ export const formDataMuck: RequestI = {
     church_name: 'Parroquia jesus te ama',
   },
   he: {
-    full_name: 'Pedro martinez',
-    nickname: 'Pedrito',
-    birth_date: '2022-02-17T04:00:00.000Z',
+    full_name: 'Novio Prueba',
+    nickname: 'noviecito',
+    birth_date: '1998-03-19T04:00:00.000Z',
     identity_type: 'Pasaporte',
     identity_number: 'RD3467343',
     are_you_married: false,

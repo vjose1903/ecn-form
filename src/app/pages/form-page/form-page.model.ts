@@ -1,9 +1,10 @@
-import { RequestStatus } from '@core/entities/request/request.model';
+import { RequestAction, RequestStatus } from '@core/entities/request/request.model';
 
 export enum FormControlName {
   id = 'id',
   retreat = 'retreat',
   is_active = 'is_active',
+  action = 'action',
   dating_period_year = 'dating_period_year',
   dating_period_month = 'dating_period_month',
   have_wedding_date = 'have_wedding_date',
@@ -112,6 +113,7 @@ export enum Affirmation {
 export const cleanFormValues = {
   [FormControlName.id]: '',
   [FormControlName.is_active]: true,
+  [FormControlName.action]: RequestAction.NEW,
   [FormControlName.status]: RequestStatus.PENDING,
   [FormControlName.retreat]: '',
   [FormControlName.dating_period_year]: null,

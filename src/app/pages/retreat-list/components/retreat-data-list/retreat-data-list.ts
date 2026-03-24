@@ -1,7 +1,6 @@
 import { Component, inject, Input, signal, OnDestroy, OnInit } from '@angular/core';
 
 import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
 import { TagModule } from 'primeng/tag';
 import { DialogService } from 'primeng/dynamicdialog';
@@ -12,8 +11,9 @@ import { Subject, debounceTime } from 'rxjs';
 @Component({
   selector: 'app-retreat-data-list',
   standalone: true,
-  imports: [ButtonModule, CardModule, TooltipModule, TagModule],
+  imports: [ButtonModule, TooltipModule, TagModule],
   templateUrl: './retreat-data-list.html',
+  styleUrl: './retreat-data-list.scss',
   providers: [DialogService],
 })
 export class RetreatDataList implements OnInit, OnDestroy {

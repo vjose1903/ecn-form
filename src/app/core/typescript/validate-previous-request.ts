@@ -118,6 +118,7 @@ export class PreviousRequestValidator {
     const fieldNames: Record<FormControlName, string> = {
       [FormControlName.id]: 'ID',
       [FormControlName.is_active]: 'Estado activo',
+      [FormControlName.action]: 'Acción',
       [FormControlName.retreat]: 'Retiro',
       [FormControlName.dating_period_month]: 'Período de noviazgo',
       [FormControlName.dating_period_year]: 'Período de noviazgo',

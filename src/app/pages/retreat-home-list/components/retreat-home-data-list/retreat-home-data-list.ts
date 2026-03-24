@@ -1,7 +1,6 @@
 import { Component, inject, Input, signal, OnDestroy, OnInit } from '@angular/core';
 
 import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
 import { TagModule } from 'primeng/tag';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -13,8 +12,9 @@ import { Subject, takeUntil } from 'rxjs';
 @Component({
   selector: 'app-retreat-home-data-list',
   standalone: true,
-  imports: [ButtonModule, CardModule, TooltipModule, TagModule],
+  imports: [ButtonModule, TooltipModule, TagModule],
   templateUrl: './retreat-home-data-list.html',
+  styleUrl: './retreat-home-data-list.scss',
   providers: [DialogService],
 })
 export class RetreatHomeDataList implements OnInit, OnDestroy {

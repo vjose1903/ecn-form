@@ -18,6 +18,11 @@ export const layoutRoutes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'solicitudes-archivadas',
+    loadComponent: () => import('../pages/archived-requests/archived-requests').then(m => m.ArchivedRequests),
+    canActivate: [authGuard],
+  },
+  {
     path: 'casas-de-retiro',
     loadComponent: () => import('../pages/retreat-home-list/retreat-home-list').then(m => m.RetreatHomeList),
     canActivate: [authGuard],

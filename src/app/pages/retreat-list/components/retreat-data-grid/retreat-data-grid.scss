@@ -1,0 +1,187 @@
+:host {
+  display: block;
+}
+
+.retreat-grid-card {
+  position: relative;
+  display: grid;
+  overflow: hidden;
+  border-radius: 1.6rem;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: linear-gradient(180deg, #ffffff 0%, #fff8f8 62%, #f8fafc 100%);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+  outline: none;
+}
+
+.retreat-grid-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(248, 113, 113, 0.3);
+  box-shadow: 0 28px 56px rgba(15, 23, 42, 0.14);
+}
+
+.retreat-grid-card:focus-visible {
+  box-shadow:
+    0 0 0 3px rgba(220, 38, 38, 0.18),
+    0 28px 56px rgba(15, 23, 42, 0.14);
+}
+
+.retreat-grid-card__hero {
+  position: relative;
+  display: grid;
+  align-content: space-between;
+  gap: 2rem;
+  min-height: 15rem;
+  padding: 1.1rem 1.1rem 1.35rem;
+  background:
+    radial-gradient(circle at top left, rgba(254, 202, 202, 0.95), transparent 34%),
+    linear-gradient(140deg, #fff1f2 0%, #ffe4e6 42%, #fecaca 100%);
+}
+
+.retreat-grid-card__hero::after {
+  content: '';
+  position: absolute;
+  inset: auto -2rem -3rem auto;
+  width: 8.5rem;
+  height: 8.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
+  filter: blur(2px);
+}
+
+.retreat-grid-card__hero-top,
+.retreat-grid-card__body {
+  position: relative;
+  z-index: 1;
+}
+
+.retreat-grid-card__hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.retreat-grid-card__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.3rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+}
+
+.retreat-grid-card__hero-copy {
+  max-width: 15rem;
+}
+
+.retreat-grid-card__eyebrow,
+.retreat-grid-card__metric-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.retreat-grid-card__eyebrow {
+  color: #b91c1c;
+  margin-bottom: 0.5rem;
+}
+
+.retreat-grid-card__number {
+  display: block;
+  color: #7f1d1d;
+  font-size: clamp(2.5rem, 6vw, 3.3rem);
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+}
+
+.retreat-grid-card__title {
+  margin: 0.7rem 0 0;
+  color: #3f3f46;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.retreat-grid-card__body {
+  display: grid;
+  gap: 1rem;
+  padding: 1.15rem 1.1rem 1.2rem;
+}
+
+.retreat-grid-card__detail-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.retreat-grid-card__detail {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.7rem;
+  align-items: start;
+  padding: 0.88rem 0.9rem;
+  border-radius: 1rem;
+  background: rgba(248, 250, 252, 0.88);
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  color: #334155;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.retreat-grid-card__detail i {
+  margin-top: 0.1rem;
+  color: #dc2626;
+  font-size: 0.9rem;
+}
+
+.retreat-grid-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.1rem;
+}
+
+.retreat-grid-card__metric {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.retreat-grid-card__metric-label {
+  color: #94a3b8;
+}
+
+.retreat-grid-card__metric-value {
+  color: #0f172a;
+  font-size: 1.7rem;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.retreat-grid-card__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.retreat-grid-card__cta i {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #fff;
+  font-size: 0.78rem;
+}

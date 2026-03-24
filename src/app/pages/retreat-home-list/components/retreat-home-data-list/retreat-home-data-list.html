@@ -1,6 +1,5 @@
-<p-card
-  class="cursor-pointer transition-all duration-200 hover:shadow-lg"
-  styleClass="hover:!bg-gray-50"
+<article
+  class="retreat-home-list-card"
   [class]="getLoadingClass()"
   (click)="onCardClick($event)"
   [attr.aria-label]="'Casa de retiro: ' + item.displayName"
@@ -8,95 +7,92 @@
   tabindex="0"
   (keydown.enter)="openRetreatHomeView()"
   (keydown.space)="openRetreatHomeView()">
-  <div class="flex justify-between items-center flex-wrap gap-x-5 gap-y-3">
-    <div class="flex items-center gap-x-3 flex-1 min-w-0">
-      <!-- Imagen con lazy loading y fallback -->
-      <div class="hidden md:block aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 w-22 h-22 flex-shrink-0">
-        @if (!imageLoaded()) {
-          <div class="w-full h-full flex items-center justify-center">
-            <i class="pi pi-image text-gray-400 text-2xl"></i>
-          </div>
-        }
-        @if (imageLoaded() && !imageError()) {
-          <img [src]="item.mainImageUrl" [alt]="'Imagen de ' + item.displayName" class="w-full h-full object-cover transition-opacity duration-200" loading="lazy" (error)="imageError.set(true)" />
-        }
-        @if (imageError()) {
-          <div class="w-full h-full flex items-center justify-center bg-gray-200">
-            <i class="pi pi-image text-gray-500 text-xl"></i>
-          </div>
-        }
+  <div class="retreat-home-list-card__media">
+    @if (!item.mainImageUrl || !imageLoaded()) {
+      <div class="retreat-home-list-card__media-placeholder">
+        <i class="pi pi-image"></i>
       </div>
+    }
 
-      <!-- Información principal -->
-      <div class="flex-1 min-w-0">
-        <!-- Estado -->
-        <div class="mb-2">
-          <p-tag [severity]="item.statusSeverity" [value]="item.statusText" [rounded]="true" [attr.aria-label]="'Estado: ' + item.statusText" />
-        </div>
+    @if (item.mainImageUrl && imageLoaded() && !imageError()) {
+      <img [src]="item.mainImageUrl" [alt]="'Imagen de ' + item.displayName" class="retreat-home-list-card__image" loading="lazy" (error)="imageError.set(true)" />
+    }
 
-        <!-- Nombre -->
-        <h3 class="text-lg font-semibold mb-2 text-gray-900 truncate" [title]="item.displayName">{{ item.displayName }}</h3>
-
-        <!-- Información de contacto -->
-        <div class="flex flex-wrap gap-x-7 gap-y-2 text-sm text-gray-600">
-          <!-- Dirección -->
-          @if (item.displayAddress) {
-            <span class="flex items-center min-w-0">
-              <i class="pi pi-map-marker mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-              <span class="line-clamp-2 truncate" [title]="item.displayAddress"> {{ item.displayAddress }} </span>
-            </span>
-          }
-
-          <!-- Teléfono -->
-          @if (item.hasPhone) {
-            <span class="flex items-center min-w-0">
-              <i class="pi pi-phone mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-              <span class="truncate" [title]="item.phone"> {{ item.phone }} </span>
-            </span>
-          }
-
-          <!-- Indicador de imágenes -->
-          @if (item.hasImages) {
-            <span class="flex items-center min-w-0">
-              <i class="pi pi-images mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-              <span> {{ item.imagesData.length }} imagen{{ item.imagesData.length !== 1 ? 'es' : '' }} </span>
-            </span>
-          }
-        </div>
+    @if (item.mainImageUrl && imageError()) {
+      <div class="retreat-home-list-card__media-placeholder retreat-home-list-card__media-placeholder--error">
+        <i class="pi pi-home"></i>
       </div>
-    </div>
+    }
 
-    <!-- Acciones -->
-    <div class="flex gap-2 justify-end w-full md:w-auto flex-shrink-0">
-      <!-- Botón de editar (solo si está activo) -->
-      @if (item.is_active) {
-        <p-button
-          [disabled]="loading()"
-          type="button"
-          icon="pi pi-pencil"
-          severity="secondary"
-          size="small"
-          [text]="true"
-          pTooltip="Editar casa de retiro"
-          tooltipPosition="left"
-          (onClick)="$event.stopPropagation(); openEditForm()"
-          [attr.aria-label]="'Editar ' + item.displayName">
-        </p-button>
-      }
-
-      <!-- Botón de cambiar estado -->
-      <p-button
-        [disabled]="loading()"
-        type="button"
-        [icon]="getStatusButtonIcon()"
-        [severity]="getStatusButtonSeverity()"
-        size="small"
-        [text]="true"
-        [pTooltip]="getStatusButtonText()"
-        tooltipPosition="left"
-        (onClick)="$event.stopPropagation(); confirmToggleStatus(item)"
-        [attr.aria-label]="getStatusButtonText() + ' ' + item.displayName">
-      </p-button>
+    <div class="retreat-home-list-card__media-overlay">
+      <p-tag [severity]="item.statusSeverity" [value]="item.statusText" [rounded]="true" [attr.aria-label]="'Estado: ' + item.statusText" />
     </div>
   </div>
-</p-card>
+
+  <div class="retreat-home-list-card__content">
+    <div class="retreat-home-list-card__header">
+      <div>
+        <span class="retreat-home-list-card__eyebrow">Casa de retiro</span>
+        <h3 class="retreat-home-list-card__title" [title]="item.displayName">{{ item.displayName }}</h3>
+      </div>
+
+      @if (showActions) {
+        <div class="retreat-home-list-card__actions">
+          @if (item.is_active) {
+            <p-button
+              [disabled]="loading()"
+              type="button"
+              icon="pi pi-pencil"
+              severity="secondary"
+              size="small"
+              [text]="true"
+              pTooltip="Editar casa de retiro"
+              tooltipPosition="left"
+              (onClick)="$event.stopPropagation(); openEditForm()"
+              [attr.aria-label]="'Editar ' + item.displayName" />
+          }
+
+          <p-button
+            [disabled]="loading()"
+            type="button"
+            [icon]="getStatusButtonIcon()"
+            [severity]="getStatusButtonSeverity()"
+            size="small"
+            [text]="true"
+            [pTooltip]="getStatusButtonText()"
+            tooltipPosition="left"
+            (onClick)="$event.stopPropagation(); confirmToggleStatus(item)"
+            [attr.aria-label]="getStatusButtonText() + ' ' + item.displayName" />
+        </div>
+      }
+    </div>
+
+    <div class="retreat-home-list-card__details">
+      @if (item.displayAddress) {
+        <div class="retreat-home-list-card__detail retreat-home-list-card__detail--wide">
+          <i class="pi pi-map-marker" aria-hidden="true"></i>
+          <div>
+            <span class="retreat-home-list-card__detail-label">Dirección</span>
+            <p [title]="item.displayAddress">{{ item.displayAddress }}</p>
+          </div>
+        </div>
+      }
+
+      @if (item.hasPhone) {
+        <div class="retreat-home-list-card__detail">
+          <i class="pi pi-phone" aria-hidden="true"></i>
+          <div>
+            <span class="retreat-home-list-card__detail-label">Teléfono</span>
+            <p [title]="item.phone">{{ item.phone }}</p>
+          </div>
+        </div>
+      }
+
+      <div class="retreat-home-list-card__metric">
+        <span class="retreat-home-list-card__detail-label">Galería</span>
+        <strong>{{ item.imagesData.length }}</strong>
+        <p>imagen{{ item.imagesData.length !== 1 ? 'es' : '' }}</p>
+      </div>
+    </div>
+  </div>
+</article>

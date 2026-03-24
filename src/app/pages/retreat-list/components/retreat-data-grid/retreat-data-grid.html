@@ -1,5 +1,5 @@
-<p-card
-  class="overflow-hidden relative cursor-pointer transition-all duration-200 hover:shadow-lg"
+<article
+  class="retreat-grid-card"
   [class]="getLoadingClass()"
   (click)="onCardClick($event)"
   [attr.aria-label]="'Retiro: ' + item.displayNumber"
@@ -7,73 +7,14 @@
   tabindex="0"
   (keydown.enter)="openRetreatView()"
   (keydown.space)="openRetreatView()">
-  <ng-template #header>
-    <!-- Estado -->
-    <div class="absolute top-2 left-2 z-10">
-      <p-tag [severity]="item.statusSeverity" [value]="item.statusText" [rounded]="true" [attr.aria-label]="'Estado: ' + item.statusText" />
-    </div>
-
-    <!-- Icono del retiro -->
-    <div class="relative w-full h-48 bg-gray-100 flex items-center justify-center flex-col">
-      <h5 class="text-md text-red-500">Retiro No.</h5>
-      <h1 class="text-3xl md:text-4xl font-bold text-red-700">{{ item.displayNumber }}</h1>
-    </div>
-  </ng-template>
-
-  <div>
-    <!-- Número de retiro -->
-    <div class="flex items-center gap-x-3 mb-3 flex-wrap">
-      <h3 class="text-lg font-semibold text-gray-900 whitespace-nowrap" [title]="item.displayNumber">Retiro No. {{ item.displayNumber }}</h3>
-      <h4 class="text-md text-gray-800" [title]="item.displayCommunityName">Comunidad: {{ item.displayCommunityName }}</h4>
-    </div>
-
-    <!-- Información del retiro -->
-    <div class="space-y-2 text-xs text-gray-600 mb-3">
-      <!-- Casa de retiro -->
-      @if (item.hasRetreatHome) {
-        <div class="flex items-center gap-1">
-          <i class="pi pi-home mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-          <span class="line-clamp-2" [title]="item.retreatHomeName"> {{ item.retreatHomeName }} </span>
-        </div>
-      }
-
-      <!-- Modalidad -->
-      @if (item.hasModality) {
-        <div class="flex items-center gap-1">
-          <i class="pi pi-globe mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-          <span class="truncate" [title]="item.displayModality"> {{ item.displayModality }} </span>
-        </div>
-      }
-
-      <!-- Fechas -->
-      @if (item.hasDates) {
-        <div class="flex items-center gap-1">
-          <i class="pi pi-calendar mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-          <span class="line-clamp-2" [title]="item.displayDateRange"> {{ item.displayDateRange }} </span>
-        </div>
-      }
-
-      <!-- Estado de solicitudes -->
-      <div class="flex items-center gap-1">
-        <i class="pi pi-check-circle mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-        <span class="truncate" [title]="item.requestsStatusText"> {{ item.requestsStatusText }} </span>
+  <div class="retreat-grid-card__hero">
+    <div class="retreat-grid-card__hero-top">
+      <div class="retreat-grid-card__status">
+        <p-tag [severity]="item.statusSeverity" [value]="item.statusText" [rounded]="true" [attr.aria-label]="'Estado: ' + item.statusText" />
       </div>
 
-      <!-- cantidad de solicitudes -->
-      @if (item.requestCount > 0) {
-        <div class="flex items-center gap-1">
-          <i class="pi pi-users mr-1 text-red-600 flex-shrink-0" aria-hidden="true"></i>
-          <span class="truncate" [title]="item.requestCount"> {{ item.requestCount }} Solicitudes </span>
-        </div>
-      }
-    </div>
-  </div>
-
-  <!-- Acciones -->
-  <ng-template #footer>
-    @if (showActions) {
-      <div class="flex justify-end items-center w-full">
-        <div class="flex items-center gap-1">
+      @if (showActions) {
+        <div class="retreat-grid-card__actions">
           @if (item.is_active) {
             <p-button
               type="button"
@@ -99,7 +40,55 @@
             tooltipPosition="top"
             [attr.aria-label]="(item.is_active ? 'Desactivar' : 'Activar') + ' ' + item.displayNumber" />
         </div>
+      }
+    </div>
+
+    <div class="retreat-grid-card__hero-copy">
+      <span class="retreat-grid-card__eyebrow">Retiro</span>
+      <strong class="retreat-grid-card__number">#{{ item.displayNumber }}</strong>
+      <h3 class="retreat-grid-card__title">{{ item.displayCommunityName }}</h3>
+    </div>
+  </div>
+
+  <div class="retreat-grid-card__body">
+    <div class="retreat-grid-card__detail-list">
+      @if (item.hasRetreatHome) {
+        <div class="retreat-grid-card__detail">
+          <i class="pi pi-home" aria-hidden="true"></i>
+          <span [title]="item.retreatHomeName">{{ item.retreatHomeName }}</span>
+        </div>
+      }
+
+      @if (item.hasModality) {
+        <div class="retreat-grid-card__detail">
+          <i class="pi pi-globe" aria-hidden="true"></i>
+          <span [title]="item.displayModality">{{ item.displayModality }}</span>
+        </div>
+      }
+
+      @if (item.hasDates) {
+        <div class="retreat-grid-card__detail">
+          <i class="pi pi-calendar" aria-hidden="true"></i>
+          <span [title]="item.displayDateRange">{{ item.displayDateRange }}</span>
+        </div>
+      }
+
+      <div class="retreat-grid-card__detail">
+        <i class="pi pi-check-circle" aria-hidden="true"></i>
+        <span [title]="item.requestsStatusText">{{ item.requestsStatusText }}</span>
       </div>
-    }
-  </ng-template>
-</p-card>
+    </div>
+
+    <div class="retreat-grid-card__footer">
+      <div class="retreat-grid-card__metric">
+        <span class="retreat-grid-card__metric-label">Solicitudes</span>
+        <strong class="retreat-grid-card__metric-value">{{ item.requestCount }}</strong>
+      </div>
+
+      <div class="retreat-grid-card__cta">
+        <span>Abrir retiro</span>
+        <i class="pi pi-arrow-up-right"></i>
+      </div>
+    </div>
+  </div>
+</article>
