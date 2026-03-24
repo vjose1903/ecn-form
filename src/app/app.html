@@ -4,7 +4,7 @@
 </div>
 } @else {
 <router-outlet />
-<p-toast />
+<p-toast styleClass="app-toast" [breakpoints]="toastBreakpoints" />
 <p-confirmdialog>
   <ng-template #message let-message>
     <div class="flex items-center w-full gap-4">

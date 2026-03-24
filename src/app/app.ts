@@ -23,6 +23,20 @@ import { CommonModule } from '@angular/common';
 export class App implements OnInit {
   protected readonly title = 'ECN Platform';
   protected readonly isReady = signal(false);
+  protected readonly toastBreakpoints = {
+    '768px': {
+      width: 'calc(100vw - 1rem)',
+      right: '0.5rem',
+      left: '0.5rem',
+      transform: 'none',
+    },
+    '480px': {
+      width: 'calc(100vw - 0.75rem)',
+      right: '0.375rem',
+      left: '0.375rem',
+      transform: 'none',
+    },
+  };
 
   private readonly cdRef = inject(ChangeDetectorRef);
   private readonly ngZone = inject(NgZone);

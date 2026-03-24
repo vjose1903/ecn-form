@@ -125,3 +125,50 @@ body {
   height: 100%;
   width: 100%;
 }
+
+@media (max-width: 768px) {
+  .app-toast.p-toast {
+    max-width: calc(100vw - 1rem) !important;
+  }
+
+  .app-toast.p-toast .p-toast-message {
+    width: 100%;
+  }
+
+  .app-toast.p-toast .p-toast-message-content {
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.9rem 0.95rem;
+  }
+
+  .app-toast.p-toast .p-toast-message-text {
+    min-width: 0;
+  }
+
+  .app-toast.p-toast .p-toast-summary,
+  .app-toast.p-toast .p-toast-detail {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .app-toast.p-toast .p-toast-detail {
+    white-space: pre-line;
+  }
+
+  .app-toast.p-toast .p-toast-close-button {
+    flex: 0 0 auto;
+    margin-inline-start: 0.25rem;
+  }
+
+  .app-toast.p-toast.p-toast-top-right,
+  .app-toast.p-toast.p-toast-top-left,
+  .app-toast.p-toast.p-toast-top-center {
+    top: calc(env(safe-area-inset-top, 0px) + 0.5rem) !important;
+  }
+
+  .app-toast.p-toast.p-toast-bottom-right,
+  .app-toast.p-toast.p-toast-bottom-left,
+  .app-toast.p-toast.p-toast-bottom-center {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem) !important;
+  }
+}
