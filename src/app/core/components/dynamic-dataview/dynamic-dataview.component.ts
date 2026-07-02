@@ -59,7 +59,7 @@ export class DynamicDataviewComponent implements OnInit, AfterViewInit, OnDestro
       }
       // Para filtros de select, considerar activo si no es 'all' y no está vacío
       else if (config?.type === 'select') {
-        return value !== '' && value !== null && value !== undefined && value !== 'all';
+        return value !== '' && value !== null && value !== undefined && value !== (config.defaultValue ?? 'all');
       }
       // Los filtros de tipo 'sort' no cuentan como filtros activos
       else if (config?.type === 'sort') {
@@ -87,7 +87,7 @@ export class DynamicDataviewComponent implements OnInit, AfterViewInit, OnDestro
         activeFilters.push(`"${value}"`);
       }
       // Para filtros de select, mostrar si no es 'all' y no está vacío
-      else if (config?.type === 'select' && value !== '' && value !== null && value !== undefined && value !== 'all') {
+      else if (config?.type === 'select' && value !== '' && value !== null && value !== undefined && value !== (config.defaultValue ?? 'all')) {
         if (config.options) {
           const option = config.options.find(opt => opt.value === value);
           if (option) {

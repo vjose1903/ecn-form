@@ -46,7 +46,7 @@ export class RetreatList implements OnInit, OnDestroy {
         { label: 'Activos', value: 'active' },
         { label: 'Inactivos', value: 'inactive' },
       ],
-      defaultValue: 'all',
+      defaultValue: 'active',
     },
     {
       key: 'requests',
@@ -82,7 +82,7 @@ export class RetreatList implements OnInit, OnDestroy {
       configs: this.filterConfigs,
       values: {
         search: '',
-        status: 'all',
+        status: 'active',
         requests: 'all',
       },
       onFilterChange: filters => this.onFiltersChanged(filters),
