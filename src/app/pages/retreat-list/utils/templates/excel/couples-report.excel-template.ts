@@ -62,7 +62,7 @@ export class CouplesExcelTemplate implements ExcelTemplate {
 
     worksheet.mergeCells('C1:K1');
     const titleCell = worksheet.getRow(1).getCell(3);
-    titleCell.value = '  Encuentro Católico para Novios';
+    titleCell.value = '  Encuentro Católico de Novios';
     titleCell.font = { size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
     titleCell.fill = {
       type: 'pattern',
