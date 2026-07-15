@@ -114,7 +114,7 @@ export class PdfService {
       head: [
         [
           { content: ' ', rowSpan: 2, styles: { halign: 'center', valign: 'middle' } },
-          { content: 'Encuentro Católico para Novios', styles: { halign: 'left', valign: 'middle' } },
+          { content: 'Encuentro Católico de Novios', styles: { halign: 'left', valign: 'middle' } },
         ],
         [{ content: cityLabel, styles: { halign: 'left', valign: 'middle', fontSize: 8, fontStyle: 'normal', textColor: accentColor } }],
       ],

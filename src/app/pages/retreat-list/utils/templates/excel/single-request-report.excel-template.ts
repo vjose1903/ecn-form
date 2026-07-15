@@ -67,7 +67,7 @@ export class SingleRequestExcelTemplate implements ExcelTemplate {
 
     worksheet.mergeCells('B1:F1');
     const titleCell = worksheet.getRow(1).getCell(2);
-    titleCell.value = 'Encuentro Católico para Novios';
+    titleCell.value = 'Encuentro Católico de Novios';
     titleCell.font = { size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
     titleCell.fill = {
       type: 'pattern',
