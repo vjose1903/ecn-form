@@ -14,4 +14,20 @@
   </ng-template>
 </p-confirmdialog>
 <p-dialog />
+<p-dialog
+  header="Nueva versión disponible"
+  [visible]="updateDialogVisible()"
+  [modal]="true"
+  [closable]="false"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: 'min(92vw, 28rem)' }">
+  <div class="flex flex-col gap-4">
+    <p class="m-0 text-gray-700">Hay una versión nueva de la aplicación. Se necesita refrescar la ventana para cargar la última versión.</p>
+
+    <div class="flex justify-end">
+      <p-button type="button" label="Refrescar" icon="pi pi-refresh" (onClick)="reloadForUpdate()" />
+    </div>
+  </div>
+</p-dialog>
 }

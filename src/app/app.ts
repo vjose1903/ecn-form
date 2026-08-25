@@ -1,5 +1,6 @@
-import { ChangeDetectorRef, Component, inject, Injector, NgZone, OnInit, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { ChangeDetectorRef, Component, inject, Injector, NgZone, OnDestroy, OnInit, signal } from '@angular/core';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { Ss } from '@core/services/singleton.service';
 import { LoadingComponent } from '@core/components/loading-component/loading-component';
 import { ToastModule } from 'primeng/toast';
@@ -13,16 +14,19 @@ import { ConfirmationService } from 'primeng/api';
 import { DialogService } from 'primeng/dynamicdialog';
 import { FileService } from '@core/entities/file/file.service';
 import { CommonModule } from '@angular/common';
+import { ButtonModule } from 'primeng/button';
+import { filter } from 'rxjs';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, RouterOutlet, LoadingComponent, ToastModule, ConfirmDialogModule, DialogModule],
+  imports: [CommonModule, RouterOutlet, LoadingComponent, ToastModule, ConfirmDialogModule, DialogModule, ButtonModule],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
-export class App implements OnInit {
+export class App implements OnInit, OnDestroy {
   protected readonly title = 'ECN Platform';
   protected readonly isReady = signal(false);
+  protected readonly updateDialogVisible = signal(false);
   protected readonly toastBreakpoints = {
     '768px': {
       width: 'calc(100vw - 1rem)',
@@ -48,9 +52,25 @@ export class App implements OnInit {
   private readonly injector = inject(Injector);
   private readonly dialogService = inject(DialogService);
   private readonly fileService = inject(FileService);
+  private readonly swUpdate = inject(SwUpdate);
+  private readonly router = inject(Router);
+  private readonly updateCheckIntervalMs = 6 * 60 * 60 * 1000;
+  private pendingUpdate = false;
+  private updateCheckInterval: ReturnType<typeof setInterval> | null = null;
 
   ngOnInit(): void {
     this.initializeApp();
+    this.watchAppUpdates();
+  }
+
+  ngOnDestroy(): void {
+    if (this.updateCheckInterval) {
+      clearInterval(this.updateCheckInterval);
+    }
+  }
+
+  protected reloadForUpdate(): void {
+    window.location.reload();
   }
 
   private async initializeApp(): Promise<void> {
@@ -88,5 +108,63 @@ export class App implements OnInit {
 
     // Delay mínimo para asegurar que Firebase esté listo
     await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  private watchAppUpdates(): void {
+    if (!this.swUpdate.isEnabled) {
+      return;
+    }
+
+    this.swUpdate.versionUpdates
+      .pipe(filter((event): event is VersionReadyEvent => event.type === 'VERSION_READY'))
+      .subscribe(() => {
+        this.pendingUpdate = true;
+        this.showUpdateDialogIfAllowed();
+      });
+
+    this.swUpdate.unrecoverable.subscribe(() => {
+      if (this.isFormRoute()) {
+        return;
+      }
+
+      this.updateDialogVisible.set(true);
+    });
+
+    this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
+      this.showUpdateDialogIfAllowed();
+    });
+
+    this.updateCheckInterval = setInterval(() => {
+      void this.checkForAppUpdate();
+    }, this.updateCheckIntervalMs);
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        void this.checkForAppUpdate();
+      }
+    });
+
+    void this.checkForAppUpdate();
+  }
+
+  private async checkForAppUpdate(): Promise<void> {
+    try {
+      await this.swUpdate.checkForUpdate();
+    } catch (error) {
+      console.warn('No se pudo verificar si hay una nueva versión de la app', error);
+    }
+  }
+
+  private showUpdateDialogIfAllowed(): void {
+    if (!this.pendingUpdate || this.isFormRoute()) {
+      this.updateDialogVisible.set(false);
+      return;
+    }
+
+    this.updateDialogVisible.set(true);
+  }
+
+  private isFormRoute(): boolean {
+    return this.router.url.startsWith('/formulario');
   }
 }
