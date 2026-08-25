@@ -14,12 +14,11 @@ import { ConfirmationService } from 'primeng/api';
 import { DialogService } from 'primeng/dynamicdialog';
 import { FileService } from '@core/entities/file/file.service';
 import { CommonModule } from '@angular/common';
-import { ButtonModule } from 'primeng/button';
 import { filter } from 'rxjs';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, RouterOutlet, LoadingComponent, ToastModule, ConfirmDialogModule, DialogModule, ButtonModule],
+  imports: [CommonModule, RouterOutlet, LoadingComponent, ToastModule, ConfirmDialogModule, DialogModule],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
@@ -56,6 +55,7 @@ export class App implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly updateCheckIntervalMs = 6 * 60 * 60 * 1000;
   private pendingUpdate = false;
+  private updatePromptDismissed = false;
   private updateCheckInterval: ReturnType<typeof setInterval> | null = null;
 
   ngOnInit(): void {
@@ -71,6 +71,11 @@ export class App implements OnInit, OnDestroy {
 
   protected reloadForUpdate(): void {
     window.location.reload();
+  }
+
+  protected dismissUpdateDialog(): void {
+    this.updatePromptDismissed = true;
+    this.updateDialogVisible.set(false);
   }
 
   private async initializeApp(): Promise<void> {
@@ -119,6 +124,7 @@ export class App implements OnInit, OnDestroy {
       .pipe(filter((event): event is VersionReadyEvent => event.type === 'VERSION_READY'))
       .subscribe(() => {
         this.pendingUpdate = true;
+        this.updatePromptDismissed = false;
         this.showUpdateDialogIfAllowed();
       });
 
@@ -156,7 +162,7 @@ export class App implements OnInit, OnDestroy {
   }
 
   private showUpdateDialogIfAllowed(): void {
-    if (!this.pendingUpdate || this.isFormRoute()) {
+    if (!this.pendingUpdate || this.updatePromptDismissed || this.isFormRoute()) {
       this.updateDialogVisible.set(false);
       return;
     }
