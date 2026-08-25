@@ -57,7 +57,7 @@ export class SingleRequestExcelTemplate implements ExcelTemplate {
   }
 
   private async addHeader(worksheet: ExcelJS.Worksheet, cityInfo?: CityInfo): Promise<void> {
-    const cityLabel = cityInfo?.large_label || 'Ciudad';
+    const cityLabel = cityInfo?.large_label || 'Ciudad'; 
 
     // Fila 1: Logo y título principal
     worksheet.mergeCells('A1:A2');
