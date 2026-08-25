@@ -15,18 +15,37 @@
 </p-confirmdialog>
 <p-dialog />
 <p-dialog
-  header="Nueva versión disponible"
   [visible]="updateDialogVisible()"
   [modal]="true"
   [closable]="false"
   [draggable]="false"
   [resizable]="false"
-  [style]="{ width: 'min(92vw, 28rem)' }">
-  <div class="flex flex-col gap-4">
-    <p class="m-0 text-gray-700">Hay una versión nueva de la aplicación. Se necesita refrescar la ventana para cargar la última versión.</p>
+  [showHeader]="false"
+  styleClass="update-version-dialog"
+  [style]="{ width: 'min(86vw, 36rem)' }">
+  <div class="update-modal-content">
+    <span class="update-sparkle update-sparkle-lg update-sparkle-left"></span>
+    <span class="update-sparkle update-sparkle-dot update-sparkle-dot-left"></span>
+    <span class="update-sparkle update-sparkle-dot update-sparkle-dot-right"></span>
+    <span class="update-sparkle update-sparkle-sm update-sparkle-right"></span>
 
-    <div class="flex justify-end">
-      <p-button type="button" label="Refrescar" icon="pi pi-refresh" (onClick)="reloadForUpdate()" />
+    <div class="update-icon-ring">
+      <i class="pi pi-cloud-upload"></i>
+    </div>
+
+    <h2>¡Nueva versión disponible!</h2>
+    <p>Hay una versión nueva de la aplicación. Se necesita refrescar la ventana para cargar la última versión.</p>
+
+    <div class="update-modal-actions">
+      <button type="button" class="update-secondary-button" (click)="dismissUpdateDialog()">
+        <i class="pi pi-times"></i>
+        <span>Ahora no</span>
+      </button>
+
+      <button type="button" class="update-primary-button" (click)="reloadForUpdate()">
+        <i class="pi pi-refresh"></i>
+        <span>Refrescar</span>
+      </button>
     </div>
   </div>
 </p-dialog>
