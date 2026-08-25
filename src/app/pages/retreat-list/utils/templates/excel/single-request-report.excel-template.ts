@@ -53,7 +53,7 @@ export class SingleRequestExcelTemplate implements ExcelTemplate {
     retreatDateRow.getCell(1).value = 'Rango de Fechas:';
     retreatDateRow.getCell(1).font = { bold: true };
     retreatDateRow.getCell(2).value = retreatInfo.dateRange;
-    retreatDateRow.height = 20; 
+    retreatDateRow.height = 20;
   }
 
   private async addHeader(worksheet: ExcelJS.Worksheet, cityInfo?: CityInfo): Promise<void> {
@@ -112,19 +112,19 @@ export class SingleRequestExcelTemplate implements ExcelTemplate {
       const cedulaValue = person?.identity_number ? `${person.identity_number} (${person.identity_type})` : person?.cedula || 'N/A';
       const rowObj = worksheet.getRow(currentRow);
       rowObj.height = 20;
-      
+
       // Cédula
       rowObj.getCell(1).value = 'Cédula:';
       rowObj.getCell(1).font = { bold: true };
       rowObj.getCell(2).value = this.convertToString(cedulaValue);
       rowObj.getCell(2).alignment = { wrapText: true };
-      
+
       // Fecha de Nacimiento (en la misma fila, columna siguiente)
       rowObj.getCell(3).value = 'Fecha de Nacimiento:';
       rowObj.getCell(3).font = { bold: true };
       rowObj.getCell(4).value = this.convertToString(person?.birth_date);
       rowObj.getCell(4).alignment = { wrapText: true };
-      
+
       currentRow++;
     } else if (person?.birth_date) {
       // Si no hay cédula pero sí fecha de nacimiento
@@ -136,7 +136,7 @@ export class SingleRequestExcelTemplate implements ExcelTemplate {
     if (person?.cell_phone || person?.phone) {
       const phoneValue = person?.cell_phone || person?.phone || 'N/A';
       this.addField(worksheet, 'Celular:', phoneValue, currentRow);
-      
+
       let phoneCol = 2;
       if (fun.hasValue(person?.home_phone)) {
         worksheet.getRow(currentRow).getCell(phoneCol + 1).value = 'Tel. Casa:';
@@ -144,7 +144,7 @@ export class SingleRequestExcelTemplate implements ExcelTemplate {
         worksheet.getRow(currentRow).getCell(phoneCol + 2).value = person.home_phone;
         phoneCol += 2;
       }
-      
+
       if (fun.hasValue(person?.work_phone)) {
         worksheet.getRow(currentRow).getCell(phoneCol + 1).value = 'Tel. Trabajo:';
         worksheet.getRow(currentRow).getCell(phoneCol + 1).font = { bold: true };
@@ -210,12 +210,12 @@ export class SingleRequestExcelTemplate implements ExcelTemplate {
       emergencyRow.getCell(1).font = { bold: true };
       emergencyRow.getCell(2).value = this.convertToString(person.emergency_relationship);
       emergencyRow.getCell(2).alignment = { wrapText: true };
-      
+
       emergencyRow.getCell(3).value = 'Teléfono:';
       emergencyRow.getCell(3).font = { bold: true };
       emergencyRow.getCell(4).value = this.convertToString(person.emergency_phone);
       emergencyRow.getCell(4).alignment = { wrapText: true };
-      
+
       currentRow += 3;
     }
 
@@ -238,15 +238,15 @@ export class SingleRequestExcelTemplate implements ExcelTemplate {
         familyRow.getCell(1).font = { bold: true };
         familyRow.getCell(2).value = this.convertToString(family.familiar_relationship);
         familyRow.getCell(2).alignment = { wrapText: true };
-        
+
         familyRow.getCell(3).value = 'Teléfono:';
         familyRow.getCell(3).font = { bold: true };
         familyRow.getCell(4).value = this.convertToString(family.familiar_phone);
         familyRow.getCell(4).alignment = { wrapText: true };
-        
+
         currentRow++;
       });
-      
+
       currentRow++;
     }
 
@@ -298,4 +298,3 @@ export class SingleRequestExcelTemplate implements ExcelTemplate {
     }
   }
 }
-
