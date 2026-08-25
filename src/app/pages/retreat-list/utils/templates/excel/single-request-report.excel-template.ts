@@ -53,7 +53,7 @@ export class SingleRequestExcelTemplate implements ExcelTemplate {
     retreatDateRow.getCell(1).value = 'Rango de Fechas:';
     retreatDateRow.getCell(1).font = { bold: true };
     retreatDateRow.getCell(2).value = retreatInfo.dateRange;
-    retreatDateRow.height = 20;
+    retreatDateRow.height = 20; 
   }
 
   private async addHeader(worksheet: ExcelJS.Worksheet, cityInfo?: CityInfo): Promise<void> {
