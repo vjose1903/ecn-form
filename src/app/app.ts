@@ -69,8 +69,14 @@ export class App implements OnInit, OnDestroy {
     }
   }
 
-  protected reloadForUpdate(): void {
-    window.location.reload();
+  protected async reloadForUpdate(): Promise<void> {
+    try {
+      await this.swUpdate.activateUpdate();
+    } catch (error) {
+      console.warn('No se pudo activar la nueva versión antes de refrescar', error);
+    } finally {
+      window.location.reload();
+    }
   }
 
   protected dismissUpdateDialog(): void {
