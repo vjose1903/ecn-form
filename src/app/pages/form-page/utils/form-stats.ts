@@ -88,6 +88,8 @@ export class FormStatsUtils {
    * Recopila los campos con errores (no required) de un FormGroup
    */
   private static collectInvalidFields(control: AbstractControl, invalidFields: string[], rootLevelOnly: boolean = false, section?: FormGroupFields, parentPath: string = ''): void {
+    this.collectControlErrors(control, invalidFields, section, parentPath);
+
     if (control instanceof FormGroup) {
       Object.entries(control.controls).forEach(([controlName, childControl]) => {
         // Si es nivel raíz y encontramos un subgrupo, saltarlo
@@ -106,8 +108,9 @@ export class FormStatsUtils {
       });
       return;
     }
+  }
 
-    // Para FormControl individual - verificar errores que no sean required
+  private static collectControlErrors(control: AbstractControl, invalidFields: string[], section?: FormGroupFields, parentPath: string = ''): void {
     if (control.errors) {
       const errorKeys = Object.keys(control.errors).filter(key => key !== 'required');
       if (errorKeys.length > 0) {
@@ -157,6 +160,10 @@ export class FormStatsUtils {
       familiar_relationship: 'Familiar - Parentesco',
     };
 
+    if (!fieldPath && (section === FormGroupFields.she || section === FormGroupFields.he)) {
+      return 'Contactos familiares y emergencia';
+    }
+
     // Limpiar el path para obtener el nombre del campo
     const cleanPath =
       fieldPath
@@ -184,6 +191,10 @@ export class FormStatsUtils {
       previousRequestExists: 'Ya existe una solicitud previa',
       invalidCedula: 'Cédula inválida',
       invalidPhone: 'Teléfono inválido',
+      minLetters: `Debe tener más de ${(errorValue?.min ?? 3) - 1} letras`,
+      missingCloseFamilyContact: 'Debe incluir al menos un familiar cercano',
+      duplicatedEmergencyFamilyContact: 'Contacto repetido entre familiares y emergencia',
+      retreatParticipantPhone: 'Teléfono de persona inscrita en este retiro',
     };
 
     return errorMessages[errorKey] || `error: ${errorKey}`;
