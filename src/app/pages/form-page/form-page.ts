@@ -17,6 +17,7 @@ import { DeviceE } from '../../core/models/device-detector.model';
 import { Affirmation, cleanFormValues, FormControlName, FormFieldId, FormGroupFields, IdentityType } from './form-page.model';
 import { FormErrorMsgComponent } from '@core/components/form-error-msg/form-error-msg.component';
 import { CedulaValidator } from '@core/typescript/validators/validate-cedula';
+import { PhoneValidator } from '@core/typescript/validators/validate-phone';
 import { PreviousRequestValidator } from '@core/typescript/validate-previous-request';
 import { yesNoOptions } from '@core/typescript/constants';
 import { RetreatService } from '@core/entities/retreat/retreat.service';
@@ -108,7 +109,7 @@ export class FormPage implements OnInit {
     [FormControlName.how_find_us]: ['', Validators.required],
     [FormControlName.how_find_us_other]: [''],
     [FormControlName.who_invited_you]: [''],
-    [FormControlName.who_invited_you_phone]: [''],
+    [FormControlName.who_invited_you_phone]: ['', PhoneValidator.validate],
 
     [FormGroupFields.she]: this.fb.group({
       [FormControlName.full_name]: ['', Validators.required],
@@ -121,19 +122,19 @@ export class FormPage implements OnInit {
       [FormControlName.city_of_residence]: ['', Validators.required],
       [FormControlName.address]: ['', Validators.required],
       [FormControlName.email]: ['', Validators.compose([Validators.required, Validators.email])],
-      [FormControlName.cell_phone]: ['', Validators.required],
-      [FormControlName.home_phone]: [''],
-      [FormControlName.work_phone]: [''],
+      [FormControlName.cell_phone]: ['', [Validators.required, PhoneValidator.validate]],
+      [FormControlName.home_phone]: ['', PhoneValidator.validate],
+      [FormControlName.work_phone]: ['', PhoneValidator.validate],
       [FormControlName.family_information]: this.fb.array(
         [
           this.fb.group({
             [FormControlName.familiar_full_name]: ['', Validators.required],
-            [FormControlName.familiar_phone]: ['', Validators.required],
+            [FormControlName.familiar_phone]: ['', [Validators.required, PhoneValidator.validate]],
             [FormControlName.familiar_relationship]: ['', Validators.required],
           }),
           this.fb.group({
             [FormControlName.familiar_full_name]: ['', Validators.required],
-            [FormControlName.familiar_phone]: ['', Validators.required],
+            [FormControlName.familiar_phone]: ['', [Validators.required, PhoneValidator.validate]],
             [FormControlName.familiar_relationship]: ['', Validators.required],
           }),
         ],
@@ -141,7 +142,7 @@ export class FormPage implements OnInit {
       ),
 
       [FormControlName.emergency_full_name]: ['', Validators.required],
-      [FormControlName.emergency_phone]: ['', Validators.required],
+      [FormControlName.emergency_phone]: ['', [Validators.required, PhoneValidator.validate]],
       [FormControlName.emergency_relationship]: ['', Validators.required],
       [FormControlName.religion]: ['', Validators.required],
       [FormControlName.church_name]: ['', Validators.required],
@@ -157,26 +158,26 @@ export class FormPage implements OnInit {
       [FormControlName.city_of_residence]: ['', Validators.required],
       [FormControlName.address]: ['', Validators.required],
       [FormControlName.email]: ['', Validators.compose([Validators.required, Validators.email])],
-      [FormControlName.cell_phone]: ['', Validators.required],
-      [FormControlName.home_phone]: [''],
-      [FormControlName.work_phone]: [''],
+      [FormControlName.cell_phone]: ['', [Validators.required, PhoneValidator.validate]],
+      [FormControlName.home_phone]: ['', PhoneValidator.validate],
+      [FormControlName.work_phone]: ['', PhoneValidator.validate],
       [FormControlName.family_information]: this.fb.array(
         [
           this.fb.group({
             [FormControlName.familiar_full_name]: ['', Validators.required],
-            [FormControlName.familiar_phone]: ['', Validators.required],
+            [FormControlName.familiar_phone]: ['', [Validators.required, PhoneValidator.validate]],
             [FormControlName.familiar_relationship]: ['', Validators.required],
           }),
           this.fb.group({
             [FormControlName.familiar_full_name]: ['', Validators.required],
-            [FormControlName.familiar_phone]: ['', Validators.required],
+            [FormControlName.familiar_phone]: ['', [Validators.required, PhoneValidator.validate]],
             [FormControlName.familiar_relationship]: ['', Validators.required],
           }),
         ],
         [Validators.minLength(2)]
       ),
       [FormControlName.emergency_full_name]: ['', Validators.required],
-      [FormControlName.emergency_phone]: ['', Validators.required],
+      [FormControlName.emergency_phone]: ['', [Validators.required, PhoneValidator.validate]],
       [FormControlName.emergency_relationship]: ['', Validators.required],
       [FormControlName.religion]: ['', Validators.required],
       [FormControlName.church_name]: ['', Validators.required],
@@ -276,7 +277,7 @@ export class FormPage implements OnInit {
 
     const newFamilyMember = this.fb.group({
       [FormControlName.familiar_full_name]: ['', Validators.required],
-      [FormControlName.familiar_phone]: ['', Validators.required],
+      [FormControlName.familiar_phone]: ['', [Validators.required, PhoneValidator.validate]],
       [FormControlName.familiar_relationship]: ['', Validators.required],
     });
 

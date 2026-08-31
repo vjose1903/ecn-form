@@ -183,6 +183,7 @@ export class FormStatsUtils {
       url: 'URL inválida',
       previousRequestExists: 'Ya existe una solicitud previa',
       invalidCedula: 'Cédula inválida',
+      invalidPhone: 'Teléfono inválido',
     };
 
     return errorMessages[errorKey] || `error: ${errorKey}`;

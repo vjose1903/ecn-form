@@ -12,6 +12,7 @@ import { CityService } from '@core/entities/city/city.service';
 import { CityClass } from '@core/entities/city/city.class';
 import { FormControlName, FormFieldId } from './account.model';
 import { InputMaskModule } from 'primeng/inputmask';
+import { PhoneValidator } from '@core/typescript/validators/validate-phone';
 
 @Component({
   selector: 'app-account',
@@ -55,7 +56,7 @@ export class Account implements OnInit {
       [FormControlName.id]: [currentUser?.id],
       [FormControlName.email]: [{ value: currentUser?.email || '', disabled: true }, [Validators.required, Validators.email]],
       [FormControlName.city]: [currentUser?.city || '', [Validators.required]],
-      [FormControlName.phone]: [currentUser?.phone || '', [Validators.required]],
+      [FormControlName.phone]: [currentUser?.phone || '', [Validators.required, PhoneValidator.validate]],
     });
   }
 

@@ -54,6 +54,7 @@ export class FormErrorMsgComponent implements OnInit, OnDestroy, AfterViewInit {
     ip: 'Intoduzca una ip valida.',
     compares: 'Las contraseñas no coinciden.',
     invalidCedula: 'Ingrese una cédula válida.',
+    invalidPhone: 'Ingrese un teléfono válido.',
     email: 'Ingrese una email válido.',
     sinRayas: () => `Complete el campo: ${this.fieldName || 'este campo'}`,
     pattern: 'Formato inválido.',
