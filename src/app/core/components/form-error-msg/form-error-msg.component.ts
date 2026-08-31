@@ -55,6 +55,8 @@ export class FormErrorMsgComponent implements OnInit, OnDestroy, AfterViewInit {
     compares: 'Las contraseñas no coinciden.',
     invalidCedula: 'Ingrese una cédula válida.',
     invalidPhone: 'Ingrese un teléfono válido.',
+    invalidCity: 'Seleccione una ciudad válida.',
+    invalidReligion: 'Seleccione una religión válida.',
     minLetters: (error: any) => `Debe tener más de ${error.min - 1} letras.`,
     missingCloseFamilyContact: 'Al menos un familiar debe ser padre, madre, hermano/a, tío/a o abuelo/a.',
     duplicatedEmergencyFamilyContact: (error: any) => error.message || 'No repita el mismo nombre y teléfono.',

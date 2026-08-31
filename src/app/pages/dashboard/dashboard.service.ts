@@ -175,7 +175,7 @@ export class DashboardService {
       { name: 'Sin invitador', value: entries.filter(entry => !this.hasText(entry.request.who_invited_you)).length },
     ];
     const ageData = this.toSortedEntries(this.countBy(participants, participant => this.getAgeRange(participant.age || 0)), (left, right) => this.ageRangeOrder(left.name) - this.ageRangeOrder(right.name));
-    const religionData = this.toSortedEntries(this.countBy(participants, participant => this.normalizeReligion(participant.religion))).slice(0, 10);
+    const religionData = this.toSortedEntries(this.countBy(participants, participant => this.normalizeReligionDisplay(participant))).slice(0, 10);
     const cityData = this.countByNormalized(participants, participant => participant.city_of_residence).slice(0, 12);
 
     return [
@@ -320,6 +320,17 @@ export class DashboardService {
     }
 
     return this.normalizeText(value);
+  }
+
+  private normalizeReligionDisplay(participant: CoupleI): string {
+    const religion = this.normalizeReligion(participant.religion);
+    const otherReligion = this.normalizeText(participant.religion_other);
+
+    if (religion === 'Otra religión' && otherReligion !== 'Sin definir') {
+      return `${religion} (${otherReligion})`;
+    }
+
+    return religion;
   }
 
   private normalizeText(value: string | null | undefined): string {

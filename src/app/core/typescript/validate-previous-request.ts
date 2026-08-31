@@ -23,6 +23,7 @@ type CoupleFieldName =
   | 'emergency_phone'
   | 'emergency_relationship'
   | 'religion'
+  | 'religion_other'
   | 'church_name';
 
 export class PreviousRequestValidator {
@@ -103,6 +104,7 @@ export class PreviousRequestValidator {
       'emergency_phone',
       'emergency_relationship',
       'religion',
+      'religion_other',
       'church_name',
     ];
 
@@ -149,6 +151,7 @@ export class PreviousRequestValidator {
       [FormControlName.emergency_phone]: 'Teléfono de emergencia',
       [FormControlName.emergency_relationship]: 'Relación con contacto de emergencia',
       [FormControlName.religion]: 'Religión',
+      [FormControlName.religion_other]: 'Otra religión',
       [FormControlName.church_name]: 'Nombre de la iglesia',
       [FormControlName.status]: 'Estado de la solicitud',
     };

@@ -42,4 +42,12 @@ export class CoupleView {
   get isComplete() {
     return this.type() === 'complete';
   }
+
+  getReligionDisplay(couple: CoupleI): string {
+    if (couple.religion === 'Otra religión' && couple.religion_other) {
+      return `${couple.religion} (${couple.religion_other})`;
+    }
+
+    return couple.religion;
+  }
 }

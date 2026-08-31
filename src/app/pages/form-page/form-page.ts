@@ -9,6 +9,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { InputMaskModule } from 'primeng/inputmask';
 import { ButtonModule } from 'primeng/button';
 import { PopoverModule } from 'primeng/popover';
+import { AutoCompleteModule } from 'primeng/autocomplete';
 
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { DividerLine } from '../../core/components/divider-line/divider-line';
@@ -67,6 +68,7 @@ import { formDataMuck } from './form-page.muck';
     InputGroupAddonModule,
     InputNumberModule,
     PopoverModule,
+    AutoCompleteModule,
     CheckboxModule,
     DialogModule,
   ],
@@ -95,6 +97,7 @@ export class FormPage implements OnInit {
   openedAccordionPanel: number[] = [0, 1, 2];
   previousRequests = signal<RequestClass[]>([]);
   readonly showDevTestButton = !environment.production;
+  readonly otherReligionOption = 'Otra religión';
   private readonly closeFamilyRelationships = new Set(['padre', 'madre', 'hermano', 'hermana', 'tio', 'tia', 'abuelo', 'abuela']);
 
   formGroup = this.fb.group({
@@ -120,7 +123,7 @@ export class FormPage implements OnInit {
       [FormControlName.identity_number]: ['', Validators.compose([Validators.required, CedulaValidator.validate])],
       [FormControlName.are_you_married]: [null, Validators.required],
       [FormControlName.have_children]: [null, Validators.required],
-      [FormControlName.city_of_residence]: ['', Validators.required],
+      [FormControlName.city_of_residence]: ['', [Validators.required, this.citySuggestionValidator()]],
       [FormControlName.address]: ['', Validators.required],
       [FormControlName.email]: ['', Validators.compose([Validators.required, Validators.email])],
       [FormControlName.cell_phone]: ['', [Validators.required, PhoneValidator.validate]],
@@ -145,7 +148,8 @@ export class FormPage implements OnInit {
       [FormControlName.emergency_full_name]: ['', [Validators.required, this.minLettersValidator(3)]],
       [FormControlName.emergency_phone]: ['', [Validators.required, PhoneValidator.validate, this.retreatParticipantPhoneValidator()]],
       [FormControlName.emergency_relationship]: ['', Validators.required],
-      [FormControlName.religion]: ['', Validators.required],
+      [FormControlName.religion]: ['', [Validators.required, this.religionSuggestionValidator()]],
+      [FormControlName.religion_other]: [''],
       [FormControlName.church_name]: ['', Validators.required],
     }),
     [FormGroupFields.he]: this.fb.group({
@@ -156,7 +160,7 @@ export class FormPage implements OnInit {
       [FormControlName.identity_number]: ['', Validators.compose([Validators.required, CedulaValidator.validate])],
       [FormControlName.are_you_married]: [null, Validators.required],
       [FormControlName.have_children]: [null, Validators.required],
-      [FormControlName.city_of_residence]: ['', Validators.required],
+      [FormControlName.city_of_residence]: ['', [Validators.required, this.citySuggestionValidator()]],
       [FormControlName.address]: ['', Validators.required],
       [FormControlName.email]: ['', Validators.compose([Validators.required, Validators.email])],
       [FormControlName.cell_phone]: ['', [Validators.required, PhoneValidator.validate]],
@@ -180,7 +184,8 @@ export class FormPage implements OnInit {
       [FormControlName.emergency_full_name]: ['', [Validators.required, this.minLettersValidator(3)]],
       [FormControlName.emergency_phone]: ['', [Validators.required, PhoneValidator.validate, this.retreatParticipantPhoneValidator()]],
       [FormControlName.emergency_relationship]: ['', Validators.required],
-      [FormControlName.religion]: ['', Validators.required],
+      [FormControlName.religion]: ['', [Validators.required, this.religionSuggestionValidator()]],
+      [FormControlName.religion_other]: [''],
       [FormControlName.church_name]: ['', Validators.required],
     }),
   });
@@ -215,8 +220,220 @@ export class FormPage implements OnInit {
 
   companionOptions = [{ label: 'Padre' }, { label: 'Madre' }, { label: 'Hermano' }, { label: 'Hermana' }, { label: 'Tio' }, { label: 'Tia' }, { label: 'Abuelo' }, { label: 'Abuela' }, { label: 'Amigo' }, { label: 'Suegra' }, { label: 'Suegro' }];
 
+  readonly citySuggestions = [
+    'Santo Domingo de Guzmán',
+    'Azua',
+    'Las Charcas',
+    'Las Yayas de Viajama',
+    'Padre Las Casas',
+    'Peralta',
+    'Sabana Yegua',
+    'Pueblo Viejo',
+    'Tábara Arriba',
+    'Guayabal',
+    'Estebanía',
+    'Neiba',
+    'Galván',
+    'Tamayo',
+    'Villa Jaragua',
+    'Los Ríos',
+    'Barahona',
+    'Cabral',
+    'Enriquillo',
+    'Paraíso',
+    'Vicente Noble',
+    'El Peñón',
+    'La Ciénaga',
+    'Fundación',
+    'Las Salinas',
+    'Polo',
+    'Jaquimeyes',
+    'Dajabón',
+    'Loma de Cabrera',
+    'Partido',
+    'Restauración',
+    'El Pino',
+    'San Francisco de Macorís',
+    'Arenoso',
+    'Castillo',
+    'Pimentel',
+    'Villa Riva',
+    'Las Guáranas',
+    'Eugenio María de Hostos',
+    'Comendador',
+    'Bánica',
+    'El Llano',
+    'Hondo Valle',
+    'Pedro Santana',
+    'Juan Santiago',
+    'El Seibo',
+    'Miches',
+    'Moca',
+    'Cayetano Germosén',
+    'Gaspar Hernández',
+    'Jamao al Norte',
+    'San Víctor',
+    'Jimaní',
+    'Duvergé',
+    'La Descubierta',
+    'Postrer Río',
+    'Cristóbal',
+    'Mella',
+    'Higüey',
+    'San Rafael del Yuma',
+    'La Romana',
+    'Guaymate',
+    'Villa Hermosa',
+    'La Vega',
+    'Constanza',
+    'Jarabacoa',
+    'Jima Abajo',
+    'Nagua',
+    'Cabrera',
+    'El Factor',
+    'Río San Juan',
+    'Monte Cristi',
+    'Castañuelas',
+    'Guayubín',
+    'Las Matas de Santa Cruz',
+    'Pepillo Salcedo',
+    'Villa Vásquez',
+    'Pedernales',
+    'Oviedo',
+    'Baní',
+    'Nizao',
+    'Matanzas',
+    'Puerto Plata',
+    'Altamira',
+    'Guananico',
+    'Imbert',
+    'Los Hidalgos',
+    'Luperón',
+    'Sosúa',
+    'Villa Isabela',
+    'Villa Montellano',
+    'Salcedo',
+    'Tenares',
+    'Villa Tapia',
+    'Samaná',
+    'Sánchez',
+    'Las Terrenas',
+    'San Cristóbal',
+    'Sabana Grande de Palenque',
+    'Bajos de Haina',
+    'Cambita Garabitos',
+    'Villa Altagracia',
+    'Yaguate',
+    'San Gregorio de Nigua',
+    'Los Cacaos',
+    'San Juan',
+    'Bohechío',
+    'El Cercado',
+    'Juan de Herrera',
+    'Las Matas de Farfán',
+    'Vallejuelo',
+    'San Pedro de Macorís',
+    'Los Llanos',
+    'Ramón Santana',
+    'Consuelo',
+    'Quisqueya',
+    'Guayacanes',
+    'Cotuí',
+    'Cevicos',
+    'Fantino',
+    'Villa La Mata',
+    'Santiago',
+    'Bisonó',
+    'Jánico',
+    'Licey al Medio',
+    'San José de Las Matas',
+    'Tamboril',
+    'Villa González',
+    'Puñal',
+    'Sabana Iglesia',
+    'Baitoa',
+    'San Ignacio de Sabaneta',
+    'Villa Los Almácigos',
+    'Monción',
+    'Mao',
+    'Esperanza',
+    'Laguna Salada',
+    'Bonao',
+    'Maimón',
+    'Piedra Blanca',
+    'Monte Plata',
+    'Bayaguana',
+    'Sabana Grande de Boyá',
+    'Yamasá',
+    'Peralvillo',
+    'Hato Mayor',
+    'Sabana de La Mar',
+    'El Valle',
+    'San José de Ocoa',
+    'Sabana Larga',
+    'Rancho Arriba',
+    'Santo Domingo Este',
+    'Santo Domingo Oeste',
+    'Santo Domingo Norte',
+    'Boca Chica',
+    'San Antonio de Guerra',
+    'Los Alcarrizos',
+    'Pedro Brand',
+  ];
+
+  filteredCitySuggestions: string[] = [...this.citySuggestions];
+  private readonly citySuggestionSet = new Set(this.citySuggestions);
+
+  readonly religionSuggestions = [
+    'Católico',
+    'Cristiano',
+    'Evangélico',
+    'Protestante',
+    'Pentecostal',
+    'Adventista',
+    'Bautista',
+    'Metodista',
+    'Luterano',
+    'Presbiteriano',
+    'Anglicano',
+    'Episcopal',
+    'Menonita',
+    'Mormón',
+    'Testigo de Jehová',
+    'Ortodoxo',
+    'Judío',
+    'Musulmán',
+    'Hindú',
+    'Budista',
+    'Bahá’í',
+    'Espiritista',
+    'Santero',
+    'Rastafari',
+    'Ninguna religión',
+    'Ateo',
+    'Agnóstico',
+    this.otherReligionOption,
+  ];
+
+  filteredReligionSuggestions: string[] = [...this.religionSuggestions];
+  private readonly religionSuggestionSet = new Set(this.religionSuggestions);
+
   get isDesktop() {
     return this.deviceDetectorService.getDeviceInfo().device === DeviceE.desktop;
+  }
+
+  filterCitySuggestions(event: { query: string }) {
+    const query = this.normalizeSearchText(event.query);
+    this.filteredCitySuggestions = this.citySuggestions.filter(city => this.normalizeSearchText(city).includes(query));
+  }
+
+  filterReligionSuggestions(event: { query: string }) {
+    const query = this.normalizeSearchText(event.query);
+    this.filteredReligionSuggestions = this.religionSuggestions.filter(religion => this.normalizeSearchText(religion).includes(query));
+  }
+
+  isOtherReligionSelected(group: FormGroup): boolean {
+    return group.get(FormControlName.religion)?.value === this.otherReligionOption;
   }
 
   get isUpdate() {
@@ -320,6 +537,7 @@ export class FormPage implements OnInit {
       let data = this.request;
       if (data instanceof RequestClass) data = data.asJson();
 
+      this.normalizeReligionForEdit(data as RequestI);
       this.formGroup.patchValue(data as any);
     }
 
@@ -476,6 +694,9 @@ export class FormPage implements OnInit {
     this.setupIdentityNumberSubscription(FormGroupFields.she);
     this.setupIdentityNumberSubscription(FormGroupFields.he);
 
+    this.setupReligionOtherSubscription(FormGroupFields.she);
+    this.setupReligionOtherSubscription(FormGroupFields.he);
+
     // Suscripción para how_find_us_other
     this.formGroup.get(FormControlName.how_find_us)?.valueChanges.subscribe(howFindUs => {
       const howFindUsOtherControl = this.formGroup.get(FormControlName.how_find_us_other);
@@ -535,6 +756,23 @@ export class FormPage implements OnInit {
       identityNumberControl?.markAsUntouched();
       identityNumberControl?.setErrors(null);
       identityNumberControl?.updateValueAndValidity({ emitEvent: false });
+    });
+  }
+
+  private setupReligionOtherSubscription(groupName: FormGroupFields.she | FormGroupFields.he) {
+    const group = this.formGroup.get(groupName);
+    if (!group) return;
+
+    group.get(FormControlName.religion)?.valueChanges.subscribe(religion => {
+      const religionOtherControl = group.get(FormControlName.religion_other);
+
+      if (religion === this.otherReligionOption) {
+        this.setRequiredControl(religionOtherControl);
+      } else {
+        this.removeRequiredControl(religionOtherControl, '');
+      }
+
+      religionOtherControl?.updateValueAndValidity({ emitEvent: false });
     });
   }
 
@@ -710,6 +948,36 @@ export class FormPage implements OnInit {
     };
   }
 
+  private citySuggestionValidator(): ValidatorFn {
+    return (control: AbstractControl) => {
+      const city = String(control.value ?? '').trim();
+      if (!city) return null;
+
+      return this.citySuggestionSet.has(city) ? null : { invalidCity: true };
+    };
+  }
+
+  private religionSuggestionValidator(): ValidatorFn {
+    return (control: AbstractControl) => {
+      const religion = String(control.value ?? '').trim();
+      if (!religion) return null;
+
+      return this.religionSuggestionSet.has(religion) ? null : { invalidReligion: true };
+    };
+  }
+
+  private normalizeReligionForEdit(data: RequestI): void {
+    [data.she, data.he].forEach(person => {
+      if (!person) return;
+
+      const religion = String(person.religion ?? '').trim();
+      if (!religion || this.religionSuggestionSet.has(religion)) return;
+
+      person.religion = this.otherReligionOption;
+      person.religion_other = religion;
+    });
+  }
+
   private hasCloseFamilyContactValidator(): ValidatorFn {
     return (control: AbstractControl) => {
       if (!(control instanceof FormArray)) return null;
@@ -768,8 +1036,8 @@ export class FormPage implements OnInit {
   private getRepeatedContactErrors(groupName: FormGroupFields.she | FormGroupFields.he): { controls: AbstractControl[]; message: string }[] {
     const group = this.formGroup.get(groupName);
     const familyInformation = this.getFamilyArray(groupName);
-    const seenNames = new Map<string, true>();
     const seenPhones = new Map<string, true>();
+    const seenContacts = new Map<string, true>();
     const repeatedContactErrors: { controls: AbstractControl[]; message: string }[] = [];
 
     familyInformation.controls.forEach(familyMember => {
@@ -777,22 +1045,21 @@ export class FormPage implements OnInit {
       const phoneControl = familyMember.get(FormControlName.familiar_phone);
       const name = this.normalizeName(nameControl?.value);
       const phone = this.normalizePhone(phoneControl?.value);
+      const contactKey = name && phone ? `${name}|${phone}` : '';
 
-      if (name && seenNames.has(name)) {
+      if (contactKey && seenContacts.has(contactKey)) {
         repeatedContactErrors.push({
-          controls: [nameControl!],
-          message: 'No repita el mismo nombre entre familiares.',
+          controls: [nameControl!, phoneControl!],
+          message: 'No repita el mismo nombre y teléfono entre familiares.',
         });
-      }
-
-      if (phone && seenPhones.has(phone)) {
+      } else if (phone && seenPhones.has(phone)) {
         repeatedContactErrors.push({
           controls: [phoneControl!],
           message: 'No repita el mismo teléfono entre familiares.',
         });
       }
 
-      if (name) seenNames.set(name, true);
+      if (contactKey) seenContacts.set(contactKey, true);
       if (phone) seenPhones.set(phone, true);
     });
 
@@ -800,15 +1067,14 @@ export class FormPage implements OnInit {
     const emergencyPhoneControl = group?.get(FormControlName.emergency_phone);
     const emergencyName = this.normalizeName(emergencyNameControl?.value);
     const emergencyPhone = this.normalizePhone(emergencyPhoneControl?.value);
+    const emergencyContactKey = emergencyName && emergencyPhone ? `${emergencyName}|${emergencyPhone}` : '';
 
-    if (emergencyName && seenNames.has(emergencyName) && emergencyNameControl) {
+    if (emergencyContactKey && seenContacts.has(emergencyContactKey) && emergencyNameControl && emergencyPhoneControl) {
       repeatedContactErrors.push({
-        controls: [emergencyNameControl],
-        message: 'No repita el mismo nombre entre familiares y contacto de emergencia.',
+        controls: [emergencyNameControl, emergencyPhoneControl],
+        message: 'No repita el mismo nombre y teléfono entre familiares y contacto de emergencia.',
       });
-    }
-
-    if (emergencyPhone && seenPhones.has(emergencyPhone) && emergencyPhoneControl) {
+    } else if (emergencyPhone && seenPhones.has(emergencyPhone) && emergencyPhoneControl) {
       repeatedContactErrors.push({
         controls: [emergencyPhoneControl],
         message: 'No repita el mismo teléfono entre familiares y contacto de emergencia.',
@@ -886,13 +1152,23 @@ export class FormPage implements OnInit {
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, '')
       .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private normalizeSearchText(value: unknown): string {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
       .trim();
   }
 
   private normalizePhone(value: unknown): string {
     return String(value ?? '').replace(/\D/g, '');
   }
+
   /**
    * Verifica si todos los campos requeridos de un grupo específico están completos
    * @param section - El grupo a verificar: 'general', 'she', o 'he'
