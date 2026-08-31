@@ -92,6 +92,11 @@ export class RequestView implements OnInit {
             icon: 'pi pi-send',
             command: () => this.openTransferModal(),
           },
+          {
+            label: 'Copiar link de ficha',
+            icon: 'pi pi-link',
+            command: () => this.copyRequestLink(),
+          },
         ],
       },
       {
@@ -215,6 +220,29 @@ export class RequestView implements OnInit {
         this.ref.close(result);
       }
     });
+  }
+
+  async copyRequestLink(): Promise<void> {
+    const currentRequest = this.request();
+
+    if (!currentRequest || !this.retreat) {
+      Ss.toastService.error({ message: 'No se encontró la información necesaria para copiar el link', title: 'Error' });
+      return;
+    }
+
+    const link = new URL('/retiros', window.location.origin);
+    link.searchParams.set('openRetreat', '1');
+    link.searchParams.set('retreatId', this.retreat.id);
+    link.searchParams.set('openRequest', '1');
+    link.searchParams.set('requestId', currentRequest.id);
+
+    try {
+      await Ss.copyToClipboardService.copyText(link.toString());
+      Ss.toastService.info({ message: 'Link copiado al portapapeles', title: 'Link de Ficha' });
+    } catch (error) {
+      console.error('Error copiando el link de la ficha:', error);
+      Ss.toastService.error({ message: 'No se pudo copiar el link de la ficha', title: 'Error' });
+    }
   }
 
   archiveRequest() {
