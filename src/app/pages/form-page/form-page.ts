@@ -97,6 +97,7 @@ export class FormPage implements OnInit {
   openedAccordionPanel: number[] = [0, 1, 2];
   previousRequests = signal<RequestClass[]>([]);
   readonly showDevTestButton = !environment.production;
+  readonly today = this.startOfDay(new Date());
   readonly otherReligionOption = 'Otra religión';
   private readonly closeFamilyRelationships = new Set(['padre', 'madre', 'hermano', 'hermana', 'tio', 'tia', 'abuelo', 'abuela']);
 
@@ -106,19 +107,19 @@ export class FormPage implements OnInit {
     [FormControlName.action]: [RequestAction.NEW],
     [FormControlName.status]: [RequestStatus.PENDING],
     [FormControlName.retreat]: ['', Validators.required],
-    [FormControlName.dating_period_year]: [null, Validators.required],
-    [FormControlName.dating_period_month]: [null, Validators.required],
+    [FormControlName.dating_period_year]: [null, [Validators.required, Validators.min(0), Validators.max(80)]],
+    [FormControlName.dating_period_month]: [null, [Validators.required, Validators.min(0), Validators.max(11)]],
     [FormControlName.have_wedding_date]: [null, Validators.required],
-    [FormControlName.wedding_date]: [null],
+    [FormControlName.wedding_date]: [null, this.futureOrTodayDateValidator()],
     [FormControlName.how_find_us]: ['', Validators.required],
     [FormControlName.how_find_us_other]: [''],
     [FormControlName.who_invited_you]: [''],
     [FormControlName.who_invited_you_phone]: ['', PhoneValidator.validate],
 
     [FormGroupFields.she]: this.fb.group({
-      [FormControlName.full_name]: ['', Validators.required],
+      [FormControlName.full_name]: ['', [Validators.required, this.minLettersValidator(3), this.personNameValidator()]],
       [FormControlName.nickname]: [''],
-      [FormControlName.birth_date]: ['', Validators.required],
+      [FormControlName.birth_date]: ['', [Validators.required, this.birthDateRangeValidator()]],
       [FormControlName.identity_type]: [IdentityType.cedula, Validators.required],
       [FormControlName.identity_number]: ['', Validators.compose([Validators.required, CedulaValidator.validate])],
       [FormControlName.are_you_married]: [null, Validators.required],
@@ -132,12 +133,12 @@ export class FormPage implements OnInit {
       [FormControlName.family_information]: this.fb.array(
         [
           this.fb.group({
-            [FormControlName.familiar_full_name]: ['', [Validators.required, this.minLettersValidator(3)]],
+            [FormControlName.familiar_full_name]: ['', [Validators.required, this.minLettersValidator(3), this.personNameValidator()]],
             [FormControlName.familiar_phone]: ['', [Validators.required, PhoneValidator.validate, this.retreatParticipantPhoneValidator()]],
             [FormControlName.familiar_relationship]: ['', Validators.required],
           }),
           this.fb.group({
-            [FormControlName.familiar_full_name]: ['', [Validators.required, this.minLettersValidator(3)]],
+            [FormControlName.familiar_full_name]: ['', [Validators.required, this.minLettersValidator(3), this.personNameValidator()]],
             [FormControlName.familiar_phone]: ['', [Validators.required, PhoneValidator.validate, this.retreatParticipantPhoneValidator()]],
             [FormControlName.familiar_relationship]: ['', Validators.required],
           }),
@@ -145,7 +146,7 @@ export class FormPage implements OnInit {
         [Validators.minLength(2), this.hasCloseFamilyContactValidator()]
       ),
 
-      [FormControlName.emergency_full_name]: ['', [Validators.required, this.minLettersValidator(3)]],
+      [FormControlName.emergency_full_name]: ['', [Validators.required, this.minLettersValidator(3), this.personNameValidator()]],
       [FormControlName.emergency_phone]: ['', [Validators.required, PhoneValidator.validate, this.retreatParticipantPhoneValidator()]],
       [FormControlName.emergency_relationship]: ['', Validators.required],
       [FormControlName.religion]: ['', [Validators.required, this.religionSuggestionValidator()]],
@@ -153,9 +154,9 @@ export class FormPage implements OnInit {
       [FormControlName.church_name]: ['', Validators.required],
     }),
     [FormGroupFields.he]: this.fb.group({
-      [FormControlName.full_name]: ['', Validators.required],
+      [FormControlName.full_name]: ['', [Validators.required, this.minLettersValidator(3), this.personNameValidator()]],
       [FormControlName.nickname]: [''],
-      [FormControlName.birth_date]: ['', Validators.required],
+      [FormControlName.birth_date]: ['', [Validators.required, this.birthDateRangeValidator()]],
       [FormControlName.identity_type]: [IdentityType.cedula, Validators.required],
       [FormControlName.identity_number]: ['', Validators.compose([Validators.required, CedulaValidator.validate])],
       [FormControlName.are_you_married]: [null, Validators.required],
@@ -169,19 +170,19 @@ export class FormPage implements OnInit {
       [FormControlName.family_information]: this.fb.array(
         [
           this.fb.group({
-            [FormControlName.familiar_full_name]: ['', [Validators.required, this.minLettersValidator(3)]],
+            [FormControlName.familiar_full_name]: ['', [Validators.required, this.minLettersValidator(3), this.personNameValidator()]],
             [FormControlName.familiar_phone]: ['', [Validators.required, PhoneValidator.validate, this.retreatParticipantPhoneValidator()]],
             [FormControlName.familiar_relationship]: ['', Validators.required],
           }),
           this.fb.group({
-            [FormControlName.familiar_full_name]: ['', [Validators.required, this.minLettersValidator(3)]],
+            [FormControlName.familiar_full_name]: ['', [Validators.required, this.minLettersValidator(3), this.personNameValidator()]],
             [FormControlName.familiar_phone]: ['', [Validators.required, PhoneValidator.validate, this.retreatParticipantPhoneValidator()]],
             [FormControlName.familiar_relationship]: ['', Validators.required],
           }),
         ],
         [Validators.minLength(2), this.hasCloseFamilyContactValidator()]
       ),
-      [FormControlName.emergency_full_name]: ['', [Validators.required, this.minLettersValidator(3)]],
+      [FormControlName.emergency_full_name]: ['', [Validators.required, this.minLettersValidator(3), this.personNameValidator()]],
       [FormControlName.emergency_phone]: ['', [Validators.required, PhoneValidator.validate, this.retreatParticipantPhoneValidator()]],
       [FormControlName.emergency_relationship]: ['', Validators.required],
       [FormControlName.religion]: ['', [Validators.required, this.religionSuggestionValidator()]],
@@ -494,7 +495,7 @@ export class FormPage implements OnInit {
     const familyArray = groupName === FormGroupFields.she ? this.sheFamilyInformationArray : this.heFamilyInformationArray;
 
     const newFamilyMember = this.fb.group({
-      [FormControlName.familiar_full_name]: ['', [Validators.required, this.minLettersValidator(3)]],
+      [FormControlName.familiar_full_name]: ['', [Validators.required, this.minLettersValidator(3), this.personNameValidator()]],
       [FormControlName.familiar_phone]: ['', [Validators.required, PhoneValidator.validate, this.retreatParticipantPhoneValidator()]],
       [FormControlName.familiar_relationship]: ['', Validators.required],
     });
@@ -679,9 +680,12 @@ export class FormPage implements OnInit {
       const weddingDateControl = this.formGroup.get(FormControlName.wedding_date);
 
       if (haveWeddingDate === true) {
-        this.setRequiredControl(weddingDateControl);
+        weddingDateControl?.setValidators([Validators.required, this.futureOrTodayDateValidator()]);
+        weddingDateControl?.markAsPristine();
+        weddingDateControl?.markAsUntouched();
       } else if (haveWeddingDate === false) {
         this.removeRequiredControl(weddingDateControl, null);
+        weddingDateControl?.addValidators(this.futureOrTodayDateValidator());
       }
       weddingDateControl?.updateValueAndValidity({ emitEvent: false });
     });
@@ -773,6 +777,30 @@ export class FormPage implements OnInit {
       }
 
       religionOtherControl?.updateValueAndValidity({ emitEvent: false });
+    });
+  }
+
+  private syncReligionOtherControls(markInvalid = false): void {
+    ([FormGroupFields.she, FormGroupFields.he] as const).forEach(groupName => {
+      const group = this.formGroup.get(groupName);
+      const religionControl = group?.get(FormControlName.religion);
+      const religionOtherControl = group?.get(FormControlName.religion_other);
+
+      if (!religionOtherControl) return;
+
+      if (religionControl?.value === this.otherReligionOption) {
+        religionOtherControl.setValidators([Validators.required]);
+      } else {
+        religionOtherControl.clearValidators();
+        religionOtherControl.setValue('', { emitEvent: false });
+      }
+
+      religionOtherControl.updateValueAndValidity({ emitEvent: false });
+
+      if (markInvalid && religionOtherControl.invalid) {
+        religionOtherControl.markAsTouched();
+        religionOtherControl.markAsDirty();
+      }
     });
   }
 
@@ -948,6 +976,38 @@ export class FormPage implements OnInit {
     };
   }
 
+  private personNameValidator(): ValidatorFn {
+    return (control: AbstractControl) => {
+      const value = String(control.value ?? '').trim();
+      if (!value) return null;
+
+      return /^[\p{L}\s]+$/u.test(value) ? null : { invalidName: true };
+    };
+  }
+
+  private birthDateRangeValidator(): ValidatorFn {
+    return (control: AbstractControl) => {
+      const date = this.toDate(control.value);
+      if (!date) return control.value ? { invalidDate: true } : null;
+
+      const today = this.startOfDay(new Date());
+      const birthDate = this.startOfDay(date);
+      if (birthDate > today) return { futureDate: true };
+
+      const age = this.calculateAgeFromDate(birthDate, today);
+      return age >= 14 && age <= 100 ? null : { invalidAgeRange: { min: 14, max: 100 } };
+    };
+  }
+
+  private futureOrTodayDateValidator(): ValidatorFn {
+    return (control: AbstractControl) => {
+      const date = this.toDate(control.value);
+      if (!date) return control.value ? { invalidDate: true } : null;
+
+      return this.startOfDay(date) >= this.startOfDay(new Date()) ? null : { pastDate: true };
+    };
+  }
+
   private citySuggestionValidator(): ValidatorFn {
     return (control: AbstractControl) => {
       const city = String(control.value ?? '').trim();
@@ -971,7 +1031,21 @@ export class FormPage implements OnInit {
       if (!person) return;
 
       const religion = String(person.religion ?? '').trim();
-      if (!religion || this.religionSuggestionSet.has(religion)) return;
+      if (!religion) return;
+
+      const normalizedReligion = this.normalizeSearchText(religion);
+      const canonicalReligion = this.religionSuggestions.find(option => this.normalizeSearchText(option) === normalizedReligion);
+
+      if (canonicalReligion) {
+        person.religion = canonicalReligion;
+        return;
+      }
+
+      if (normalizedReligion === 'catolica') {
+        person.religion = 'Católico';
+        person.religion_other = '';
+        return;
+      }
 
       person.religion = this.otherReligionOption;
       person.religion_other = religion;
@@ -1169,6 +1243,41 @@ export class FormPage implements OnInit {
     return String(value ?? '').replace(/\D/g, '');
   }
 
+  private toDate(value: unknown): Date | null {
+    if (!value) return null;
+
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : value;
+    }
+
+    if (typeof value === 'string' || typeof value === 'number') {
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    if (typeof value === 'object' && 'seconds' in value) {
+      const date = new Date(Number((value as { seconds: number }).seconds) * 1000);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    return null;
+  }
+
+  private startOfDay(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+
+  private calculateAgeFromDate(birthDate: Date, today: Date): number {
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    return age;
+  }
+
   /**
    * Verifica si todos los campos requeridos de un grupo específico están completos
    * @param section - El grupo a verificar: 'general', 'she', o 'he'
@@ -1364,6 +1473,7 @@ export class FormPage implements OnInit {
   }
 
   private validateFormBeforeSubmit(): boolean {
+    this.syncReligionOtherControls(true);
     this.validateControlTree(this.formGroup);
     this.updateContactPhoneValidity(true);
     this.updateContactDuplicationValidity();

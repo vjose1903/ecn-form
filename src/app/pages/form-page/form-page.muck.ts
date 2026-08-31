@@ -75,7 +75,7 @@ export const formDataMuck: RequestI = {
     emergency_full_name: 'carlos',
     emergency_phone: '(809) 809-8209',
     emergency_relationship: 'Padre',
-    religion: 'Católica',
+    religion: 'Católico',
     church_name: 'Parroquia ve tu a ',
   },
 };

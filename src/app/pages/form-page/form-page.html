@@ -68,7 +68,7 @@
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-5 relative w-full">
                     <div class="flex flex-col gap-1">
                       <p-inputgroup>
-                        <p-inputnumber [id]="FormFieldId.dating_period_year + '_control'" [formControlName]="FormControlName.dating_period_year" placeholder="#" [min]="0" />
+                        <p-inputnumber [id]="FormFieldId.dating_period_year + '_control'" [formControlName]="FormControlName.dating_period_year" placeholder="#" [min]="0" [max]="80" />
                         <p-inputgroup-addon>
                           <div class="min-w-15 text-center">{{getDatingPeriodAddon(FormControlName.dating_period_year)}}</div>
                         </p-inputgroup-addon>
@@ -78,7 +78,7 @@
 
                     <div class="flex flex-col gap-1">
                       <p-inputgroup>
-                        <p-inputnumber [id]="FormFieldId.dating_period_month + '_control'" [formControlName]="FormControlName.dating_period_month" placeholder="#" [min]="0" />
+                        <p-inputnumber [id]="FormFieldId.dating_period_month + '_control'" [formControlName]="FormControlName.dating_period_month" placeholder="#" [min]="0" [max]="11" />
                         <p-inputgroup-addon>
                           <div class="min-w-15 text-center">{{getDatingPeriodAddon(FormControlName.dating_period_month)}}</div>
                         </p-inputgroup-addon>
@@ -120,6 +120,7 @@
                         appendTo="body"
                         placeholder="Seleccione fecha de boda"
                         [touchUI]="!isDesktop"
+                        [minDate]="today"
                         readonlyInput="true"
                         dateFormat="dd/mm/yy"
                         [formControlName]="FormControlName.wedding_date" />
@@ -220,6 +221,7 @@
                       appendTo="body"
                       placeholder="Seleccione fecha de nacimiento"
                       [touchUI]="!isDesktop"
+                      [maxDate]="today"
                       readonlyInput="true"
                       [formControlName]="FormControlName.birth_date" />
                     <form-error-msg [control]="sheGroup.get(FormControlName.birth_date)" />
@@ -566,6 +568,7 @@
                       appendTo="body"
                       placeholder="Seleccione fecha de nacimiento"
                       [touchUI]="!isDesktop"
+                      [maxDate]="today"
                       readonlyInput="true"
                       [formControlName]="FormControlName.birth_date" />
                     <form-error-msg [control]="heGroup.get(FormControlName.birth_date)" />
@@ -873,7 +876,7 @@
       </div>
 
       <div class="flex justify-end my-10">
-        <p-button [label]="loading() ? 'Enviando...'  :  'Enviar'" [icon]="loading() ? 'pi pi-spin pi-spinner' : ''" [disabled]="!isFormValid || loading()" (onClick)="onSubmit()" />
+        <p-button [label]="loading() ? 'Enviando...'  :  'Enviar'" [icon]="loading() ? 'pi pi-spin pi-spinner' : ''" [disabled]="loading()" (onClick)="onSubmit()" />
       </div>
     </div>
   </div>

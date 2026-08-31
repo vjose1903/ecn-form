@@ -124,6 +124,7 @@ export const cleanFormValues = {
   [FormControlName.how_find_us]: '',
   [FormControlName.how_find_us_other]: '',
   [FormControlName.who_invited_you]: '',
+  [FormControlName.who_invited_you_phone]: '',
 
   [FormGroupFields.she]: {
     [FormControlName.full_name]: '',
