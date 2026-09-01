@@ -68,7 +68,7 @@
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-5 relative w-full">
                     <div class="flex flex-col gap-1">
                       <p-inputgroup>
-                        <p-inputnumber [id]="FormFieldId.dating_period_year + '_control'" [formControlName]="FormControlName.dating_period_year" placeholder="#" [min]="0" />
+                        <p-inputnumber [id]="FormFieldId.dating_period_year + '_control'" [formControlName]="FormControlName.dating_period_year" placeholder="#" [min]="0" [max]="80" />
                         <p-inputgroup-addon>
                           <div class="min-w-15 text-center">{{getDatingPeriodAddon(FormControlName.dating_period_year)}}</div>
                         </p-inputgroup-addon>
@@ -120,6 +120,7 @@
                         appendTo="body"
                         placeholder="Seleccione fecha de boda"
                         [touchUI]="!isDesktop"
+                        [minDate]="today"
                         readonlyInput="true"
                         dateFormat="dd/mm/yy"
                         [formControlName]="FormControlName.wedding_date" />
@@ -169,8 +170,10 @@
 
                       <div class="flex flex-col relative">
                         <p-inputmask [inputId]="FormFieldId.who_invited_you_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" [formControlName]="FormControlName.who_invited_you_phone" />
-                        <form-error-msg [control]="formGroup.get(FormControlName.who_invited_you_phone)" />
                       </div>
+                      @if (formGroup.get(FormControlName.who_invited_you_phone)?.hasError('invalidPhone') && (formGroup.get(FormControlName.who_invited_you_phone)?.dirty || formGroup.get(FormControlName.who_invited_you_phone)?.touched)) {
+                      <small class="text-red-500">Teléfono válido.</small>
+                      }
                     </div>
                   </div>
                 </div>
@@ -220,6 +223,7 @@
                       appendTo="body"
                       placeholder="Seleccione fecha de nacimiento"
                       [touchUI]="!isDesktop"
+                      [maxDate]="today"
                       readonlyInput="true"
                       [formControlName]="FormControlName.birth_date" />
                     <form-error-msg [control]="sheGroup.get(FormControlName.birth_date)" />
@@ -313,7 +317,16 @@
                     <span class="text-red-500">*</span>
                   </div>
                   <div class="flex flex-col relative">
-                    <input [id]="FormFieldId.she_city_of_residence + '_control'" type="text" pInputText placeholder="Ej: La Vega, Santiago, Santo Domingo" class="w-full" [formControlName]="FormControlName.city_of_residence" />
+                    <p-autocomplete
+                      [inputId]="FormFieldId.she_city_of_residence + '_control'"
+                      [suggestions]="filteredCitySuggestions"
+                      (completeMethod)="filterCitySuggestions($event)"
+                      [forceSelection]="true"
+                      placeholder="Seleccione una ciudad"
+                      class="w-full"
+                      inputStyleClass="w-full"
+                      appendTo="body"
+                      [formControlName]="FormControlName.city_of_residence" />
                     <form-error-msg [control]="sheGroup.get(FormControlName.city_of_residence)" />
                   </div>
                 </div>
@@ -419,6 +432,7 @@
                     </div>
                     }
                   </div>
+                  <form-error-msg [customErrorMessage]="getFamilyInformationErrorMessage(FormGroupFields.she)" />
                 </div>
 
                 <divider-line />
@@ -479,10 +493,25 @@
                       <span class="text-red-500">*</span>
                     </div>
                     <div class="flex flex-col relative">
-                      <input [id]="FormFieldId.she_religion + '_control'" type="text" pInputText placeholder="Ej: Católica" class="w-full" [formControlName]="FormControlName.religion" />
+                      <p-autocomplete
+                        [inputId]="FormFieldId.she_religion + '_control'"
+                        [suggestions]="filteredReligionSuggestions"
+                        (completeMethod)="filterReligionSuggestions($event)"
+                        [forceSelection]="true"
+                        placeholder="Seleccione una religión"
+                        class="w-full"
+                        inputStyleClass="w-full"
+                        appendTo="body"
+                        [formControlName]="FormControlName.religion" />
                       <form-error-msg [control]="sheGroup.get(FormControlName.religion)" />
                     </div>
-                  </div>
+                    @if (isOtherReligionSelected(sheGroup)) {
+                    <div class="flex flex-col relative mt-5">
+                      <input type="text" pInputText placeholder="Especifique la religión" class="w-full" [formControlName]="FormControlName.religion_other" />
+                      <form-error-msg [control]="sheGroup.get(FormControlName.religion_other)" />
+                    </div>
+                    }
+                    </div>
 
                   <div class="flex flex-col gap-1" [id]="FormFieldId.she_church_name">
                     <div class="flex gap-1">
@@ -541,6 +570,7 @@
                       appendTo="body"
                       placeholder="Seleccione fecha de nacimiento"
                       [touchUI]="!isDesktop"
+                      [maxDate]="today"
                       readonlyInput="true"
                       [formControlName]="FormControlName.birth_date" />
                     <form-error-msg [control]="heGroup.get(FormControlName.birth_date)" />
@@ -634,7 +664,16 @@
                     <span class="text-red-500">*</span>
                   </div>
                   <div class="flex flex-col relative">
-                    <input [id]="FormFieldId.he_city_of_residence + '_control'" type="text" pInputText placeholder="Ej: La Vega, Santiago, Santo Domingo" class="w-full" [formControlName]="FormControlName.city_of_residence" />
+                    <p-autocomplete
+                      [inputId]="FormFieldId.he_city_of_residence + '_control'"
+                      [suggestions]="filteredCitySuggestions"
+                      (completeMethod)="filterCitySuggestions($event)"
+                      [forceSelection]="true"
+                      placeholder="Seleccione una ciudad"
+                      class="w-full"
+                      inputStyleClass="w-full"
+                      appendTo="body"
+                      [formControlName]="FormControlName.city_of_residence" />
                     <form-error-msg [control]="heGroup.get(FormControlName.city_of_residence)" />
                   </div>
                 </div>
@@ -740,6 +779,7 @@
                     </div>
                     }
                   </div>
+                  <form-error-msg [customErrorMessage]="getFamilyInformationErrorMessage(FormGroupFields.he)" />
                 </div>
 
                 <divider-line />
@@ -800,10 +840,25 @@
                       <span class="text-red-500">*</span>
                     </div>
                     <div class="flex flex-col relative">
-                      <input [id]="FormFieldId.he_religion + '_control'" type="text" pInputText placeholder="Ej: Católica" class="w-full" [formControlName]="FormControlName.religion" />
+                      <p-autocomplete
+                        [inputId]="FormFieldId.he_religion + '_control'"
+                        [suggestions]="filteredReligionSuggestions"
+                        (completeMethod)="filterReligionSuggestions($event)"
+                        [forceSelection]="true"
+                        placeholder="Seleccione una religión"
+                        class="w-full"
+                        inputStyleClass="w-full"
+                        appendTo="body"
+                        [formControlName]="FormControlName.religion" />
                       <form-error-msg [control]="heGroup.get(FormControlName.religion)" />
                     </div>
-                  </div>
+                    @if (isOtherReligionSelected(heGroup)) {
+                    <div class="flex flex-col relative mt-5">
+                      <input type="text" pInputText placeholder="Especifique la religión" class="w-full" [formControlName]="FormControlName.religion_other" />
+                      <form-error-msg [control]="heGroup.get(FormControlName.religion_other)" />
+                    </div>
+                    }
+                    </div>
 
                   <div class="flex flex-col gap-1" [id]="FormFieldId.he_church_name">
                     <div class="flex gap-1">
@@ -823,7 +878,7 @@
       </div>
 
       <div class="flex justify-end my-10">
-        <p-button [label]="loading() ? 'Enviando...'  :  'Enviar'" [icon]="loading() ? 'pi pi-spin pi-spinner' : ''" [disabled]="!isFormValid || loading()" (onClick)="onSubmit()" />
+        <p-button [label]="loading() ? 'Enviando...'  :  'Enviar'" [icon]="loading() ? 'pi pi-spin pi-spinner' : ''" [disabled]="loading()" (onClick)="onSubmit()" />
       </div>
     </div>
   </div>

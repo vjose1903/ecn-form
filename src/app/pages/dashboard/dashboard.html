@@ -1,0 +1,113 @@
+<div class="dashboard-page">
+  <header class="dashboard-header">
+    <div class="dashboard-title">
+      <div class="dashboard-title__mark">
+        <i class="pi pi-chart-bar"></i>
+      </div>
+      <div>
+        <h1>Dashboard</h1>
+        <p>{{ summary() }}</p>
+      </div>
+    </div>
+
+    <div class="dashboard-filters">
+      <div class="dashboard-filter-field">
+        <label for="dashboard-period-filter">Periodo</label>
+        <p-select
+          inputId="dashboard-period-filter"
+          [options]="periodOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="selectedPeriod()"
+          (ngModelChange)="onPeriodChange($event)"
+          appendTo="body"
+          class="dashboard-period-select" />
+      </div>
+
+      @if (showCustomRange()) {
+      <div class="dashboard-filter-field">
+        <label for="dashboard-date-from">Desde</label>
+        <p-datepicker
+          inputId="dashboard-date-from"
+          [ngModel]="customFrom()"
+          (ngModelChange)="customFrom.set($event); onCustomRangeChange()"
+          placeholder="Desde"
+          dateFormat="dd/mm/yy"
+          appendTo="body"
+          [showClear]="true"
+          inputStyleClass="dashboard-date-input" />
+      </div>
+
+      <div class="dashboard-filter-field">
+        <label for="dashboard-date-to">Hasta</label>
+        <p-datepicker
+          inputId="dashboard-date-to"
+          [ngModel]="customTo()"
+          (ngModelChange)="customTo.set($event); onCustomRangeChange()"
+          placeholder="Hasta"
+          dateFormat="dd/mm/yy"
+          appendTo="body"
+          [showClear]="true"
+          inputStyleClass="dashboard-date-input" />
+      </div>
+      }
+
+      <p-button type="button" icon="pi pi-refresh" severity="secondary" [text]="true" [loading]="loading()" pTooltip="Refrescar datos" (onClick)="refresh()" [attr.aria-label]="'Refrescar datos'" />
+    </div>
+  </header>
+
+  <section class="dashboard-kpi-grid">
+    @for (kpi of kpis(); track kpi.label) {
+      <article class="dashboard-kpi dashboard-kpi--{{ kpi.tone }}">
+        <div class="dashboard-kpi__body">
+          <div class="dashboard-kpi__icon">
+            <i class="{{ kpi.icon }}"></i>
+          </div>
+          <div class="dashboard-kpi__content">
+            <span>{{ kpi.label }}</span>
+            <strong>{{ kpi.value }}</strong>
+            @if (kpi.detail) {
+            <small>{{ kpi.detail }}</small>
+            }
+          </div>
+        </div>
+      </article>
+    }
+  </section>
+
+  <section class="dashboard-chart-grid">
+    @for (chart of charts(); track chart.title) {
+      <article
+        #chartCard
+        class="dashboard-chart-card"
+        role="button"
+        tabindex="0"
+        [class.dashboard-chart-card--wide]="chart.wide"
+        [class.dashboard-chart-card--half]="chart.size === 'half'"
+        [class.dashboard-chart-card--full]="chart.size === 'full'"
+        (click)="openChartFullscreen(chart, chartCard, $event)"
+        (keydown.enter)="openChartFullscreen(chart, chartCard, $event)"
+        (keydown.space)="openChartFullscreen(chart, chartCard, $event)">
+        <div class="dashboard-chart-card__header">
+          <div>
+            <h2>{{ chart.title }}</h2>
+            <p>{{ chart.subtitle }}</p>
+          </div>
+        </div>
+
+        @if (chart.empty) {
+          <div class="dashboard-empty-chart">
+            <i class="pi pi-chart-bar"></i>
+            <span>No hay datos para este rango</span>
+          </div>
+        } @else {
+          <app-dashboard-chart [option]="chart.option" />
+        }
+      </article>
+    }
+  </section>
+
+  @if (fullscreenChart(); as chart) {
+    <app-dashboard-fullscreen-card [chart]="chart" [originRect]="fullscreenOriginRect()" (closed)="closeChartFullscreen()" />
+  }
+</div>

@@ -16,6 +16,7 @@ import { FileClass } from '@core/entities/file/file.class';
 import { FileService } from '@core/entities/file/file.service';
 import { fun } from '@core/services/functions.service';
 import { UrlValidator } from '@core/typescript/validators/validate-url';
+import { PhoneValidator } from '@core/typescript/validators/validate-phone';
 import { RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
 import { Ss } from '@core/services/singleton.service';
 import { AuthService } from '@core/services/auth.service';
@@ -130,7 +131,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
         this.fb.group({
           [FormControlName.id]: [retreatHome?.id ?? null, []],
           [FormControlName.name]: [retreatHome?.name ?? null, [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
-          [FormControlName.phone]: [retreatHome?.phone ?? null, [Validators.pattern(/^\(\d{3}\) \d{3}-\d{4}$/)]],
+          [FormControlName.phone]: [retreatHome?.phone ?? null, [Validators.pattern(/^\(\d{3}\) \d{3}-\d{4}$/), PhoneValidator.validate]],
           [FormControlName.address]: [retreatHome?.address ?? null, [Validators.required, Validators.minLength(10), Validators.maxLength(500)]],
           [FormControlName.location]: [retreatHome?.location ?? null, [Validators.required, UrlValidator.validate]],
           [FormControlName.city]: [cityRef, []],
@@ -351,6 +352,10 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
 
     if (formData.phone && !formData.phone.match(/^\(\d{3}\) \d{3}-\d{4}$/)) {
       errors.push('El formato del teléfono debe ser (###) ###-####');
+    }
+
+    if (formData.phone && !PhoneValidator.isValid(formData.phone)) {
+      errors.push('El teléfono no es válido');
     }
 
     return errors;

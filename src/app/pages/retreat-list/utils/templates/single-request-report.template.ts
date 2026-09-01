@@ -124,7 +124,7 @@ export class SingleRequestReportTemplate implements PdfTemplate {
     }
 
     if (person?.religion) {
-      this.addField(doc, 'Religión:', person.religion, 5, currentY);
+      this.addField(doc, 'Religión:', this.formatReligionDisplay(person), 5, currentY);
       currentY += 7;
     }
 
@@ -226,6 +226,14 @@ export class SingleRequestReportTemplate implements PdfTemplate {
     } catch {
       return 'N/A';
     }
+  }
+
+  private formatReligionDisplay(person: any): string {
+    if (person?.religion === 'Otra religión' && person?.religion_other) {
+      return `${person.religion} (${person.religion_other})`;
+    }
+
+    return person?.religion;
   }
 
   private truncateText(doc: jsPDF, text: string, maxWidth: number): string {

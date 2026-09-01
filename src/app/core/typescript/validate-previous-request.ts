@@ -23,6 +23,7 @@ type CoupleFieldName =
   | 'emergency_phone'
   | 'emergency_relationship'
   | 'religion'
+  | 'religion_other'
   | 'church_name';
 
 export class PreviousRequestValidator {
@@ -35,7 +36,7 @@ export class PreviousRequestValidator {
    */
   static validate(previousRequests: RequestClass[], fieldName: FormControlName, currentRequestId?: string | null) {
     return (control: AbstractControl): ValidationErrors | null => {
-      const currentValue = control.value;
+      const currentValue = this.normalizeValue(control.value, fieldName);
 
       // Si no hay valor, no hay error (el required se maneja por separado)
       if (!currentValue) return null;
@@ -57,10 +58,10 @@ export class PreviousRequestValidator {
       // Buscar en las solicitudes filtradas
       const hasConflict = requestsToCheck.some(request => {
         // Buscar en el grupo 'she'
-        if (request.she && request.she[fieldName as CoupleFieldName] === currentValue) return true;
+        if (request.she && this.normalizeValue(request.she[fieldName as CoupleFieldName], fieldName) === currentValue) return true;
 
         // Buscar en el grupo 'he'
-        if (request.he && request.he[fieldName as CoupleFieldName] === currentValue) return true;
+        if (request.he && this.normalizeValue(request.he[fieldName as CoupleFieldName], fieldName) === currentValue) return true;
 
         return false;
       });
@@ -103,6 +104,7 @@ export class PreviousRequestValidator {
       'emergency_phone',
       'emergency_relationship',
       'religion',
+      'religion_other',
       'church_name',
     ];
 
@@ -149,10 +151,29 @@ export class PreviousRequestValidator {
       [FormControlName.emergency_phone]: 'Teléfono de emergencia',
       [FormControlName.emergency_relationship]: 'Relación con contacto de emergencia',
       [FormControlName.religion]: 'Religión',
+      [FormControlName.religion_other]: 'Otra religión',
       [FormControlName.church_name]: 'Nombre de la iglesia',
       [FormControlName.status]: 'Estado de la solicitud',
     };
 
     return fieldNames[fieldName] || fieldName;
+  }
+
+  private static normalizeValue(value: unknown, fieldName: FormControlName): string {
+    const text = String(value ?? '').trim();
+
+    if ([FormControlName.cell_phone, FormControlName.home_phone, FormControlName.work_phone, FormControlName.emergency_phone, FormControlName.familiar_phone, FormControlName.who_invited_you_phone].includes(fieldName)) {
+      return text.replace(/\D/g, '');
+    }
+
+    if (fieldName === FormControlName.email) {
+      return text.toLowerCase();
+    }
+
+    if (fieldName === FormControlName.identity_number) {
+      return text.replace(/[\s-]/g, '').toUpperCase();
+    }
+
+    return text.replace(/\s+/g, ' ');
   }
 }

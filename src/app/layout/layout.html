@@ -26,11 +26,11 @@
   </div>
 
   <!-- Contenido de las páginas -->
-  <div #contentRef class="bg-gray-50/50" [ngClass]="{'grid grid-cols-[min-content_1fr]': isAdminRoute()}">
+  <div #contentRef class="min-h-0 min-w-0 overflow-hidden bg-gray-50/50" [ngClass]="{'grid grid-cols-[min-content_minmax(0,1fr)]': isAdminRoute()}">
     @if(isAdminRoute()){
-    <app-menu />
+      <app-menu />
     }
-    <div class="h-full">
+    <div class="h-full min-h-0 min-w-0 overflow-y-auto overflow-x-hidden">
       <router-outlet />
     </div>
   </div>

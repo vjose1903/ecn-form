@@ -198,6 +198,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
       { key: 'emergency_phone', label: 'Teléfono de emergencia' },
       { key: 'emergency_relationship', label: 'Relación de emergencia' },
       { key: 'religion', label: 'Religión' },
+      { key: 'religion_other', label: 'Otra religión' },
       { key: 'church_name', label: 'Parroquia' },
       { key: 'family_information', label: 'Información familiar' },
     ];

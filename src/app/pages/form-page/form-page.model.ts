@@ -36,6 +36,7 @@ export enum FormControlName {
   emergency_phone = 'emergency_phone',
   emergency_relationship = 'emergency_relationship',
   religion = 'religion',
+  religion_other = 'religion_other',
   church_name = 'church_name',
 }
 
@@ -123,6 +124,7 @@ export const cleanFormValues = {
   [FormControlName.how_find_us]: '',
   [FormControlName.how_find_us_other]: '',
   [FormControlName.who_invited_you]: '',
+  [FormControlName.who_invited_you_phone]: '',
 
   [FormGroupFields.she]: {
     [FormControlName.full_name]: '',
@@ -154,6 +156,7 @@ export const cleanFormValues = {
     [FormControlName.emergency_phone]: '',
     [FormControlName.emergency_relationship]: '',
     [FormControlName.religion]: '',
+    [FormControlName.religion_other]: '',
     [FormControlName.church_name]: '',
   },
   [FormGroupFields.he]: {
@@ -186,6 +189,7 @@ export const cleanFormValues = {
     [FormControlName.emergency_phone]: '',
     [FormControlName.emergency_relationship]: '',
     [FormControlName.religion]: '',
+    [FormControlName.religion_other]: '',
     [FormControlName.church_name]: '',
   },
 };

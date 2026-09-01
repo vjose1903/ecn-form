@@ -38,6 +38,7 @@ export interface CoupleI {
   city_of_residence: string;
   are_you_married: boolean;
   religion: string;
+  religion_other?: string;
   emergency_full_name: string;
   have_children: boolean;
   identity_type: string;

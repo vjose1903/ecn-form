@@ -13,6 +13,11 @@ export const layoutRoutes: Routes = [
     loadComponent: () => import('../pages/form-page/form-page').then(m => m.FormPage),
   },
   {
+    path: 'dashboard',
+    loadComponent: () => import('../pages/dashboard/dashboard').then(m => m.DashboardPage),
+    canActivate: [authGuard],
+  },
+  {
     path: 'retiros',
     loadComponent: () => import('../pages/retreat-list/retreat-list').then(m => m.RetreatList),
     canActivate: [authGuard],

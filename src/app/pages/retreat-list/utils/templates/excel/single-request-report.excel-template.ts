@@ -183,7 +183,7 @@ export class SingleRequestExcelTemplate implements ExcelTemplate {
     }
 
     if (person?.religion) {
-      this.addField(worksheet, 'Religión:', person.religion, currentRow);
+      this.addField(worksheet, 'Religión:', this.formatReligionDisplay(person), currentRow);
       currentRow++;
     }
 
@@ -268,6 +268,14 @@ export class SingleRequestExcelTemplate implements ExcelTemplate {
     rowObj.getCell(column).font = { bold: true };
     rowObj.getCell(column + 1).value = this.convertToString(value);
     rowObj.getCell(column + 1).alignment = { wrapText: true };
+  }
+
+  private formatReligionDisplay(person: any): string {
+    if (person?.religion === 'Otra religión' && person?.religion_other) {
+      return `${person.religion} (${person.religion_other})`;
+    }
+
+    return person?.religion;
   }
 
   private convertToString(value: any): string {
