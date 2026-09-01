@@ -22,6 +22,7 @@ interface CounterEntry {
 })
 export class DashboardService {
   private retreatService = inject(RetreatService);
+  private readonly chartPalette = ['#a83044', '#2563eb', '#16a34a', '#f59e0b', '#7c3aed', '#0891b2', '#ef4444', '#0f766e', '#ea580c', '#475569', '#db2777', '#65a30d'];
 
   async getDashboardData(filter: DashboardPeriodFilter, customRange: DashboardDateRange): Promise<DashboardData> {
     const currentUser = Ss.authService.current_user();
@@ -31,7 +32,7 @@ export class DashboardService {
     }
 
     const retreats = await this.retreatService.getAll();
-    const cityRetreats = retreats.filter(retreat => this.isRetreatInUserCity(retreat, currentUser.city));
+    const cityRetreats = retreats.filter(retreat => retreat.is_active && this.isRetreatInUserCity(retreat, currentUser.city));
     const scopedRetreats = this.filterRetreatsByPeriod(cityRetreats, filter, customRange);
     const requestGroups = await Promise.all(scopedRetreats.map(retreat => this.retreatService.getRequests(retreat).then(requests => ({ retreat, requests }))));
     const entries = requestGroups.flatMap(group => group.requests.map(request => ({ retreat: group.retreat, request })));
@@ -110,7 +111,7 @@ export class DashboardService {
     const mainSource = this.topEntry(this.countBy(entries, entry => this.getSource(entry.request)))?.name || 'Sin datos';
 
     return [
-      { label: 'Total de solicitudes', value: this.formatNumber(total), icon: 'pi pi-file', tone: 'primary' },
+      { label: 'Total de solicitudes', value: this.formatNumber(total), icon: 'pi pi-chart-bar', tone: 'primary' },
       {
         label: 'Estado de solicitudes',
         value: `${statusCounts[RequestStatus.PENDING] || 0} / ${statusCounts[RequestStatus.ACCEPTED] || 0} / ${statusCounts[RequestStatus.REJECTED] || 0}`,
@@ -121,14 +122,14 @@ export class DashboardService {
       {
         label: 'Solicitudes por retiro',
         value: `${this.averagePerRetreat(entries).toFixed(1)} prom.`,
-        icon: 'pi pi-calendar',
+        icon: 'pi pi-calendar-clock',
         tone: 'info',
         detail: `${new Set(entries.map(entry => entry.retreat.id)).size} retiros con solicitudes`,
       },
       {
         label: 'Con fecha de boda',
         value: this.formatNumber(weddingCounts['con'] || 0),
-        icon: 'pi pi-heart',
+        icon: 'pi pi-heart-fill',
         tone: 'danger',
         detail: `${weddingCounts['sin'] || 0} sin fecha`,
       },
@@ -139,7 +140,7 @@ export class DashboardService {
         tone: 'warning',
         detail: `${invitedCounts['sin'] || 0} sin invitador`,
       },
-      { label: 'Fuente principal', value: mainSource, icon: 'pi pi-megaphone', tone: 'primary' },
+      { label: 'Fuente principal', value: mainSource, icon: 'pi pi-compass', tone: 'primary' },
       { label: 'Promedio de noviazgo', value: `${averageDatingYears.toFixed(1)} años`, icon: 'pi pi-clock', tone: 'info' },
       { label: 'Participantes con hijos', value: this.formatNumber(withChildren), icon: 'pi pi-users', tone: 'warning', detail: `${participants.length} participantes` },
       { label: 'Casados por la iglesia', value: this.formatNumber(churchMarried), icon: 'pi pi-building-columns', tone: 'success', detail: `${participants.length} participantes` },
@@ -180,21 +181,21 @@ export class DashboardService {
 
     return [
       { title: 'Estado de solicitudes', subtitle: 'Pendientes, aceptadas y rechazadas', option: this.pieOption(requestStatus), empty: entries.length === 0 },
-      { title: 'Solicitudes por retiro', subtitle: 'Total por retiro seleccionado', option: this.barOption(requestsByRetreat, { color: '#a83044' }), empty: entries.length === 0 },
-      { title: 'Fuente de captación', subtitle: 'Cómo se enteraron del retiro', option: this.horizontalBarOption(sourceData, { color: '#2563eb' }), empty: entries.length === 0 },
-      { title: 'Evolución por fecha de retiro', subtitle: 'Solicitudes agrupadas por fecha de inicio del retiro', option: this.barOption(evolutionData, { color: '#0f766e' }), empty: entries.length === 0 },
-      { title: 'Años de noviazgo', subtitle: 'Distribución por ficha', option: this.barOption(datingYears, { color: '#7c3aed' }), empty: entries.length === 0 },
+      { title: 'Solicitudes por retiro', subtitle: 'Total por retiro seleccionado', option: this.barOption(requestsByRetreat), empty: entries.length === 0 },
+      { title: 'Fuente de captación', subtitle: 'Cómo se enteraron del retiro', option: this.horizontalBarOption(sourceData), empty: entries.length === 0 },
+      { title: 'Evolución por fecha de retiro', subtitle: 'Solicitudes agrupadas por fecha de inicio del retiro', option: this.barOption(evolutionData), empty: entries.length === 0 },
+      { title: 'Años de noviazgo', subtitle: 'Distribución por ficha', option: this.barOption(datingYears), empty: entries.length === 0 },
       { title: 'Fecha de boda', subtitle: 'Solicitudes con y sin fecha definida', option: this.pieOption(weddingData), empty: entries.length === 0 },
       { title: 'Invitador registrado', subtitle: 'Solicitudes con referencia de invitador', option: this.pieOption(invitedData), empty: entries.length === 0 },
-      { title: 'Edades de participantes', subtitle: 'Rangos de edad entre novio y novia', option: this.barOption(ageData, { color: '#ea580c' }), empty: participants.length === 0 },
-      { title: 'Religión declarada', subtitle: 'Valores normalizados visualmente', option: this.horizontalBarOption(religionData, { color: '#16a34a' }), empty: participants.length === 0 },
-      { title: 'Ciudad de residencia', subtitle: 'Distribución entre solicitantes', option: this.horizontalBarOption(cityData, { color: '#0891b2' }), empty: participants.length === 0, wide: true },
+      { title: 'Edades de participantes', subtitle: 'Rangos de edad entre novio y novia', option: this.barOption(ageData), empty: participants.length === 0, size: 'half' },
+      { title: 'Religión declarada', subtitle: 'Valores normalizados visualmente', option: this.horizontalBarOption(religionData), empty: participants.length === 0, size: 'half' },
+      { title: 'Ciudad de residencia', subtitle: 'Distribución entre solicitantes', option: this.horizontalBarOption(cityData), empty: participants.length === 0, size: 'full' },
     ];
   }
 
   private pieOption(data: CounterEntry[]): EChartsOption {
     return {
-      color: ['#b3324a', '#16a34a', '#ef4444', '#2563eb', '#f59e0b'],
+      color: this.chartPalette,
       tooltip: {
         trigger: 'item',
         backgroundColor: '#111827',
@@ -220,15 +221,15 @@ export class DashboardService {
             borderWidth: 3,
             borderRadius: 6,
           },
-          data,
+          data: this.toColoredChartData(data),
         },
       ],
     };
   }
 
-  private barOption(data: CounterEntry[], args: { color: string }): EChartsOption {
+  private barOption(data: CounterEntry[]): EChartsOption {
     return {
-      color: [args.color],
+      color: this.chartPalette,
       tooltip: {
         trigger: 'axis',
         backgroundColor: '#111827',
@@ -252,7 +253,7 @@ export class DashboardService {
       series: [
         {
           type: 'bar',
-          data: data.map(item => item.value),
+          data: this.toColoredChartData(data),
           barMaxWidth: 42,
           itemStyle: { borderRadius: [6, 6, 0, 0] },
         },
@@ -260,11 +261,11 @@ export class DashboardService {
     };
   }
 
-  private horizontalBarOption(data: CounterEntry[], args: { color: string }): EChartsOption {
+  private horizontalBarOption(data: CounterEntry[]): EChartsOption {
     const sortedData = data.slice().reverse();
 
     return {
-      color: [args.color],
+      color: this.chartPalette,
       tooltip: {
         trigger: 'axis',
         backgroundColor: '#111827',
@@ -285,8 +286,26 @@ export class DashboardService {
         axisLine: { lineStyle: { color: '#cbd5e1' } },
         axisLabel: { width: 112, overflow: 'truncate', color: '#475569', fontWeight: 650 },
       },
-      series: [{ type: 'bar', data: sortedData.map(item => item.value), barMaxWidth: 30, itemStyle: { borderRadius: [0, 6, 6, 0] } }],
+      series: [{ type: 'bar', data: this.toColoredChartData(sortedData), barMaxWidth: 30, itemStyle: { borderRadius: [0, 6, 6, 0] } }],
     };
+  }
+
+  private toColoredChartData(data: CounterEntry[]): (CounterEntry & { itemStyle: { color: string } })[] {
+    return data.map((item, index) => ({
+      name: item.name,
+      value: item.value,
+      itemStyle: {
+        color: this.getChartColor(index),
+      },
+    }));
+  }
+
+  private getChartColor(index: number): string {
+    if (index < this.chartPalette.length) {
+      return this.chartPalette[index];
+    }
+
+    return `hsl(${(index * 137.508) % 360}, 68%, 46%)`;
   }
 
   private getParticipants(request: RequestClass): CoupleI[] {
@@ -344,13 +363,26 @@ export class DashboardService {
   }
 
   private normalizeGroupKey(value: string | null | undefined): string {
-    return String(value || '')
+    const key = String(value || '')
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^\p{L}\p{N}\s]/gu, ' ')
       .replace(/\s+/g, ' ')
       .trim()
       .toLowerCase();
+
+    return this.normalizeCityAliasKey(key);
+  }
+
+  private normalizeCityAliasKey(key: string): string {
+    const aliases: Record<string, string> = {
+      'concepcion la vega': 'la vega',
+      'monsenor nouel': 'bonao',
+      'bonao monsenor nouel': 'bonao',
+      'maimon monsenor nouel': 'maimon',
+    };
+
+    return aliases[key] || key;
   }
 
   private normalizeGroupLabel(value: string | null | undefined): string {
@@ -436,13 +468,23 @@ export class DashboardService {
         current.value += 1;
       } else {
         grouped.set(key, {
-          name: this.normalizeGroupLabel(value),
+          name: this.normalizeGroupLabelFromKey(key, value),
           value: 1,
         });
       }
     }
 
     return Array.from(grouped.values()).sort((left, right) => right.value - left.value);
+  }
+
+  private normalizeGroupLabelFromKey(key: string, value: string | null | undefined): string {
+    const labels: Record<string, string> = {
+      'la vega': 'La Vega',
+      bonao: 'Bonao',
+      maimon: 'Maimón',
+    };
+
+    return labels[key] || this.normalizeGroupLabel(value);
   }
 
   private topEntry(counter: Record<string, number>): CounterEntry | null {

@@ -78,7 +78,7 @@
 
                     <div class="flex flex-col gap-1">
                       <p-inputgroup>
-                        <p-inputnumber [id]="FormFieldId.dating_period_month + '_control'" [formControlName]="FormControlName.dating_period_month" placeholder="#" [min]="0" [max]="11" />
+                        <p-inputnumber [id]="FormFieldId.dating_period_month + '_control'" [formControlName]="FormControlName.dating_period_month" placeholder="#" [min]="0" />
                         <p-inputgroup-addon>
                           <div class="min-w-15 text-center">{{getDatingPeriodAddon(FormControlName.dating_period_month)}}</div>
                         </p-inputgroup-addon>
@@ -170,8 +170,10 @@
 
                       <div class="flex flex-col relative">
                         <p-inputmask [inputId]="FormFieldId.who_invited_you_phone + '_control'" mask="(999) 999-9999" placeholder="(###) ###-####" class="w-full" [formControlName]="FormControlName.who_invited_you_phone" />
-                        <form-error-msg [control]="formGroup.get(FormControlName.who_invited_you_phone)" />
                       </div>
+                      @if (formGroup.get(FormControlName.who_invited_you_phone)?.hasError('invalidPhone') && (formGroup.get(FormControlName.who_invited_you_phone)?.dirty || formGroup.get(FormControlName.who_invited_you_phone)?.touched)) {
+                      <small class="text-red-500">Teléfono válido.</small>
+                      }
                     </div>
                   </div>
                 </div>

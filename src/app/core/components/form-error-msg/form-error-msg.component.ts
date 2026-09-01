@@ -58,6 +58,7 @@ export class FormErrorMsgComponent implements OnInit, OnDestroy, AfterViewInit {
     invalidCity: 'Seleccione una ciudad válida.',
     invalidReligion: 'Seleccione una religión válida.',
     invalidName: 'Ingrese solo letras y espacios.',
+    invalidDate: 'Ingrese una fecha válida.',
     futureDate: 'La fecha no puede ser futura.',
     pastDate: 'La fecha no puede ser pasada.',
     invalidAgeRange: (error: any) => `La edad debe estar entre ${error.min} y ${error.max} años.`,

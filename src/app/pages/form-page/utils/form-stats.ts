@@ -195,6 +195,7 @@ export class FormStatsUtils {
       invalidCity: 'Ciudad inválida',
       invalidReligion: 'Religión inválida',
       invalidName: 'Solo letras y espacios',
+      invalidDate: 'Fecha inválida',
       futureDate: 'La fecha no puede ser futura',
       pastDate: 'La fecha no puede ser pasada',
       invalidAgeRange: `Edad entre ${errorValue?.min ?? 14} y ${errorValue?.max ?? 100} años`,

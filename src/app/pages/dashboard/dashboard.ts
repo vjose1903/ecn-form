@@ -6,13 +6,14 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
 import { DashboardChartComponent } from './dashboard-chart.component';
+import { DashboardFullscreenCardComponent } from './dashboard-fullscreen-card.component';
 import { DashboardService } from './dashboard.service';
-import type { DashboardData, DashboardDateRange, DashboardPeriodFilter, DashboardPeriodOption } from './dashboard.model';
+import type { DashboardChart, DashboardData, DashboardDateRange, DashboardPeriodFilter, DashboardPeriodOption } from './dashboard.model';
 import { Ss } from '@core/services/singleton.service';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, FormsModule, ButtonModule, DatePickerModule, SelectModule, TooltipModule, DashboardChartComponent],
+  imports: [CommonModule, FormsModule, ButtonModule, DatePickerModule, SelectModule, TooltipModule, DashboardChartComponent, DashboardFullscreenCardComponent],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
@@ -24,6 +25,8 @@ export class DashboardPage implements OnInit {
   selectedPeriod = signal<DashboardPeriodFilter>('all');
   customFrom = signal<Date | null>(null);
   customTo = signal<Date | null>(null);
+  fullscreenChart = signal<DashboardChart | null>(null);
+  fullscreenOriginRect = signal<DOMRect | null>(null);
 
   periodOptions: DashboardPeriodOption[] = [
     { label: 'Sin filtro', value: 'all' },
@@ -68,6 +71,21 @@ export class DashboardPage implements OnInit {
     void this.loadDashboard();
   }
 
+  openChartFullscreen(chart: DashboardChart, cardElement: HTMLElement, event: Event): void {
+    if (this.shouldIgnoreCardEvent(event)) {
+      return;
+    }
+
+    event.preventDefault();
+    this.fullscreenOriginRect.set(cardElement.getBoundingClientRect());
+    this.fullscreenChart.set(chart);
+  }
+
+  closeChartFullscreen(): void {
+    this.fullscreenChart.set(null);
+    this.fullscreenOriginRect.set(null);
+  }
+
   private async loadDashboard(): Promise<void> {
     try {
       this.loading.set(true);
@@ -83,5 +101,15 @@ export class DashboardPage implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  private shouldIgnoreCardEvent(event: Event): boolean {
+    const target = event.target;
+
+    if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+
+    return !!target.closest('button, a, input, select, textarea, p-select, p-datepicker, .p-select, .p-datepicker, .p-datepicker-panel, .p-button');
   }
 }

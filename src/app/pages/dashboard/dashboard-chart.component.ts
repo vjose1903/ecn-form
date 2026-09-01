@@ -10,7 +10,7 @@ import type { EChartsOption } from 'echarts';
       .dashboard-chart {
         width: 100%;
         height: 100%;
-        min-height: 320px;
+        min-height: 232px;
       }
     `,
   ],

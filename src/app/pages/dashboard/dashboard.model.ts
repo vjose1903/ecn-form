@@ -26,6 +26,7 @@ export interface DashboardChart {
   option: EChartsOption;
   empty: boolean;
   wide?: boolean;
+  size?: 'half' | 'full';
 }
 
 export interface DashboardData {

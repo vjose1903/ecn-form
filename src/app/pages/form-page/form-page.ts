@@ -113,7 +113,7 @@ export class FormPage implements OnInit {
     [FormControlName.wedding_date]: [null, this.futureOrTodayDateValidator()],
     [FormControlName.how_find_us]: ['', Validators.required],
     [FormControlName.how_find_us_other]: [''],
-    [FormControlName.who_invited_you]: [''],
+    [FormControlName.who_invited_you]: ['', [this.minLettersValidator(3), this.personNameValidator()]],
     [FormControlName.who_invited_you_phone]: ['', PhoneValidator.validate],
 
     [FormGroupFields.she]: this.fb.group({
@@ -873,16 +873,7 @@ export class FormPage implements OnInit {
       fieldsToValidate.forEach(fieldName => {
         const control = group?.get(fieldName);
         if (control) {
-          // Obtener validadores existentes
-          const currentValidators = control.validator ? [control.validator] : [];
-
-          // Filtrar validadores que no sean PreviousRequestValidator
-          const filteredValidators = currentValidators.filter(validator => {
-            return !validator.toString().includes('PreviousRequestValidator');
-          });
-
-          // Aplicar los validadores filtrados
-          control.setValidators(filteredValidators);
+          control.setValidators(this.getBasePreviousRequestValidators(group, fieldName));
 
           // Forzar la validación y emitir eventos para que se actualice la UI
           control.updateValueAndValidity();
@@ -908,14 +899,7 @@ export class FormPage implements OnInit {
       fieldsToValidate.forEach(fieldName => {
         const control = group?.get(fieldName);
         if (control) {
-          // Obtener validadores existentes
-          const currentValidators = control.validator ? [control.validator] : [];
-
-          // Agregar el validador de solicitudes anteriores con el array directamente
-          const newValidators = [...currentValidators, PreviousRequestValidator.validate(currentRequests, fieldName, this.currentRequestId)];
-
-          // Aplicar los validadores actualizados
-          control.setValidators(newValidators);
+          control.setValidators([...this.getBasePreviousRequestValidators(group, fieldName), PreviousRequestValidator.validate(currentRequests, fieldName, this.currentRequestId)]);
 
           // Forzar la validación y emitir eventos para que se muestren los mensajes de error
           control.updateValueAndValidity();
@@ -951,6 +935,23 @@ export class FormPage implements OnInit {
         }
       });
     });
+  }
+
+  private getBasePreviousRequestValidators(group: AbstractControl | null | undefined, fieldName: FormControlName): ValidatorFn[] {
+    if (fieldName === FormControlName.email) {
+      return [Validators.required, Validators.email];
+    }
+
+    if (fieldName === FormControlName.cell_phone) {
+      return [Validators.required, PhoneValidator.validate];
+    }
+
+    if (fieldName === FormControlName.identity_number) {
+      const identityType = group?.get(FormControlName.identity_type)?.value;
+      return identityType === IdentityType.cedula ? [Validators.required, CedulaValidator.validate] : [Validators.required];
+    }
+
+    return [];
   }
 
   getFamilyInformationErrorMessage(groupName: FormGroupFields.she | FormGroupFields.he): string | null {
