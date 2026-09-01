@@ -51,18 +51,18 @@ export class DashboardService {
     let to: Date | null = null;
 
     if (filter === 'last_year') {
-      from = this.addYears(now, -1);
-      to = now;
+      from = this.startOfYear(now);
+      to = this.endOfYear(now);
     }
 
     if (filter === 'last_3_years') {
-      from = this.addYears(now, -3);
-      to = now;
+      from = this.startOfYear(this.addYears(now, -2));
+      to = this.endOfYear(now);
     }
 
     if (filter === 'last_5_years') {
-      from = this.addYears(now, -5);
-      to = now;
+      from = this.startOfYear(this.addYears(now, -4));
+      to = this.endOfYear(now);
     }
 
     if (filter === 'custom') {
@@ -536,6 +536,14 @@ export class DashboardService {
     const newDate = new Date(date);
     newDate.setHours(23, 59, 59, 999);
     return newDate;
+  }
+
+  private startOfYear(date: Date): Date {
+    return new Date(date.getFullYear(), 0, 1, 0, 0, 0, 0);
+  }
+
+  private endOfYear(date: Date): Date {
+    return new Date(date.getFullYear(), 11, 31, 23, 59, 59, 999);
   }
 
   private formatNumber(value: number): string {
