@@ -57,6 +57,7 @@ export class App implements OnInit, OnDestroy {
   private pendingUpdate = false;
   private updatePromptDismissed = false;
   private updateCheckInterval: ReturnType<typeof setInterval> | null = null;
+  private visibilityHandler: (() => void) | null = null;
 
   ngOnInit(): void {
     this.initializeApp();
@@ -67,11 +68,16 @@ export class App implements OnInit, OnDestroy {
     if (this.updateCheckInterval) {
       clearInterval(this.updateCheckInterval);
     }
+    if (this.visibilityHandler) {
+      document.removeEventListener('visibilitychange', this.visibilityHandler);
+      this.visibilityHandler = null;
+    }
   }
 
   protected async reloadForUpdate(): Promise<void> {
     try {
       await this.swUpdate.activateUpdate();
+      this.pendingUpdate = false;
     } catch (error) {
       console.warn('No se pudo activar la nueva versión antes de refrescar', error);
     } finally {
@@ -96,6 +102,7 @@ export class App implements OnInit, OnDestroy {
 
       this.isReady.set(true);
       this.cdRef.detectChanges();
+      void this.checkForAppUpdate();
     } catch (error) {
       console.error('❌ [App] Error durante la inicialización:', error);
       // Aún marcar como lista para que la app funcione
@@ -150,13 +157,12 @@ export class App implements OnInit, OnDestroy {
       void this.checkForAppUpdate();
     }, this.updateCheckIntervalMs);
 
-    document.addEventListener('visibilitychange', () => {
+    this.visibilityHandler = () => {
       if (document.visibilityState === 'visible') {
         void this.checkForAppUpdate();
       }
-    });
-
-    void this.checkForAppUpdate();
+    };
+    document.addEventListener('visibilitychange', this.visibilityHandler);
   }
 
   private async checkForAppUpdate(): Promise<void> {
