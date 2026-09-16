@@ -53,11 +53,15 @@ export class App implements OnInit, OnDestroy {
   private readonly fileService = inject(FileService);
   private readonly swUpdate = inject(SwUpdate);
   private readonly router = inject(Router);
-  private readonly updateCheckIntervalMs = 6 * 60 * 60 * 1000;
+  private readonly updateCheckIntervalMs = 30 * 60 * 1000;
   private pendingUpdate = false;
   private updatePromptDismissed = false;
+  private updateCheckInProgress = false;
   private updateCheckInterval: ReturnType<typeof setInterval> | null = null;
   private visibilityHandler: (() => void) | null = null;
+  private readonly resumeHandler = (): void => {
+    void this.checkForAppUpdate();
+  };
 
   ngOnInit(): void {
     this.initializeApp();
@@ -72,6 +76,9 @@ export class App implements OnInit, OnDestroy {
       document.removeEventListener('visibilitychange', this.visibilityHandler);
       this.visibilityHandler = null;
     }
+    window.removeEventListener('pageshow', this.resumeHandler);
+    window.removeEventListener('focus', this.resumeHandler);
+    window.removeEventListener('online', this.resumeHandler);
   }
 
   protected async reloadForUpdate(): Promise<void> {
@@ -159,17 +166,28 @@ export class App implements OnInit, OnDestroy {
 
     this.visibilityHandler = () => {
       if (document.visibilityState === 'visible') {
-        void this.checkForAppUpdate();
+        this.resumeHandler();
       }
     };
     document.addEventListener('visibilitychange', this.visibilityHandler);
+    window.addEventListener('pageshow', this.resumeHandler);
+    window.addEventListener('focus', this.resumeHandler);
+    window.addEventListener('online', this.resumeHandler);
+    this.resumeHandler();
   }
 
   private async checkForAppUpdate(): Promise<void> {
+    if (!this.swUpdate.isEnabled || this.updateCheckInProgress) {
+      return;
+    }
+
+    this.updateCheckInProgress = true;
     try {
       await this.swUpdate.checkForUpdate();
     } catch (error) {
       console.warn('No se pudo verificar si hay una nueva versión de la app', error);
+    } finally {
+      this.updateCheckInProgress = false;
     }
   }
 
