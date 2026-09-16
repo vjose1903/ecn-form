@@ -14,6 +14,7 @@
   </ng-template>
 </p-confirmdialog>
 <p-dialog />
+}
 <p-dialog
   [visible]="updateDialogVisible()"
   [modal]="true"
@@ -21,6 +22,8 @@
   [draggable]="false"
   [resizable]="false"
   [showHeader]="false"
+  appendTo="body"
+  [baseZIndex]="20000"
   styleClass="update-version-dialog"
   [style]="{ width: 'min(86vw, 36rem)' }">
   <div class="update-modal-content">
@@ -35,18 +38,20 @@
 
     <h2>¡Nueva versión disponible!</h2>
     <p>Hay una versión nueva de la aplicación. Se necesita refrescar la ventana para cargar la última versión.</p>
+    @if (updateError()) {
+      <p role="alert" class="text-red-600">{{ updateError() }}</p>
+    }
 
     <div class="update-modal-actions">
-      <button type="button" class="update-secondary-button" (click)="dismissUpdateDialog()">
+      <button type="button" class="update-secondary-button" [disabled]="updateInProgress()" (click)="dismissUpdateDialog()">
         <i class="pi pi-times"></i>
         <span>Ahora no</span>
       </button>
 
-      <button type="button" class="update-primary-button" (click)="reloadForUpdate()">
-        <i class="pi pi-refresh"></i>
-        <span>Refrescar</span>
+      <button type="button" class="update-primary-button" [disabled]="updateInProgress()" (click)="reloadForUpdate()">
+        <i class="pi pi-refresh" [class.pi-spin]="updateInProgress()"></i>
+        <span>{{ updateInProgress() ? 'Actualizando…' : 'Refrescar' }}</span>
       </button>
     </div>
   </div>
 </p-dialog>
-}
