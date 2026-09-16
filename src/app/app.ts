@@ -53,7 +53,7 @@ export class App implements OnInit, OnDestroy {
   private readonly fileService = inject(FileService);
   private readonly swUpdate = inject(SwUpdate);
   private readonly router = inject(Router);
-  private readonly updateCheckIntervalMs = 30 * 60 * 1000;
+  private readonly updateCheckIntervalMs = 5 * 60 * 1000;
   private pendingUpdate = false;
   private updatePromptDismissed = false;
   private updateCheckInProgress = false;
@@ -88,20 +88,25 @@ export class App implements OnInit, OnDestroy {
       return;
     }
 
-    let activated = false;
     try {
-      activated = await firstValueFrom(from(this.swUpdate.activateUpdate()).pipe(timeout(10000)));
-    } catch (error) {
-      console.warn('No se pudo activar la nueva versión antes de refrescar', error);
-    } finally {
-      if (activated) {
-        window.location.reload();
-      } else {
-        // Un worker desactualizado o degradado no debe volver a entregar el HTML anterior.
-        const url = new URL(window.location.href);
-        url.searchParams.set('ngsw-bypass', 'true');
-        window.location.replace(url.href);
+      const updateReady = await firstValueFrom(from(this.swUpdate.checkForUpdate()).pipe(timeout(15000)));
+      if (!updateReady) {
+        await this.checkDeployedVersion();
+        if (!this.pendingUpdate) {
+          return;
+        }
       }
+
+      const activated = await firstValueFrom(from(this.swUpdate.activateUpdate()).pipe(timeout(15000)));
+      if (!activated && !updateReady) {
+        return;
+      }
+
+      this.pendingUpdate = false;
+      this.updatePromptDismissed = false;
+      window.location.reload();
+    } catch (error) {
+      console.warn('No se pudo descargar y activar la nueva versión', error);
     }
   }
 
@@ -198,13 +203,8 @@ export class App implements OnInit, OnDestroy {
 
     this.updateCheckInProgress = true;
     try {
-      // La comprobación directa funciona aunque VERSION_READY ya se haya emitido o el worker falle.
-      await Promise.all([
-        this.checkDeployedVersion(),
-        firstValueFrom(from(this.swUpdate.checkForUpdate()).pipe(timeout(15000))).catch(error => {
-          console.warn('No se pudo verificar la actualización del service worker', error);
-        }),
-      ]);
+      // Esta comprobación solo detecta. La descarga queda reservada para el botón del modal.
+      await this.checkDeployedVersion();
     } finally {
       this.updateCheckInProgress = false;
     }
