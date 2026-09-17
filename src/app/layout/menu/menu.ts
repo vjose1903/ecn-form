@@ -21,7 +21,7 @@ export class Menu implements OnInit, OnDestroy {
   private authService = inject(AuthService);
 
   items: MenuItem[] = [
-    { label: 'Dashboard', icon: 'pi pi-chart-bar', link: '/dashboard', severity: 'contrast' },
+    { label: 'DASHBOARD', icon: 'pi pi-chart-bar', link: '/dashboard', severity: 'contrast' },
     { label: 'Retiros', icon: 'pi pi-calendar-plus', link: '/retiros', severity: 'contrast' },
     { label: 'Solicitudes archivadas', icon: 'pi pi-inbox', link: '/solicitudes-archivadas', severity: 'contrast' },
     { label: 'Casas de Retiro', icon: 'pi pi-home', link: '/casas-de-retiro', severity: 'contrast' },
