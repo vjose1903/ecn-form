@@ -15,6 +15,7 @@ import { DialogService } from 'primeng/dynamicdialog';
 import { FileService } from '@core/entities/file/file.service';
 import { CommonModule } from '@angular/common';
 import { filter, Subscription } from 'rxjs';
+import { buildVersion } from '../environments/build-version';
 
 @Component({
   selector: 'app-root',
@@ -189,9 +190,25 @@ export class App implements OnInit, OnDestroy {
   private async checkForUpdate(): Promise<void> {
     if (!this.swUpdate.isEnabled) return;
     try {
+      try {
+        await this.checkPublishedVersion();
+      } catch (error) {
+        console.warn('No se pudo consultar el número de versión publicado', error);
+      }
       await this.swUpdate.checkForUpdate();
     } catch (error) {
       console.warn('No se pudo comprobar la actualización', error);
+    }
+  }
+
+  private async checkPublishedVersion(): Promise<void> {
+    const url = new URL('version.json', document.baseURI);
+    url.searchParams.set('t', String(Date.now()));
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const published = await response.json() as { label?: unknown };
+    if (typeof published.label === 'string' && published.label !== buildVersion.label) {
+      console.info(`Nueva versión publicada: ${published.label}. Versión activa: ${buildVersion.label}.`);
     }
   }
 
