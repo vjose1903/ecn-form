@@ -154,9 +154,9 @@ export class App implements OnInit, OnDestroy {
       return;
     }
 
-    this.updateSubscriptions.add(this.swUpdate.versionUpdates.subscribe(event => {
+    this.updateSubscriptions.add(this.swUpdate.versionUpdates.subscribe(event => this.ngZone.run(() => {
       if (event.type === 'VERSION_READY') {
-        if (event.latestVersion.hash !== this.pendingDeployment) {
+        if (!this.updateReady) {
           this.pendingDeployment = event.latestVersion.hash;
           this.updatePromptDismissed = false;
           this.updateError.set('');
@@ -166,7 +166,7 @@ export class App implements OnInit, OnDestroy {
       } else if (event.type === 'VERSION_INSTALLATION_FAILED') {
         console.warn('No se pudo preparar la nueva versión', event);
       }
-    }));
+    })));
 
     this.updateSubscriptions.add(this.swUpdate.unrecoverable.subscribe(() => {
       console.warn('La versión activa no se puede recuperar; se recargará la aplicación.');
@@ -191,7 +191,10 @@ export class App implements OnInit, OnDestroy {
     if (!this.swUpdate.isEnabled) return;
     try {
       try {
-        await this.checkPublishedVersion();
+        const publishedLabel = await this.checkPublishedVersion();
+        if (publishedLabel !== null && publishedLabel !== buildVersion.label) {
+          this.markPublishedUpdateReady(publishedLabel);
+        }
       } catch (error) {
         console.warn('No se pudo consultar el número de versión publicado', error);
       }
@@ -201,15 +204,23 @@ export class App implements OnInit, OnDestroy {
     }
   }
 
-  private async checkPublishedVersion(): Promise<void> {
+  private async checkPublishedVersion(): Promise<string | null> {
     const url = new URL('version.json', document.baseURI);
     url.searchParams.set('t', String(Date.now()));
     const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const published = await response.json() as { label?: unknown };
-    if (typeof published.label === 'string' && published.label !== buildVersion.label) {
-      console.info(`Nueva versión publicada: ${published.label}. Versión activa: ${buildVersion.label}.`);
+    return typeof published.label === 'string' ? published.label : null;
+  }
+
+  private markPublishedUpdateReady(publishedLabel: string): void {
+    if (this.pendingDeployment !== publishedLabel) {
+      this.pendingDeployment = publishedLabel;
+      this.updatePromptDismissed = false;
+      this.updateError.set('');
     }
+    this.updateReady = true;
+    this.ngZone.run(() => this.handleReadyUpdate());
   }
 
   private handleReadyUpdate(): void {
