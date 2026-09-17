@@ -20,7 +20,7 @@ if (worker.split(entrypoint).length !== 2) {
 const index = manifest.index;
 const html = await readFile(new URL(`../dist/ecn-form${index}`, import.meta.url));
 const shellHash = createHash('sha1').update(html).digest('hex');
-const shell = `/app-shell.${shellHash}.txt`;
+const shell = `/app-shell.${shellHash}.html`;
 await writeFile(new URL(`../dist/ecn-form${shell}`, import.meta.url), html);
 manifest.index = shell;
 for (const group of manifest.assetGroups) {

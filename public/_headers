@@ -16,6 +16,11 @@
 /safety-worker.js
   Cache-Control: no-cache
 
+/app-shell.*.html
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: public, max-age=31536000, immutable, no-transform
+
+# Compatibilidad con shells generados por el deploy anterior.
 /app-shell.*.txt
-  Content-Type: text/plain; charset=utf-8
+  Content-Type: text/html; charset=utf-8
   Cache-Control: public, max-age=31536000, immutable, no-transform
