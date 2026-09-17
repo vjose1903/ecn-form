@@ -15,17 +15,11 @@ class ManualUpdateDriver extends Driver {
       throw new Error('No se encuentra la versión aprobada en el almacenamiento local.');
     }
     if (!approved) {
-      // Los despliegues antiguos con freshness no guardaban index.html.
-      // Solo durante esta migración hay que crear una primera versión que pueda conservarse.
       if (!this.hasCachedShell(this.latestHash)) {
-        const manifest = await this.fetchLatestManifest();
-        const hash = hashManifest(manifest);
-        const version = new AppVersion(this.scope, this.adapter, this.db, this.idle, this.debugger, manifest, hash);
-        await version.initializeFully();
-        this.versions.set(hash, version);
-        this.latestHash = hash;
-        await this.sync();
+        throw new Error('La versión anterior necesita recuperarse con confirmación.');
       }
+      // En producción Angular difiere esta descarga; no aprobar una caché parcial.
+      await this.versions.get(this.latestHash).initializeFully();
       approved = { hash: this.latestHash };
       await table.write('ecn-approved-version', approved);
     }
@@ -55,14 +49,17 @@ class ManualUpdateDriver extends Driver {
 
   async downloadPublishedVersion() {
     const manifest = await this.fetchLatestManifest();
-    const hash = hashManifest(manifest);
-    if (this.versions.has(hash)) {
-      await this.versions.get(hash).initializeFully();
-      this.latestHash = hash;
-      await this.sync();
-    } else {
-      await this.setupUpdate(manifest, hash);
+    if (manifest.configVersion !== SUPPORTED_CONFIG_VERSION) {
+      throw new Error('Formato de actualización no compatible.');
     }
+    const hash = hashManifest(manifest);
+    // Una instancia nueva permite reintentar una descarga fallida (_okay=false).
+    // Sin updateFrom: también debe funcionar si falló la inicialización del driver.
+    const version = new AppVersion(this.scope, this.adapter, this.db, this.idle, this.debugger, manifest, hash);
+    await version.initializeFully();
+    this.versions.set(hash, version);
+    this.latestHash = hash;
+    await this.sync();
     return true;
   }
 
@@ -78,10 +75,35 @@ class ManualUpdateDriver extends Driver {
     await table.write('ecn-approved-version', { hash: this.latestHash });
     this.approvedHash = this.latestHash;
     await this.updateClient(client);
+    this.initialized = Promise.resolve();
+    this.state = DriverReadyState.NORMAL;
+    this.stateMessage = '(nominal)';
     return true;
   }
 
   onMessage(event) {
+    const action = event.data?.action;
+    if (['CHECK_FOR_UPDATES', 'ACTIVATE_UPDATE', 'ECN_RECOVER_UPDATE'].includes(action) && event.source?.id) {
+      event.waitUntil((async () => {
+        try {
+          // SAFE_MODE de Angular ignora mensajes: mantener disponible la recuperación.
+          try { await this.ensureInitialized(event); } catch (error) { this.debugger.log(error, 'manual recovery'); }
+          if (action === 'ECN_RECOVER_UPDATE') {
+            this.manualDownload ??= this.downloadPublishedVersion().finally(() => { this.manualDownload = null; });
+            await this.manualDownload;
+            await this.approveVersion(event.source);
+            event.ports?.[0]?.postMessage({ ok: true });
+          } else {
+            await this.handleMessage(event.data, event.source);
+          }
+        } catch (error) {
+          event.ports?.[0]?.postMessage({ error: String(error) });
+        } finally {
+          event.ports?.[0]?.close();
+        }
+      })());
+      return;
+    }
     if (event.data?.action !== 'ECN_VERSION_STATUS') {
       super.onMessage(event);
       return;
@@ -100,6 +122,17 @@ class ManualUpdateDriver extends Driver {
         event.ports[0].close();
       }
     })());
+  }
+
+  onFetch(event) {
+    // SAFE_MODE no debe saltarse la política de consentimiento en una navegación.
+    const url = this.adapter.parseUrl(event.request.url, this.scope.registration.scope);
+    if (event.request.mode === 'navigate' && url.path !== this.ngswStatePath &&
+        !event.request.headers.has('ngsw-bypass') && !/[?&]ngsw-bypass(?:[=&]|$)/i.test(url.search)) {
+      event.respondWith(this.handleFetch(event));
+      return;
+    }
+    super.onFetch(event);
   }
 
   async assignVersion(event) {
@@ -129,21 +162,57 @@ class ManualUpdateDriver extends Driver {
       await this.ensureInitialized(event);
       const version = await this.assignVersion(event);
       const url = this.adapter.normalizeUrl(event.request.url);
-      if (!version.isNavigationRequest(event.request) && url !== version.indexUrl) {
+      const publicIndex = this.adapter.normalizeUrl(new URL('index.html', this.scope.registration.scope).href);
+      if (!version.isNavigationRequest(event.request) && url !== version.indexUrl && url !== publicIndex) {
         return super.handleFetch(event);
       }
       // Incluso un manifiesto antiguo con freshness debe respetar la aprobación guardada.
-      return await version.handleFetch(this.adapter.newRequest(version.indexUrl), event);
+      const response = await version.handleFetch(this.adapter.newRequest(version.indexUrl), event);
+      if (!response?.ok) throw new Error('No se pudo leer la versión guardada.');
+      const headers = this.adapter.newHeaders(response.headers);
+      headers.set('Content-Type', 'text/html; charset=utf-8');
+      // La longitud/codificación del recurso de red no corresponde al body ya decodificado.
+      headers.delete('Content-Length');
+      headers.delete('Content-Encoding');
+      return this.adapter.newResponse(response.body, { status: 200, headers });
     } catch (error) {
       this.debugger.log(error, 'manual navigation');
-      // No cargar otro deploy silenciosamente si falla la versión aprobada.
-      return this.adapter.newResponse('No se pudo abrir la versión guardada. Vuelve a intentarlo con conexión.', {
-        status: 503,
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-      });
+      return this.recoveryPage();
     } finally {
       event.waitUntil(this.idle.trigger());
     }
+  }
+
+  recoveryPage() {
+    // Independiente de Angular: funciona aunque el HTML anterior nunca se haya cacheado.
+    return this.adapter.newResponse(`<!doctype html><html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Actualizar ECN Platform</title><style>
+body{margin:0;min-height:100dvh;display:grid;place-items:center;background:#f5f5f5;color:#202020;font:16px system-ui}
+main{box-sizing:border-box;width:min(90%,420px);padding:28px;background:white;border-radius:16px}
+button{padding:12px 20px;border:0;border-radius:8px;background:#a83044;color:white;font:inherit;cursor:pointer}
+button:disabled{opacity:.6}p{line-height:1.5}</style></head><body>
+<main role="dialog" aria-modal="true" aria-labelledby="title"><h1 id="title">Actualización necesaria</h1>
+<p>La versión guardada no se pudo abrir. Pulsa Refrescar para descargar y abrir la versión disponible.</p>
+<p id="status" role="status" aria-live="polite"></p><button id="refresh">Refrescar</button></main>
+<script>
+const button=document.getElementById('refresh'),status=document.getElementById('status');
+button.addEventListener('click',async()=>{
+  button.disabled=true;status.textContent='Descargando actualización…';
+  try{
+    const worker=navigator.serviceWorker.controller;
+    if(!worker)throw new Error('Sin controlador');
+    await new Promise((resolve,reject)=>{
+      const channel=new MessageChannel();
+      const finish=(error)=>{clearTimeout(timer);channel.port1.close();error?reject(error):resolve();};
+      const timer=setTimeout(()=>finish(new Error('Tiempo agotado')),120000);
+      channel.port1.onmessage=event=>finish(event.data.ok?null:new Error(event.data.error));
+      try{worker.postMessage({action:'ECN_RECOVER_UPDATE'},[channel.port2]);}catch(error){finish(error);}
+    });
+    location.reload();
+  }catch(error){status.textContent='No se pudo completar la actualización. Comprueba tu conexión y vuelve a intentarlo.';button.disabled=false;}
+});
+</script></body></html>`, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
   }
 
   async cleanupCaches() {

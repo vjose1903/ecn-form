@@ -15,3 +15,7 @@
 
 /safety-worker.js
   Cache-Control: no-cache
+
+/app-shell.*.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=31536000, immutable, no-transform

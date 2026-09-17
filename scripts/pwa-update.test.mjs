@@ -11,7 +11,8 @@ const policy = await readFile(new URL('scripts/manual-update-policy.js', root), 
 const monitorCode = ts.transpileModule(await readFile(new URL('src/app/core/services/app-update-monitor.ts', root), 'utf8'), {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
 }).outputText;
-const origin = 'https://localhost/';
+// Angular difiere la precarga fuera de localhost: reproducir el flujo de producción.
+const origin = 'https://ecn.example/';
 const sha1 = value => createHash('sha1').update(value).digest('hex');
 
 function release(name, extra = {}) {
@@ -126,7 +127,7 @@ test('la limpieza no toca cachés de otras funciones de la aplicación', async (
   assert.equal(await host.navigate('back'), '<html>A</html>');
 });
 
-test('migra un worker antiguo sin index cacheado y conserva la versión base en el siguiente deploy', async () => {
+test('un worker antiguo sin index cacheado requiere confirmación para recuperarse', async () => {
   const old = release('A');
   old.manifest.navigationRequestStrategy = 'freshness';
   old.manifest.assetGroups[0].urls = old.manifest.assetGroups[0].urls.filter(url => url !== '/index.html');
@@ -137,9 +138,50 @@ test('migra un worker antiguo sin index cacheado y conserva la versión base en 
   host.published = release('B');
   host.clients.clear();
   host.restart();
-  assert.equal(await host.navigate('migrated'), '<html>B</html>');
+  assert.match(await host.navigate('migrated'), /Actualización necesaria/);
+  assert.equal((await host.message('CHECK_FOR_UPDATES', 'migrated')).result, true);
+  assert.equal((await host.message('ACTIVATE_UPDATE', 'migrated')).result, true);
+  assert.equal(await host.navigate('accepted'), '<html>B</html>');
   host.published = release('C');
   assert.equal(await host.navigate('next-deploy'), '<html>B</html>');
+});
+
+test('el HTML transformado por el hosting no afecta al shell de texto versionado', async () => {
+  const deployed = release('A');
+  const shell = `/app-shell.${sha1(deployed.assets['/index.html'])}.txt`;
+  deployed.assets[shell] = deployed.assets['/index.html'];
+  deployed.assets['/index.html'] += '<!-- HTML añadido por el hosting -->';
+  deployed.manifest.index = shell;
+  deployed.manifest.assetGroups[0].urls = deployed.manifest.assetGroups[0].urls.map(url => url === '/index.html' ? shell : url);
+  deployed.manifest.hashTable[shell] = deployed.manifest.hashTable['/index.html'];
+  delete deployed.manifest.hashTable['/index.html'];
+  const host = workerHost(deployed);
+  assert.equal(await host.navigate('tab'), '<html>A</html>');
+  host.published = release('B');
+  assert.equal(await host.navigate('reopened'), '<html>A</html>');
+  assert.ok(!host.requests.includes('/index.html'));
+});
+
+test('un fallo inicial conserva la recuperación en SAFE_MODE y permite reintentar el mismo manifiesto', async () => {
+  const host = workerHost();
+  host.broken = '/index.html';
+  assert.match(await host.navigate('tab'), /Actualización necesaria/);
+  let response;
+  const request = new BrowserRequest(origin, { headers: { Accept: 'text/html' } });
+  Object.defineProperty(request, 'mode', { value: 'navigate' });
+  host.driver.onFetch({ request, resultingClientId: 'again', clientId: '', waitUntil() {}, respondWith(value) { response = value; } });
+  assert.match(await (await response).text(), /Actualización necesaria/);
+  host.broken = null;
+  let operation;
+  let result;
+  host.driver.onMessage({
+    data: { action: 'ECN_RECOVER_UPDATE' }, source: host.clients.get('tab'),
+    ports: [{ postMessage(value) { result = value; }, close() {} }],
+    waitUntil(value) { operation = value; },
+  });
+  await operation;
+  assert.equal(result.ok, true);
+  assert.equal(await host.navigate('recovered'), '<html>A</html>');
 });
 
 test('la versión de una ventana abierta no cambia porque otra ventana apruebe un deploy', async () => {
