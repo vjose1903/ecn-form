@@ -10,7 +10,7 @@ export class AppUpdateMonitor {
   private inFlight: Promise<void> | null = null;
   private started = false;
   private active = false;
-  private currentHash: string | null = null;
+  private currentHash: string | null = this.readApprovedHash();
   private lastCheckAt = 0;
   private readonly resume = (): void => {
     if (!this.started) return;
@@ -31,6 +31,15 @@ export class AppUpdateMonitor {
   };
 
   constructor(private readonly callbacks: UpdateMonitorCallbacks) {}
+
+  markApproved(hash: string): void {
+    this.currentHash = hash;
+    try {
+      sessionStorage.setItem('ecn-approved-deployment-hash', hash);
+    } catch {
+      // El modo privado puede bloquear sessionStorage; el worker sigue siendo la fuente principal.
+    }
+  }
 
   start(): void {
     if (this.started) return;
@@ -126,6 +135,15 @@ export class AppUpdateMonitor {
         finish(null);
       }
     });
+  }
+
+  private readApprovedHash(): string | null {
+    try {
+      const hash = sessionStorage.getItem('ecn-approved-deployment-hash');
+      return hash && /^[a-f0-9]{40}$/.test(hash) ? hash : null;
+    } catch {
+      return null;
+    }
   }
 
   private hasDifferentBundles(hashes: Record<string, string>): boolean {

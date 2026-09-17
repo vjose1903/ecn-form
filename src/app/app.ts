@@ -68,9 +68,16 @@ export class App implements OnInit, OnDestroy {
         this.updateError.set('');
       }
       this.pendingUpdate = true;
-      this.showUpdateDialogIfAllowed();
+      if (this.isFormRoute()) {
+        void this.reloadForUpdate(true);
+      } else {
+        this.showUpdateDialogIfAllowed();
+      }
     },
     current: () => {
+      if (this.pendingDeployment) {
+        this.updateMonitor.markApproved(this.pendingDeployment);
+      }
       this.pendingUpdate = false;
       this.pendingDeployment = null;
       this.showUpdateDialogIfAllowed();
@@ -87,8 +94,8 @@ export class App implements OnInit, OnDestroy {
     this.updateSubscriptions.unsubscribe();
   }
 
-  protected async reloadForUpdate(): Promise<void> {
-    if (this.isFormRoute() || this.updateInProgress()) {
+  protected async reloadForUpdate(automatic = false): Promise<void> {
+    if ((!automatic && this.isFormRoute()) || this.updateInProgress()) {
       return;
     }
 
@@ -97,9 +104,23 @@ export class App implements OnInit, OnDestroy {
     this.updateMonitor.stop();
     try {
       // El paquete completo puede tardar más de 15 segundos en conexiones móviles.
-      await firstValueFrom(from(this.swUpdate.checkForUpdate()).pipe(timeout(120000)));
-      await firstValueFrom(from(this.swUpdate.activateUpdate()).pipe(timeout(15000)));
-      window.location.reload();
+      const downloaded = await firstValueFrom(from(this.swUpdate.checkForUpdate()).pipe(timeout(120000)));
+      if (!downloaded) {
+        throw new Error('La versión disponible no pudo descargarse completamente.');
+      }
+
+      const activated = await firstValueFrom(from(this.swUpdate.activateUpdate()).pipe(timeout(15000)));
+      if (!activated) {
+        throw new Error('La versión descargada no pudo activarse.');
+      }
+
+      // Ocultar el diálogo antes de navegar evita que quede visible si el navegador
+      // tarda un instante en reemplazar el documento actual.
+      this.pendingUpdate = false;
+      this.pendingDeployment = null;
+      this.updateDialogVisible.set(false);
+      this.cdRef.detectChanges();
+      window.location.replace(window.location.href);
     } catch (error) {
       console.warn('No se pudo descargar y activar la nueva versión', error);
       this.updateError.set('No se pudo completar la actualización. Comprueba tu conexión y vuelve a intentarlo.');
@@ -172,7 +193,11 @@ export class App implements OnInit, OnDestroy {
     }));
 
     this.updateSubscriptions.add(this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
-      this.showUpdateDialogIfAllowed();
+      if (this.isFormRoute() && this.pendingUpdate) {
+        void this.reloadForUpdate(true);
+      } else {
+        this.showUpdateDialogIfAllowed();
+      }
       void this.updateMonitor.check();
     }));
     this.updateMonitor.start();
