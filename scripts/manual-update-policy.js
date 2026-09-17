@@ -83,18 +83,22 @@ class ManualUpdateDriver extends Driver {
 
   onMessage(event) {
     const action = event.data?.action;
-    if (['CHECK_FOR_UPDATES', 'ACTIVATE_UPDATE', 'ECN_RECOVER_UPDATE'].includes(action) && event.source?.id) {
+    if (['CHECK_FOR_UPDATES', 'ACTIVATE_UPDATE', 'ECN_RECOVER_UPDATE'].includes(action)) {
       event.waitUntil((async () => {
+        const client = event.source ?? {
+          id: `manual-update-${Date.now()}`,
+          postMessage() {},
+        };
         try {
           // SAFE_MODE de Angular ignora mensajes: mantener disponible la recuperación.
           try { await this.ensureInitialized(event); } catch (error) { this.debugger.log(error, 'manual recovery'); }
           if (action === 'ECN_RECOVER_UPDATE') {
             this.manualDownload ??= this.downloadPublishedVersion().finally(() => { this.manualDownload = null; });
             await this.manualDownload;
-            await this.approveVersion(event.source);
+            await this.approveVersion(client);
             event.ports?.[0]?.postMessage({ ok: true });
           } else {
-            await this.handleMessage(event.data, event.source);
+            await this.handleMessage(event.data, client);
           }
         } catch (error) {
           event.ports?.[0]?.postMessage({ error: String(error) });
@@ -200,7 +204,8 @@ const button=document.getElementById('refresh'),status=document.getElementById('
 button.addEventListener('click',async()=>{
   button.disabled=true;status.textContent='Descargando actualización…';
   try{
-    const worker=navigator.serviceWorker.controller;
+    const registration=await navigator.serviceWorker.ready;
+    const worker=navigator.serviceWorker.controller||registration.active||registration.waiting;
     if(!worker)throw new Error('Sin controlador');
     await new Promise((resolve,reject)=>{
       const channel=new MessageChannel();
