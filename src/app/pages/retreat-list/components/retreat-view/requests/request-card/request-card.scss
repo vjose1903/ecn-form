@@ -31,6 +31,8 @@
   gap: 1rem;
   min-height: 9.4rem;
   padding: 1.05rem;
+  min-width: 0;
+  box-sizing: border-box;
   position: relative;
 }
 
@@ -89,6 +91,7 @@
   display: flex;
   align-items: center;
   gap: .5rem;
+  min-width: 0;
 }
 
 .request-card__informed {
@@ -125,6 +128,7 @@
 .request-card__arrow {
   display: grid;
   place-items: center;
+  flex: 0 0 1.8rem;
   width: 1.8rem;
   height: 1.8rem;
   border-radius: 50%;
@@ -156,19 +160,19 @@
 }
 
 .request-card__identity h3 {
+  min-width: 0;
   margin: 0;
   color: #172033;
   font-size: 1rem;
   font-weight: 800;
   line-height: 1.35;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .request-card__name {
   display: block;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  white-space: normal;
 }
 
 .request-card__meta {
@@ -193,5 +197,29 @@
 @media (max-width: 640px) {
   .request-card__content {
     min-height: auto;
+    padding-inline: 1.25rem;
+  }
+
+  .request-card__topline {
+    padding-right: 1.75rem;
+  }
+
+  :host ::ng-deep .request-card__topline .p-tag {
+    padding: .2rem .42rem;
+    font-size: .65rem;
+  }
+
+  .request-card__informed {
+    gap: .2rem;
+    font-size: .58rem;
+  }
+
+  .request-card__arrow {
+    position: absolute;
+    top: 1.05rem;
+    right: 1.05rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: .65rem;
   }
 }

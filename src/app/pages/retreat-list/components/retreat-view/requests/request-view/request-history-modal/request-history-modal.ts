@@ -10,10 +10,11 @@ import { TagModule } from 'primeng/tag';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
+import { SkeletonModule } from 'primeng/skeleton';
 
 @Component({
   selector: 'app-request-history-modal',
-  imports: [CommonModule, TagModule, DialogModule, ButtonModule, TooltipModule],
+  imports: [CommonModule, TagModule, DialogModule, ButtonModule, TooltipModule, SkeletonModule],
   templateUrl: './request-history-modal.html',
   styleUrl: './request-history-modal.scss',
 })
@@ -27,6 +28,7 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
   history = signal<RequestHistoryI[]>([]);
   receiptPreview = signal<RequestHistoryI | null>(null);
   receiptPreviewUrls = signal<Record<string, string>>({});
+  loadingReceiptPreviews = signal(false);
   openedReceiptPreviewUrl = signal<string | null>(null);
   deletingEventId = signal<string | null>(null);
   private destroyed = false;
@@ -184,6 +186,14 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
       : value;
   }
 
+  formatReceiptDialogTitle(item: RequestHistoryI): string {
+    const amount = Number(this.getChangeValue(item, 'Monto'));
+    const formattedAmount = Number.isFinite(amount)
+      ? new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP' }).format(amount)
+      : this.getChangeValue(item, 'Monto');
+    return `${formattedAmount} · ${this.getChangeValue(item, 'Fecha del pago')}`;
+  }
+
   formatHappenedAt(value: RequestHistoryI['happened_at']): string {
     if (!value) {
       return 'Fecha no disponible';
@@ -246,17 +256,22 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
   }
 
   private async loadReceiptPreviews(history: RequestHistoryI[]): Promise<void> {
-    const previews = await Promise.all(history.filter(item => item.receipt_path || item.receipt_url).map(async item => {
-      try {
-        return [item.id, await this.requestService.loadPreRetreatReceiptPreview(item)] as const;
-      } catch (error) {
-        console.error('No se pudo cargar la vista previa del recibo:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
-        return null;
-      }
-    }));
-    const loaded = Object.fromEntries(previews.filter((preview): preview is readonly [string, string] => preview !== null));
-    if (this.destroyed) Object.values(loaded).forEach(URL.revokeObjectURL);
-    else this.receiptPreviewUrls.set(loaded);
+    this.loadingReceiptPreviews.set(true);
+    try {
+      const previews = await Promise.all(history.filter(item => item.receipt_path || item.receipt_url).map(async item => {
+        try {
+          return [item.id, await this.requestService.loadPreRetreatReceiptPreview(item)] as const;
+        } catch (error) {
+          console.error('No se pudo cargar la vista previa del recibo:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
+          return null;
+        }
+      }));
+      const loaded = Object.fromEntries(previews.filter((preview): preview is readonly [string, string] => preview !== null));
+      if (this.destroyed) Object.values(loaded).forEach(URL.revokeObjectURL);
+      else this.receiptPreviewUrls.set(loaded);
+    } finally {
+      this.loadingReceiptPreviews.set(false);
+    }
   }
 
   private hydratePaymentReceipt(item: RequestHistoryI, payments: PreRetreatPaymentI[]): RequestHistoryI {

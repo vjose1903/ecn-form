@@ -17,6 +17,8 @@
             <button class="pre-retreat-payment__receipt" type="button" (click)="showReceipt(payment)" [attr.aria-label]="'Ver recibo ' + payment.receipt_name">
               @if (paymentReceiptPreviews()[payment.id]; as previewUrl) {
                 <img [src]="previewUrl" [alt]="payment.receipt_name || 'Vista previa del recibo'" />
+              } @else if (loadingPaymentReceiptPreviews()) {
+                <p-skeleton width="2.5rem" height="2.5rem" aria-hidden="true" />
               } @else {
                 <i class="pi pi-image" aria-hidden="true"></i>
               }
@@ -78,10 +80,15 @@
     [modal]="false"
     appendTo="body"
     styleClass="request-history-receipt-dialog"
-    [header]="receipt.receipt_name || 'Recibo de pago'"
     [draggable]="false"
     [resizable]="false"
     [style]="{ width: 'min(92vw, 48rem)' }">
+    <ng-template pTemplate="header">
+      <div class="receipt-dialog-header">
+        <span class="receipt-dialog-header__title">{{ formatAmount(receipt.amount) }} · {{ formatDate(receipt.payment_date) }}</span>
+        <span class="receipt-dialog-header__subtitle">{{ receipt.receipt_name || 'Recibo de pago' }}</span>
+      </div>
+    </ng-template>
     <img class="pre-retreat-payment__receipt-image" [src]="openedReceiptPreviewUrl()" [alt]="receipt.receipt_name || 'Recibo del pago'" />
   </p-dialog>
 }

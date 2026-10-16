@@ -63,6 +63,8 @@
           <button class="history-receipt-preview" type="button" (click)="showReceipt(item)" [attr.aria-label]="'Ver recibo ' + (item.receipt_name || 'del pago')">
             @if (receiptPreviewUrls()[item.id]; as previewUrl) {
               <img [src]="previewUrl" [alt]="item.receipt_name || 'Vista previa del recibo'" />
+            } @else if (loadingReceiptPreviews()) {
+              <p-skeleton width="3rem" height="3rem" aria-hidden="true" />
             } @else {
               <i class="pi pi-image" aria-hidden="true"></i>
             }
@@ -142,7 +144,13 @@
 </div>
 
 @if (receiptPreview(); as receipt) {
-<p-dialog [visible]="true" (visibleChange)="onReceiptVisibilityChange($event)" [modal]="false" appendTo="body" styleClass="request-history-receipt-dialog" [header]="receipt.receipt_name || 'Recibo de pago'" [draggable]="false" [resizable]="false" [style]="{ width: 'min(92vw, 48rem)' }">
+<p-dialog [visible]="true" (visibleChange)="onReceiptVisibilityChange($event)" [modal]="false" appendTo="body" styleClass="request-history-receipt-dialog" [draggable]="false" [resizable]="false" [style]="{ width: 'min(92vw, 48rem)' }">
+  <ng-template pTemplate="header">
+    <div class="receipt-dialog-header">
+      <span class="receipt-dialog-header__title">{{ formatReceiptDialogTitle(receipt) }}</span>
+      <span class="receipt-dialog-header__subtitle">{{ receipt.receipt_name || 'Recibo de pago' }}</span>
+    </div>
+  </ng-template>
   <img class="history-receipt-preview__image" [src]="openedReceiptPreviewUrl()" [alt]="receipt.receipt_name || 'Recibo del pago'" />
 </p-dialog>
 }

@@ -12,10 +12,11 @@ import { RequestService } from '@core/entities/request/request.service';
 import { RetreatClass } from '@core/entities/retreat/retreat.class';
 import { Ss } from '@core/services/singleton.service';
 import { DialogModule } from 'primeng/dialog';
+import { SkeletonModule } from 'primeng/skeleton';
 
 @Component({
   selector: 'app-pre-retreat-payment-modal',
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, DatePickerModule, InputNumberModule, DividerLine, DialogModule],
+  imports: [CommonModule, ReactiveFormsModule, ButtonModule, DatePickerModule, InputNumberModule, DividerLine, DialogModule, SkeletonModule],
   templateUrl: './pre-retreat-payment-modal.html',
   styleUrl: './pre-retreat-payment-modal.scss',
 })
@@ -27,10 +28,12 @@ export class PreRetreatPaymentModal implements OnInit, OnDestroy {
 
   readonly today = new Date();
   readonly loading = signal(false);
+  private confirmationPending = false;
   readonly receipt = signal<File | null>(null);
   readonly receiptPreviewUrl = signal<string | null>(null);
   readonly receiptPreview = signal<PreRetreatPaymentI | null>(null);
   readonly paymentReceiptPreviews = signal<Record<string, string>>({});
+  readonly loadingPaymentReceiptPreviews = signal(false);
   readonly openedReceiptPreviewUrl = signal<string | null>(null);
   readonly request = this.config.data.request as RequestClass;
   readonly retreat = this.config.data.retreat as RetreatClass;
@@ -77,6 +80,8 @@ export class PreRetreatPaymentModal implements OnInit, OnDestroy {
   }
 
   async save(): Promise<void> {
+    if (this.loading() || this.confirmationPending) return;
+
     this.form.markAllAsTouched();
     const { payment_date, amount } = this.form.getRawValue();
     const receipt = this.receipt();
@@ -86,6 +91,51 @@ export class PreRetreatPaymentModal implements OnInit, OnDestroy {
       return;
     }
 
+    const amountPerPerson = this.retreat.amount_per_person;
+    const coupleAmount = amountPerPerson && amountPerPerson > 0 ? amountPerPerson * 2 : null;
+    const previousPaymentsAmount = this.payments.reduce((total, payment) => total + (Number(payment.amount) || 0), 0);
+    const accumulatedAmount = previousPaymentsAmount + amount;
+
+    if (coupleAmount !== null && accumulatedAmount > coupleAmount) {
+      this.confirmationPending = true;
+      const overage = accumulatedAmount - coupleAmount;
+      const accumulatedLabel = previousPaymentsAmount > 0 ? 'Total acumulado con este pago' : 'Nuevo pago';
+      Ss.confirmationService.confirm({
+        header: 'Confirmar pago superior al monto',
+        message: `<div class="payment-overage-confirmation">
+          <p class="payment-overage-confirmation__intro">El pago supera el monto registrado para esta pareja.</p>
+          <div class="payment-overage-confirmation__comparison">
+            <div class="payment-overage-confirmation__amount">
+              <span>${accumulatedLabel}</span>
+              <strong>${this.formatAmount(accumulatedAmount)}</strong>
+            </div>
+            <i class="pi pi-arrow-right" aria-hidden="true"></i>
+            <div class="payment-overage-confirmation__amount payment-overage-confirmation__amount--limit">
+              <span>Monto por pareja</span>
+              <strong>${this.formatAmount(coupleAmount)}</strong>
+            </div>
+          </div>
+          <p class="payment-overage-confirmation__outcome">Excede por <strong>${this.formatAmount(overage)}</strong></p>
+          <p class="payment-overage-confirmation__question">¿Deseas registrar el pago de todas formas?</p>
+        </div>`,
+        icon: 'pi pi-exclamation-triangle',
+        acceptLabel: 'Sí, registrar pago',
+        rejectLabel: 'Cancelar',
+        acceptButtonStyleClass: 'p-button-warning',
+        rejectButtonStyleClass: 'p-button-text',
+        accept: () => {
+          this.confirmationPending = false;
+          void this.registerPayment(payment_date, amount, receipt);
+        },
+        reject: () => this.confirmationPending = false,
+      });
+      return;
+    }
+
+    await this.registerPayment(payment_date, amount, receipt);
+  }
+
+  private async registerPayment(payment_date: Date, amount: number, receipt: File): Promise<void> {
     this.loading.set(true);
     try {
       const updatedRequest = await this.requestService.addPreRetreatPayment({
@@ -135,17 +185,22 @@ export class PreRetreatPaymentModal implements OnInit, OnDestroy {
   }
 
   private async loadPaymentReceiptPreviews(): Promise<void> {
-    const previews = await Promise.all(this.payments.map(async payment => {
-      try {
-        return [payment.id, await this.requestService.loadPreRetreatReceiptPreview(payment)] as const;
-      } catch (error) {
-        console.error('No se pudo cargar la vista previa del recibo:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
-        return null;
-      }
-    }));
-    const loaded = Object.fromEntries(previews.filter((preview): preview is readonly [string, string] => preview !== null));
-    if (this.destroyed) Object.values(loaded).forEach(URL.revokeObjectURL);
-    else this.paymentReceiptPreviews.set(loaded);
+    this.loadingPaymentReceiptPreviews.set(true);
+    try {
+      const previews = await Promise.all(this.payments.map(async payment => {
+        try {
+          return [payment.id, await this.requestService.loadPreRetreatReceiptPreview(payment)] as const;
+        } catch (error) {
+          console.error('No se pudo cargar la vista previa del recibo:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
+          return null;
+        }
+      }));
+      const loaded = Object.fromEntries(previews.filter((preview): preview is readonly [string, string] => preview !== null));
+      if (this.destroyed) Object.values(loaded).forEach(URL.revokeObjectURL);
+      else this.paymentReceiptPreviews.set(loaded);
+    } finally {
+      this.loadingPaymentReceiptPreviews.set(false);
+    }
   }
 
   formatAmount(amount: number): string {

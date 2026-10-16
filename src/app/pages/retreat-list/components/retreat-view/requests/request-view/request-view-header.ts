@@ -18,7 +18,7 @@ import { RequestHistoryModal } from './request-history-modal/request-history-mod
         <h2 class="request-view-header__title">{{ config.header }}</h2>
         <p class="request-view-header__description">Datos de la pareja y seguimiento de su solicitud.</p>
       </div>
-      <p-button icon="pi pi-history" severity="secondary" pTooltip="Ver trazo de la solicitud" (click)="openHistoryModal()" />
+      <p-button icon="pi pi-history" severity="secondary" pTooltip="Ver trazo de la solicitud" tooltipPosition="left" (click)="openHistoryModal()" />
     </div>
   `,
   styles: `

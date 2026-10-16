@@ -461,7 +461,7 @@
   .retreat-summary,
   .retreat-requests {
     gap: 1rem;
-    padding: 1rem;
+    padding: .75rem;
     border-radius: 1.05rem;
   }
 
@@ -480,7 +480,11 @@
   }
 
   .retreat-summary {
-    padding: .65rem .85rem;
+    padding: .5rem .6rem;
+  }
+
+  .retreat-requests {
+    padding: .35rem;
   }
 
   .retreat-request-filters {
@@ -569,7 +573,7 @@
   }
 
   .retreat-search,
-  .retreat-request-filters p-button {
+  .retreat-request-filters > p-button {
     grid-column: auto;
     width: 100%;
     min-width: 0;
@@ -593,6 +597,6 @@
   }
 
   :host ::ng-deep .retreat-view-dialog .p-dialog-content {
-    padding: 1.25rem 1rem 1rem;
+    padding: .15rem;
   }
 }
