@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { RequestClass } from '@core/entities/request/request.class';
 import { PreRetreatPaymentI } from '@core/entities/request/request.model';
 import { RequestService } from '@core/entities/request/request.service';
@@ -14,7 +14,9 @@ type PaymentType = 'Parcial' | 'Completivo' | 'Sin clasificar';
 
 interface RetreatPaymentRow {
   requestId: string;
-  couple: string;
+  brideName: string;
+  groomName: string;
+  searchName: string;
   paymentDate: Date;
   amount: number;
   registrationTime: number;
@@ -33,6 +35,11 @@ export class RetreatPaymentsModal implements OnInit, OnDestroy {
   private config = inject(DynamicDialogConfig);
   private requestService = inject(RequestService);
   payments = signal<RetreatPaymentRow[]>([]);
+  searchTerm = signal('');
+  filteredPayments = computed(() => {
+    const query = this.searchTerm().trim().toLocaleLowerCase();
+    return query ? this.payments().filter(payment => payment.searchName.includes(query)) : this.payments();
+  });
   total = signal(0);
   receiptPreview = signal<PreRetreatPaymentI | null>(null);
   receiptPreviewUrl = signal<string | null>(null);
@@ -54,7 +61,9 @@ export class RetreatPaymentsModal implements OnInit, OnDestroy {
         const paymentDate = new Date(payment.payment_date);
         return {
           requestId: request.id,
-          couple: `${request.she.full_name} & ${request.he.full_name}`,
+          brideName: this.firstThreeNames(request.she.full_name),
+          groomName: this.firstThreeNames(request.he.full_name),
+          searchName: `${request.she.full_name} ${request.he.full_name}`.toLocaleLowerCase(),
           paymentDate,
           amount: payment.amount,
           registrationTime: Number.isFinite(idTime) && idTime > 0 ? idTime : paymentDate.getTime(),
@@ -83,6 +92,14 @@ export class RetreatPaymentsModal implements OnInit, OnDestroy {
 
   formatDate(value: Date | string): string {
     return new Date(value).toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  private firstThreeNames(name: string): string {
+    return name.trim().split(/\s+/).slice(0, 3).join(' ');
+  }
+
+  onSearchInput(event: Event): void {
+    this.searchTerm.set((event.target as HTMLInputElement).value);
   }
 
   async showReceipt(payment: PreRetreatPaymentI): Promise<void> {
