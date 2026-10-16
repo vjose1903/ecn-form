@@ -11,13 +11,17 @@
     </span>
   </div>
 
-  <label class="retreat-payment-report__search">
-    <i class="pi pi-search" aria-hidden="true"></i>
-    <input type="search" placeholder="Buscar por nombre de la pareja" aria-label="Buscar por nombre de la novia o del novio" [value]="searchTerm()" (input)="onSearchInput($event)" />
-    @if (searchTerm()) {
-      <button type="button" aria-label="Limpiar búsqueda" (click)="searchTerm.set('')"><i class="pi pi-times" aria-hidden="true"></i></button>
-    }
-  </label>
+  <div class="retreat-payment-report__toolbar">
+    <label class="retreat-payment-report__search">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <input type="search" placeholder="Buscar por nombre de la pareja" aria-label="Buscar por nombre de la novia o del novio" [value]="searchTerm()" (input)="onSearchInput($event)" />
+      @if (searchTerm()) {
+        <button type="button" aria-label="Limpiar búsqueda" (click)="searchTerm.set('')"><i class="pi pi-times" aria-hidden="true"></i></button>
+      }
+    </label>
+    <p-button label="Exportar" icon="pi pi-download" severity="secondary" [outlined]="true" (onClick)="exportMenu.toggle($event)" />
+    <p-menu #exportMenu [model]="exportActions" [popup]="true" [appendTo]="'body'" />
+  </div>
 
   <p-table [value]="filteredPayments()" [scrollable]="true" scrollHeight="min(58vh, 34rem)" [tableStyle]="{ 'min-width': '52rem' }" styleClass="retreat-payment-report__table">
     <ng-template #header>
