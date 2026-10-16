@@ -138,8 +138,9 @@
   font-weight: 500;
 }
 
-.retreat-detail__date-range span {
+.retreat-detail ::ng-deep view-item .retreat-detail__date-range span {
   display: block;
+  color: #000;
 }
 
 .retreat-detail__date-range {
@@ -409,15 +410,24 @@
 }
 
 @container retreat-view (max-width: 850px) {
+  .retreat-summary {
+    padding: .65rem .8rem;
+  }
+
   .retreat-details {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .retreat-detail {
-    padding: .65rem .8rem;
+    min-height: auto;
+    padding: .5rem .65rem;
   }
 
-  .retreat-detail:nth-child(2) {
+  .retreat-detail ::ng-deep view-item > div {
+    gap: .35rem .65rem;
+  }
+
+  .retreat-detail:nth-child(even) {
     border-right: 0;
   }
 

@@ -28,6 +28,7 @@ export class ArchivedRequests implements OnInit {
   private retreatService = inject(RetreatService);
 
   loading = signal(true);
+  loadError = signal(false);
   archivedRequests = signal<RequestClass[]>([]);
   retreats = signal<RetreatClass[]>([]);
   selectionMode = signal(false);
@@ -237,6 +238,7 @@ export class ArchivedRequests implements OnInit {
   }
 
   private async loadData(): Promise<void> {
+    this.loadError.set(false);
     try {
       this.loading.set(true);
       const [retreats, archivedRequests] = await Promise.all([this.retreatService.getAll(), this.requestService.getArchivedRequests()]);
@@ -246,11 +248,8 @@ export class ArchivedRequests implements OnInit {
       this.refreshFilterConfigs();
       this.updateDataviewData();
     } catch (error) {
-      console.error('Error cargando solicitudes archivadas:', error);
-      Ss.toastService.error({
-        message: 'No se pudieron cargar las solicitudes archivadas',
-        title: 'Error',
-      });
+      this.loadError.set(true);
+      console.error('Error cargando solicitudes archivadas:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message, ...('code' in error ? { code: error.code } : {}) } : error));
     } finally {
       this.loading.set(false);
     }

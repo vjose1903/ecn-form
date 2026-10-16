@@ -1,14 +1,23 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Permitir acceso a usuarios autenticados para la carpeta retreat_homes
+    function ownsRetreat(ownerId, retreatId) {
+      let user = firestore.get(/databases/(default)/documents/user/$(ownerId));
+      let retreat = firestore.get(/databases/(default)/documents/user/$(ownerId)/retreat/$(retreatId));
+      return request.auth != null
+        && user.data.uid == request.auth.uid
+        && retreat.data.user_id == ownerId;
+    }
+
+    match /user/{ownerId}/retreat/{retreatId}/request/{requestId}/pre-retreat-payments/{fileName} {
+      allow read, delete: if ownsRetreat(ownerId, retreatId);
+      allow create, update: if ownsRetreat(ownerId, retreatId)
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
     match /retreat_homes/{allPaths=**} {
       allow read, write: if request.auth != null;
     }
-    
-    // Regla general: solo usuarios autenticados pueden acceder
-    match /{allPaths=**} {
-      allow read, write: if request.auth != null;
-    }
   }
-} 
+}

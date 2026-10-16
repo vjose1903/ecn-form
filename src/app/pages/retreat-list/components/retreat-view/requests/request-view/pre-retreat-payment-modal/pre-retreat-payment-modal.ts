@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnDestroy, signal } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -19,7 +19,7 @@ import { DialogModule } from 'primeng/dialog';
   templateUrl: './pre-retreat-payment-modal.html',
   styleUrl: './pre-retreat-payment-modal.scss',
 })
-export class PreRetreatPaymentModal implements OnDestroy {
+export class PreRetreatPaymentModal implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly config = inject(DynamicDialogConfig);
   readonly ref = inject(DynamicDialogRef);
@@ -30,6 +30,8 @@ export class PreRetreatPaymentModal implements OnDestroy {
   readonly receipt = signal<File | null>(null);
   readonly receiptPreviewUrl = signal<string | null>(null);
   readonly receiptPreview = signal<PreRetreatPaymentI | null>(null);
+  readonly paymentReceiptPreviews = signal<Record<string, string>>({});
+  readonly openedReceiptPreviewUrl = signal<string | null>(null);
   readonly request = this.config.data.request as RequestClass;
   readonly retreat = this.config.data.retreat as RetreatClass;
   readonly isArchived = Boolean(this.config.data.isArchivedView);
@@ -38,6 +40,12 @@ export class PreRetreatPaymentModal implements OnDestroy {
     payment_date: [new Date(), Validators.required],
     amount: [null as number | null, [Validators.required, Validators.min(0.01)]],
   });
+
+  private destroyed = false;
+
+  ngOnInit(): void {
+    void this.loadPaymentReceiptPreviews();
+  }
 
   onReceiptSelected(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0] ?? null;
@@ -57,7 +65,9 @@ export class PreRetreatPaymentModal implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.clearReceiptPreview();
+    Object.values(this.paymentReceiptPreviews()).forEach(URL.revokeObjectURL);
   }
 
   private clearReceiptPreview(): void {
@@ -98,12 +108,44 @@ export class PreRetreatPaymentModal implements OnDestroy {
     return new Date(value).toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
-  showReceipt(payment: PreRetreatPaymentI): void {
-    this.receiptPreview.set(payment);
+  async showReceipt(payment: PreRetreatPaymentI): Promise<void> {
+    try {
+      let previewUrl = this.paymentReceiptPreviews()[payment.id];
+      if (!previewUrl) {
+        previewUrl = await this.requestService.loadPreRetreatReceiptPreview(payment);
+        if (this.destroyed) {
+          URL.revokeObjectURL(previewUrl);
+          return;
+        }
+        this.paymentReceiptPreviews.update(previews => ({ ...previews, [payment.id]: previewUrl }));
+      }
+      this.receiptPreview.set(payment);
+      this.openedReceiptPreviewUrl.set(previewUrl);
+    } catch (error) {
+      console.error('No se pudo cargar el recibo del pago:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
+      Ss.toastService.error({ title: 'Recibo no disponible', message: 'No se pudo cargar la imagen del recibo' });
+    }
   }
 
   onReceiptVisibilityChange(visible: boolean): void {
-    if (!visible) this.receiptPreview.set(null);
+    if (!visible) {
+      this.receiptPreview.set(null);
+      this.openedReceiptPreviewUrl.set(null);
+    }
+  }
+
+  private async loadPaymentReceiptPreviews(): Promise<void> {
+    const previews = await Promise.all(this.payments.map(async payment => {
+      try {
+        return [payment.id, await this.requestService.loadPreRetreatReceiptPreview(payment)] as const;
+      } catch (error) {
+        console.error('No se pudo cargar la vista previa del recibo:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
+        return null;
+      }
+    }));
+    const loaded = Object.fromEntries(previews.filter((preview): preview is readonly [string, string] => preview !== null));
+    if (this.destroyed) Object.values(loaded).forEach(URL.revokeObjectURL);
+    else this.paymentReceiptPreviews.set(loaded);
   }
 
   formatAmount(amount: number): string {

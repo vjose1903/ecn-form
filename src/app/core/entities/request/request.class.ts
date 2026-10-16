@@ -306,6 +306,7 @@ export class RequestClass {
         resizable: false,
         closable: !args.actionsOnly,
         showHeader: !args.actionsOnly,
+        styleClass: 'request-view-dialog',
         ...(args.actionsOnly ? { style: { width: '0', height: '0', padding: '0', margin: '0', overflow: 'visible' }, contentStyle: { padding: '0', overflow: 'visible' }, styleClass: 'request-actions-menu-host' } : {}),
         focusOnShow: false,
         templates: {

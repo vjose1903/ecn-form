@@ -25,7 +25,8 @@ export interface PreRetreatPaymentI {
   id: string;
   payment_date: Date | string;
   amount: number;
-  receipt_url: string;
+  receipt_path?: string;
+  receipt_url?: string;
   receipt_name: string;
 }
 
@@ -122,8 +123,10 @@ export interface RequestHistoryI {
   changes?: Array<string | RequestHistoryChangeI>;
   message?: string;
   receipt_url?: string;
+  receipt_path?: string;
   receipt_name?: string;
   payment_id?: string;
+  deletion_pending?: boolean;
   retreat_label?: string;
   source_retreat_label?: string;
   target_retreat_label?: string;

@@ -15,7 +15,11 @@
               <span><small>Fecha del pago</small><strong>{{ formatDate(payment.payment_date) }}</strong></span>
             </div>
             <button class="pre-retreat-payment__receipt" type="button" (click)="showReceipt(payment)" [attr.aria-label]="'Ver recibo ' + payment.receipt_name">
-              <img [src]="payment.receipt_url" [alt]="payment.receipt_name || 'Vista previa del recibo'" />
+              @if (paymentReceiptPreviews()[payment.id]; as previewUrl) {
+                <img [src]="previewUrl" [alt]="payment.receipt_name || 'Vista previa del recibo'" />
+              } @else {
+                <i class="pi pi-image" aria-hidden="true"></i>
+              }
               <span>Ver recibo</span>
             </button>
           </div>
@@ -78,7 +82,7 @@
     [draggable]="false"
     [resizable]="false"
     [style]="{ width: 'min(92vw, 48rem)' }">
-    <img class="pre-retreat-payment__receipt-image" [src]="receipt.receipt_url" [alt]="receipt.receipt_name || 'Recibo del pago'" />
+    <img class="pre-retreat-payment__receipt-image" [src]="openedReceiptPreviewUrl()" [alt]="receipt.receipt_name || 'Recibo del pago'" />
   </p-dialog>
 }
 

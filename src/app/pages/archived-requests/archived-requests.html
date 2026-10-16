@@ -7,8 +7,6 @@
         [icon]="selectionMode() ? 'pi pi-times' : 'pi pi-check-square'"
         severity="secondary"
         [text]="true"
-        [pTooltip]="selectionMode() ? 'Cancelar selección múltiple' : 'Seleccionar solicitudes'"
-        tooltipPosition="left"
         [attr.aria-label]="selectionMode() ? 'Cancelar selección múltiple' : 'Seleccionar solicitudes'"
         (onClick)="toggleSelectionMode()"
       />
@@ -30,6 +28,12 @@
         @for (item of [1, 2, 3, 4, 5, 6]; track item) {
           <request-card [skeleton]="true" />
         }
+      </div>
+    } @else if (loadError()) {
+      <div class="text-center flex flex-col items-center gap-4 py-10" role="alert">
+        <i class="pi pi-exclamation-circle text-red-600 text-3xl" aria-hidden="true"></i>
+        <p>No se pudieron cargar las solicitudes archivadas.</p>
+        <p-button label="Reintentar" icon="pi pi-refresh" severity="secondary" (onClick)="refresh()" />
       </div>
     } @else if (archivedRequestsWithRetreat().length > 0) {
       <dynamic-dataview [config]="dataviewConfig" />

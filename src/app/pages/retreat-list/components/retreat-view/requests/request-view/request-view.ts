@@ -1,6 +1,7 @@
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Ss } from '@core/services/singleton.service';
 
-import { Component, inject, OnInit, signal, computed, AfterViewInit, ViewChild } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, AfterViewInit, ViewChild, DestroyRef } from '@angular/core';
 import { DividerLine } from '@core/components/divider-line/divider-line';
 import { RequestClass } from '@core/entities/request/request.class';
 import { DynamicDialogConfig } from 'primeng/dynamicdialog';
@@ -37,6 +38,9 @@ export class RequestView implements OnInit, AfterViewInit {
   pdfService = inject(PdfService);
   excelService = inject(ExcelService);
 
+  private destroyRef = inject(DestroyRef);
+  recentAction = signal('Cargando…');
+
   loading = signal(false);
   isArchivedView = signal(false);
   private _request = signal<RequestClass | null>(null);
@@ -55,6 +59,18 @@ export class RequestView implements OnInit, AfterViewInit {
     this.isArchivedView.set(Boolean(this.config.data.isArchivedView));
     this.actionsOnly = Boolean(this.config.data.actionsOnly);
     this.actions = this.buildActions();
+    const request = this.request();
+    if (!this.actionsOnly && request) {
+      this.requestService.watchLatestRequestHistory(request.id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: event => this.recentAction.set(event?.message === 'Pago de pre retiro registrado' ? 'Pago registrado' : event?.message || request.actionLabel),
+          error: error => {
+            this.recentAction.set('No disponible');
+            console.error('Error al cargar la acción reciente:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
+          },
+        });
+    }
   }
 
   ngAfterViewInit(): void {

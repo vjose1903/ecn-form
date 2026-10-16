@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { PreRetreatPaymentI, RequestHistoryChangeI, RequestHistoryI, RequestAction } from '@core/entities/request/request.model';
 import { RequestClass } from '@core/entities/request/request.class';
 import { RetreatClass } from '@core/entities/retreat/retreat.class';
@@ -17,7 +17,7 @@ import { TooltipModule } from 'primeng/tooltip';
   templateUrl: './request-history-modal.html',
   styleUrl: './request-history-modal.scss',
 })
-export class RequestHistoryModal implements OnInit {
+export class RequestHistoryModal implements OnInit, OnDestroy {
   protected readonly RequestAction = RequestAction;
 
   private config = inject(DynamicDialogConfig);
@@ -26,10 +26,18 @@ export class RequestHistoryModal implements OnInit {
   loading = signal(true);
   history = signal<RequestHistoryI[]>([]);
   receiptPreview = signal<RequestHistoryI | null>(null);
+  receiptPreviewUrls = signal<Record<string, string>>({});
+  openedReceiptPreviewUrl = signal<string | null>(null);
   deletingEventId = signal<string | null>(null);
+  private destroyed = false;
 
   ngOnInit(): void {
     void this.loadHistory();
+  }
+
+  ngOnDestroy(): void {
+    this.destroyed = true;
+    Object.values(this.receiptPreviewUrls()).forEach(URL.revokeObjectURL);
   }
 
   private async loadHistory(): Promise<void> {
@@ -37,7 +45,9 @@ export class RequestHistoryModal implements OnInit {
 
     try {
       this.loading.set(true);
-      this.history.set((await this.requestService.getRequestHistory(request.id)).map(item => this.hydratePaymentReceipt(item, request.pre_retreat_payments ?? [])));
+      const history = (await this.requestService.getRequestHistory(request.id)).map(item => this.hydratePaymentReceipt(item, request.pre_retreat_payments ?? []));
+      this.history.set(history);
+      void this.loadReceiptPreviews(history);
     } catch (error) {
       console.error('Error cargando trazo de la solicitud:', error);
       Ss.toastService.error({
@@ -105,7 +115,10 @@ export class RequestHistoryModal implements OnInit {
   }
 
   canRevertInformation(item: RequestHistoryI): boolean {
-    return item.message === 'Pareja marcada como informada' && Boolean(this.config.data.request.is_informado);
+    const latestInformationEvent = this.history().find(event => this.isInformationStatusChange(event));
+    return item.message === 'Pareja marcada como informada'
+      && latestInformationEvent?.id === item.id
+      && Boolean(this.config.data.request.is_informado);
   }
 
   confirmRemoveEvent(item: RequestHistoryI): void {
@@ -134,15 +147,22 @@ export class RequestHistoryModal implements OnInit {
         event: item,
         isArchived: Boolean(this.config.data.isArchivedView),
       });
+      if (!result.deleted) {
+        Ss.toastService.error({ title: 'No se eliminó el pago', message: 'El recibo no pudo borrarse. El pago sigue registrado; puedes intentar de nuevo.' });
+        return;
+      }
       Object.assign(request, new RequestClass(result.request));
+      const previewUrl = this.receiptPreviewUrls()[item.id];
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      this.receiptPreviewUrls.update(previews => {
+        const { [item.id]: _removed, ...remaining } = previews;
+        return remaining;
+      });
       this.history.update(items => items.filter(event => event.id !== item.id));
       Ss.toastService.success({
         title: 'Trazo actualizado',
         message: this.isPaymentEvent(item) ? 'El pago y su movimiento fueron eliminados' : 'La pareja quedó como no informada y se revirtió el movimiento',
       });
-      if (!result.receiptDeleted) {
-        Ss.toastService.error({ title: 'Recibo pendiente', message: 'El pago se eliminó, pero no se pudo borrar la imagen del recibo' });
-      }
     } catch (error) {
       console.error('Error al revertir el movimiento del trazo:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : error));
       Ss.toastService.error({ title: 'No se pudo completar la acción', message: 'El movimiento no fue eliminado' });
@@ -199,20 +219,52 @@ export class RequestHistoryModal implements OnInit {
     return typeof change !== 'string';
   }
 
-  showReceipt(item: RequestHistoryI): void {
-    if (item.receipt_url) this.receiptPreview.set(item);
+  async showReceipt(item: RequestHistoryI): Promise<void> {
+    try {
+      let previewUrl = this.receiptPreviewUrls()[item.id];
+      if (!previewUrl) {
+        previewUrl = await this.requestService.loadPreRetreatReceiptPreview(item);
+        if (this.destroyed) {
+          URL.revokeObjectURL(previewUrl);
+          return;
+        }
+        this.receiptPreviewUrls.update(previews => ({ ...previews, [item.id]: previewUrl }));
+      }
+      this.openedReceiptPreviewUrl.set(previewUrl);
+      this.receiptPreview.set(item);
+    } catch (error) {
+      console.error('No se pudo cargar el recibo del pago:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
+      Ss.toastService.error({ title: 'Recibo no disponible', message: 'No se pudo cargar la imagen del recibo' });
+    }
   }
 
   onReceiptVisibilityChange(visible: boolean): void {
-    if (!visible) this.receiptPreview.set(null);
+    if (!visible) {
+      this.receiptPreview.set(null);
+      this.openedReceiptPreviewUrl.set(null);
+    }
+  }
+
+  private async loadReceiptPreviews(history: RequestHistoryI[]): Promise<void> {
+    const previews = await Promise.all(history.filter(item => item.receipt_path || item.receipt_url).map(async item => {
+      try {
+        return [item.id, await this.requestService.loadPreRetreatReceiptPreview(item)] as const;
+      } catch (error) {
+        console.error('No se pudo cargar la vista previa del recibo:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
+        return null;
+      }
+    }));
+    const loaded = Object.fromEntries(previews.filter((preview): preview is readonly [string, string] => preview !== null));
+    if (this.destroyed) Object.values(loaded).forEach(URL.revokeObjectURL);
+    else this.receiptPreviewUrls.set(loaded);
   }
 
   private hydratePaymentReceipt(item: RequestHistoryI, payments: PreRetreatPaymentI[]): RequestHistoryI {
-    if (item.receipt_url || item.message !== 'Pago de pre retiro registrado') return item;
+    if (item.receipt_path || item.receipt_url || item.message !== 'Pago de pre retiro registrado') return item;
     const changes = item.changes?.filter((change): change is RequestHistoryChangeI => typeof change !== 'string') ?? [];
     const value = (label: string) => changes.find(change => change.label === label)?.next_value;
     const payment = payments.find(payment => payment.receipt_name === value('Recibo') && String(payment.amount) === value('Monto') && this.formatPaymentDate(payment.payment_date) === value('Fecha del pago'));
-    return payment ? { ...item, receipt_url: payment.receipt_url, receipt_name: payment.receipt_name, payment_id: payment.id } : item;
+    return payment ? { ...item, receipt_path: payment.receipt_path, receipt_url: payment.receipt_url, receipt_name: payment.receipt_name, payment_id: payment.id } : item;
   }
 
   private formatPaymentDate(value: Date | string): string {

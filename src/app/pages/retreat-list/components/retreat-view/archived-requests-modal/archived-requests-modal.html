@@ -5,8 +5,6 @@
       [icon]="selectionMode() ? 'pi pi-times' : 'pi pi-check-square'"
       severity="secondary"
       [text]="true"
-      [pTooltip]="selectionMode() ? 'Cancelar selección múltiple' : 'Seleccionar solicitudes'"
-      tooltipPosition="left"
       [attr.aria-label]="selectionMode() ? 'Cancelar selección múltiple' : 'Seleccionar solicitudes'"
       (onClick)="toggleSelectionMode()"
     />

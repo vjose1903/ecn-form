@@ -22,7 +22,7 @@
         </div>
         <div class="retreat-detail">
           <view-item title="Monto por persona" icon="pi pi-wallet">
-            @if (retreat.amount_per_person !== null && retreat.amount_per_person > 0) {
+            @if (retreat.amount_per_person != null && retreat.amount_per_person > 0) {
               <p class="retreat-detail__amount">
                 <strong>{{ formatRetreatAmount(retreat.amount_per_person) }} P/P</strong>
                 <small>{{ formatRetreatAmount(retreat.amount_per_person * 2) }} pareja</small>
@@ -49,7 +49,7 @@
             </div>
           </div>
           <div class="retreat-request-actions">
-            <p-button [icon]="selectionMode() ? 'pi pi-times' : 'pi pi-check-square'" severity="secondary" [text]="true" [pTooltip]="selectionMode() ? 'Cancelar selección múltiple' : 'Seleccionar solicitudes'" tooltipPosition="left" [attr.aria-label]="selectionMode() ? 'Cancelar selección múltiple' : 'Seleccionar solicitudes'" (click)="toggleSelectionMode()" />
+            <p-button [icon]="selectionMode() ? 'pi pi-times' : 'pi pi-check-square'" severity="secondary" [text]="true" [attr.aria-label]="selectionMode() ? 'Cancelar selección múltiple' : 'Seleccionar solicitudes'" (click)="toggleSelectionMode()" />
             <p-button icon="pi pi-inbox" severity="secondary" [text]="true" pTooltip="Solicitudes archivadas" (click)="openArchivedRequestsModal()" />
             <p-button icon="pi pi-download" severity="secondary" [text]="true" pTooltip="Exportar contactos de parejas" (click)="menu.toggle($event)" />
             <p-menu #menu [model]="exportActions" [popup]="true" [appendTo]="'body'" [autoZIndex]="true" />
@@ -105,12 +105,12 @@
           </div>
           <div class="retreat-bulk-actions__buttons">
             @if (canManagePreRetreatActions) {
-              <p-button label="Informar" icon="pi pi-check-circle" severity="success" size="small" pTooltip="Marcar seleccionadas como informadas" ariaLabel="Marcar seleccionadas como informadas" [disabled]="!selectedRequests().length || batchLoading()" [loading]="batchLoading()" (onClick)="setSelectedInformed(true)" />
-              <p-button label="Sin informar" icon="pi pi-circle" severity="secondary" size="small" pTooltip="Marcar seleccionadas como no informadas" ariaLabel="Marcar seleccionadas como no informadas" [disabled]="!selectedRequests().length || batchLoading()" (onClick)="setSelectedInformed(false)" />
+              <p-button label="Informar" icon="pi pi-check-circle" severity="success" size="small" ariaLabel="Marcar seleccionadas como informadas" [disabled]="!selectedRequests().length || batchLoading()" [loading]="batchLoading()" (onClick)="setSelectedInformed(true)" />
+              <p-button label="Sin informar" icon="pi pi-circle" severity="secondary" size="small" ariaLabel="Marcar seleccionadas como no informadas" [disabled]="!selectedRequests().length || batchLoading()" (onClick)="setSelectedInformed(false)" />
             }
-            <p-button label="Archivar" icon="pi pi-inbox" severity="secondary" size="small" pTooltip="Archivar seleccionadas" ariaLabel="Archivar solicitudes seleccionadas" [disabled]="!selectedRequests().length || batchLoading()" (onClick)="archiveSelected()" />
-            <p-button label="Transferir" icon="pi pi-send" severity="help" size="small" pTooltip="Transferir seleccionadas" ariaLabel="Transferir solicitudes seleccionadas" [disabled]="!selectedRequests().length || batchLoading()" (onClick)="transferSelected()" />
-            <p-button label="Exportar" icon="pi pi-download" iconPos="right" severity="secondary" [outlined]="true" size="small" pTooltip="Exportar seleccionadas" ariaLabel="Exportar solicitudes seleccionadas" [disabled]="!selectedRequests().length || batchLoading()" (onClick)="bulkExportMenu.toggle($event)" />
+            <p-button label="Archivar" icon="pi pi-inbox" severity="secondary" size="small" ariaLabel="Archivar solicitudes seleccionadas" [disabled]="!selectedRequests().length || batchLoading()" (onClick)="archiveSelected()" />
+            <p-button label="Transferir" icon="pi pi-send" severity="help" size="small" ariaLabel="Transferir solicitudes seleccionadas" [disabled]="!selectedRequests().length || batchLoading()" (onClick)="transferSelected()" />
+            <p-button label="Exportar" icon="pi pi-download" iconPos="right" severity="secondary" [outlined]="true" size="small" ariaLabel="Exportar solicitudes seleccionadas" [disabled]="!selectedRequests().length || batchLoading()" (onClick)="bulkExportMenu.toggle($event)" />
             <p-menu #bulkExportMenu [model]="bulkExportActions" [popup]="true" [appendTo]="'body'" [autoZIndex]="true" />
           </div>
         </footer>

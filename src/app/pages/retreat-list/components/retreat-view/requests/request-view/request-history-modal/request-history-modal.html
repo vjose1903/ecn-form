@@ -59,12 +59,17 @@
               <span><small>Fecha del pago</small><strong>{{ getChangeValue(item, 'Fecha del pago') }}</strong></span>
             </div>
           </div>
-          @if (item.receipt_url) {
+          @if (item.receipt_path || item.receipt_url) {
           <button class="history-receipt-preview" type="button" (click)="showReceipt(item)" [attr.aria-label]="'Ver recibo ' + (item.receipt_name || 'del pago')">
-            <img [src]="item.receipt_url" [alt]="item.receipt_name || 'Vista previa del recibo'" />
+            @if (receiptPreviewUrls()[item.id]; as previewUrl) {
+              <img [src]="previewUrl" [alt]="item.receipt_name || 'Vista previa del recibo'" />
+            } @else {
+              <i class="pi pi-image" aria-hidden="true"></i>
+            }
             <span>Ver recibo</span>
           </button>
           }
+          @if (item.deletion_pending) { <small class="history-card__pending-delete">Eliminación pendiente; vuelve a intentarlo.</small> }
         </div>
         } @else {
         @if (item.message) {
@@ -138,6 +143,6 @@
 
 @if (receiptPreview(); as receipt) {
 <p-dialog [visible]="true" (visibleChange)="onReceiptVisibilityChange($event)" [modal]="false" appendTo="body" styleClass="request-history-receipt-dialog" [header]="receipt.receipt_name || 'Recibo de pago'" [draggable]="false" [resizable]="false" [style]="{ width: 'min(92vw, 48rem)' }">
-  <img class="history-receipt-preview__image" [src]="receipt.receipt_url" [alt]="receipt.receipt_name || 'Recibo del pago'" />
+  <img class="history-receipt-preview__image" [src]="openedReceiptPreviewUrl()" [alt]="receipt.receipt_name || 'Recibo del pago'" />
 </p-dialog>
 }

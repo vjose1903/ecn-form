@@ -10,14 +10,16 @@
 
   <div class="ml-4 flex flex-col gap-y-2">
     <!-- nombre completo -->
-    <div class="flex items-center gap-2">
+    <div class="couple-identity">
       <h1 class="text-gray-800 font-bold mb-0 text-lg">{{ couple().full_name }}</h1>
-      @if(couple().nickname){
+      <div class="couple-identity__meta">
+      @if(couple().nickname?.trim() && couple().nickname.trim().toLowerCase() !== 'n/a'){
       <!-- apodo -->
-      <small class="text-black/50 font-medium mb-0">({{ couple().nickname }})</small>
+      <small class="text-black/50 font-medium mb-0" [title]="couple().nickname">({{ couple().nickname }})</small>
       }
       <!-- edad -->
       <p-badge value="{{ couple().age }} años" severity="secondary" />
+      </div>
     </div>
 
     <!-- fecha de nacimiento -->
