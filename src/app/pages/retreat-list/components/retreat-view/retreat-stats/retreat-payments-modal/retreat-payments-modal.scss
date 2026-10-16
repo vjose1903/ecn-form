@@ -267,7 +267,9 @@
   }
 
   :host ::ng-deep .retreat-payment-report__table .p-datatable-table-container {
-    max-width: calc(96vw - 2.5rem);
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     overflow: auto;
   }
 

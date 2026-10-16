@@ -116,6 +116,15 @@
   .request-summary__item + .request-summary__item { border-left: 0; }
   .request-summary__item { padding: .4rem .3rem; }
   .request-overview { padding: .15rem .5rem; }
+  .request-view__actions,
+  .request-view__actions-buttons { gap: .35rem; }
+  .request-view__actions { align-items: center; }
+  :host ::ng-deep .request-view__actions-buttons .p-button {
+    gap: .3rem;
+    padding-inline: .4rem;
+    font-size: .7rem;
+  }
+  :host ::ng-deep .request-view__actions-buttons .p-button-label { white-space: nowrap; }
   .request-summary__item ::ng-deep view-item > div {
     grid-template-columns: 1.9rem minmax(0, 1fr);
     gap: .2rem .6rem;

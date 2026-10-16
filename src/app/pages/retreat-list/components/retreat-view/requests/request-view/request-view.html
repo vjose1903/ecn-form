@@ -68,13 +68,13 @@
   <!-- Mensaje cuando no hay información completa -->
 
   <!-- Acciones -->
-  <div class="flex justify-between gap-3 w-full pt-4 border-t border-gray-200">
+  <div class="request-view__actions flex justify-between gap-3 w-full pt-4 border-t border-gray-200">
     <div>
       <p-button icon="pi pi-bars" severity="secondary" (click)="menu.toggle($event)" />
       <p-menu #menu [model]="actions" [popup]="true" [appendTo]="'body'" [autoZIndex]="true" />
     </div>
 
-    <div class="flex gap-3">
+    <div class="request-view__actions-buttons flex gap-3">
       @if (!isArchivedView()) {
       <p-button type="button" label="Aceptar solicitud" severity="success" [disabled]="loading() || req.status == RequestStatus.ACCEPTED" icon="pi pi-check" class="w-auto" (onClick)="toggleStatus(RequestStatus.ACCEPTED)" size="small" />
       <p-button type="button" label="Rechazar solicitud" severity="danger" [disabled]="loading() || req.status == RequestStatus.REJECTED" icon="pi pi-times" class="w-auto" (onClick)="toggleStatus(RequestStatus.REJECTED)" size="small" />
