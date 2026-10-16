@@ -69,11 +69,18 @@
   white-space: nowrap;
 }
 
+.retreat-payment-report__toolbar {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+
 .retreat-payment-report__search {
   display: flex;
   align-items: center;
   gap: .6rem;
   width: min(22rem, 100%);
+  flex: 1 1 22rem;
   min-width: 0;
   height: 2.6rem;
   padding: 0 .8rem;
@@ -244,6 +251,10 @@
 }
 
 @media (max-width: 640px) {
+  .retreat-payment-report__toolbar { gap: .4rem; }
+  :host ::ng-deep .retreat-payment-report__toolbar > p-button { flex: 0 0 auto; }
+  :host ::ng-deep .retreat-payment-report__toolbar > p-button .p-button { padding-inline: .65rem; font-size: .78rem; }
+
   .retreat-payment-report__summary {
     align-items: center;
     flex-direction: row;

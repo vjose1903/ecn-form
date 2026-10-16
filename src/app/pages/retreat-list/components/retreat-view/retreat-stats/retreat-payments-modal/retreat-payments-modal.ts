@@ -4,9 +4,15 @@ import { RequestClass } from '@core/entities/request/request.class';
 import { PreRetreatPaymentI } from '@core/entities/request/request.model';
 import { RequestService } from '@core/entities/request/request.service';
 import { Ss } from '@core/services/singleton.service';
+import ExcelJS from 'exceljs';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { MenuItem } from 'primeng/api';
+import { ButtonModule } from 'primeng/button';
 import { DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
+import { MenuModule } from 'primeng/menu';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
 
@@ -27,13 +33,17 @@ interface RetreatPaymentRow {
 
 @Component({
   selector: 'app-retreat-payments-modal',
-  imports: [CommonModule, TableModule, TagModule, DialogModule, SkeletonModule],
+  imports: [CommonModule, TableModule, TagModule, DialogModule, SkeletonModule, ButtonModule, MenuModule],
   templateUrl: './retreat-payments-modal.html',
   styleUrl: './retreat-payments-modal.scss',
 })
 export class RetreatPaymentsModal implements OnInit, OnDestroy {
   private config = inject(DynamicDialogConfig);
   private requestService = inject(RequestService);
+  exportActions: MenuItem[] = [
+    { label: 'Exportar a Excel', icon: 'pi pi-file-excel', command: () => this.exportToExcel() },
+    { label: 'Exportar a PDF', icon: 'pi pi-file-pdf', command: () => this.exportToPdf() },
+  ];
   payments = signal<RetreatPaymentRow[]>([]);
   searchTerm = signal('');
   filteredPayments = computed(() => {
@@ -92,6 +102,68 @@ export class RetreatPaymentsModal implements OnInit, OnDestroy {
 
   formatDate(value: Date | string): string {
     return new Date(value).toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  async exportToExcel(): Promise<void> {
+    const rows = this.filteredPayments();
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Pagos recibidos');
+    worksheet.columns = [
+      { header: 'Descripción', key: 'description', width: 52 },
+      { header: 'Tipo', key: 'type', width: 18 },
+      { header: 'Fecha', key: 'date', width: 16 },
+      { header: 'Ingresos', key: 'amount', width: 20 },
+    ];
+    worksheet.addRows(rows.map(payment => ({
+      description: `- ${payment.brideName}\n- ${payment.groomName}`,
+      type: payment.type,
+      date: payment.paymentDate,
+      amount: payment.amount,
+    })));
+    worksheet.addRow({ description: 'Total recibido', amount: rows.reduce((sum, payment) => sum + payment.amount, 0) });
+    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC10007' } };
+    worksheet.getColumn('date').numFmt = 'dd/mm/yyyy';
+    worksheet.getColumn('amount').numFmt = '"RD$"#,##0.00';
+    worksheet.eachRow(row => row.alignment = { vertical: 'middle', wrapText: true });
+    const buffer = await workbook.xlsx.writeBuffer();
+    this.downloadFile(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'xlsx');
+  }
+
+  exportToPdf(): void {
+    const rows = this.filteredPayments();
+    const doc = new jsPDF({ orientation: 'landscape' });
+    doc.setFontSize(16);
+    doc.text('Pagos recibidos', 14, 16);
+    doc.setFontSize(10);
+    doc.text(`Total recibido: ${this.formatAmount(rows.reduce((sum, payment) => sum + payment.amount, 0))}`, 14, 23);
+    autoTable(doc, {
+      startY: 29,
+      head: [['Descripción', 'Tipo', 'Fecha', 'Ingresos']],
+      body: rows.map(payment => [
+        `- ${payment.brideName}\n- ${payment.groomName}`,
+        payment.type,
+        this.formatDate(payment.paymentDate),
+        this.formatAmount(payment.amount),
+      ]),
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [193, 0, 7] },
+      columnStyles: { 0: { cellWidth: 'auto' }, 1: { cellWidth: 32 }, 2: { cellWidth: 32 }, 3: { cellWidth: 40, halign: 'right' } },
+    });
+    this.downloadFile(doc.output('blob'), 'pdf');
+  }
+
+  private downloadFile(blob: Blob, extension: 'pdf' | 'xlsx'): void {
+    const date = new Date();
+    const datePart = [date.getFullYear(), date.getMonth() + 1, date.getDate()].map(value => String(value).padStart(2, '0')).join('-');
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Pagos_Recibidos_${datePart}.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   private firstThreeNames(name: string): string {
