@@ -14,6 +14,7 @@
         <th scope="col">Tipo</th>
         <th scope="col">Fecha</th>
         <th scope="col" class="retreat-payment-report__amount">Ingresos</th>
+        <th scope="col" class="retreat-payment-report__actions">Acciones</th>
       </tr>
     </ng-template>
     <ng-template #body let-payment>
@@ -22,16 +23,50 @@
         <td><p-tag [value]="payment.type" [severity]="payment.type === 'Completivo' ? 'success' : payment.type === 'Parcial' ? 'warn' : 'secondary'" [rounded]="true" /></td>
         <td>{{ payment.paymentDate | date:'dd/MM/yyyy' }}</td>
         <td class="retreat-payment-report__amount">{{ formatAmount(payment.amount) }}</td>
+        <td class="retreat-payment-report__actions">
+          <button class="retreat-payment-report__receipt-button" type="button" (click)="showReceipt(payment.receipt)" [attr.aria-label]="'Ver recibo del pago de ' + payment.couple">
+            <i class="pi pi-image" aria-hidden="true"></i><span>Ver recibo</span>
+          </button>
+        </td>
       </tr>
     </ng-template>
     <ng-template #footer>
       <tr>
-        <td colspan="3"><strong>Total recibido</strong></td>
+        <td colspan="4"><strong>Total recibido</strong></td>
         <td class="retreat-payment-report__amount"><strong>{{ formatAmount(total()) }}</strong></td>
       </tr>
     </ng-template>
     <ng-template #emptymessage>
-      <tr><td colspan="4" class="retreat-payment-report__empty">Todavía no hay pagos registrados.</td></tr>
+      <tr><td colspan="5" class="retreat-payment-report__empty">Todavía no hay pagos registrados.</td></tr>
     </ng-template>
   </p-table>
 </section>
+
+@if (receiptPreview(); as receipt) {
+  <p-dialog
+    [visible]="true"
+    (visibleChange)="onReceiptVisibilityChange($event)"
+    [modal]="false"
+    appendTo="body"
+    styleClass="request-history-receipt-dialog"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: 'min(92vw, 48rem)' }">
+    <ng-template pTemplate="header">
+      <div class="receipt-dialog-header">
+        <span class="receipt-dialog-header__title">{{ formatAmount(receipt.amount) }} · {{ formatDate(receipt.payment_date) }}</span>
+        <span class="receipt-dialog-header__subtitle">{{ receipt.receipt_name || 'Recibo de pago' }}</span>
+      </div>
+    </ng-template>
+    @if (receiptPreviewUrl(); as previewUrl) {
+      <div class="retreat-payment-report__receipt-frame" [class.retreat-payment-report__receipt-frame--loading]="loadingReceipt()">
+        @if (loadingReceipt()) {
+          <p-skeleton class="retreat-payment-report__receipt-skeleton" width="100%" height="min(70vh, 42rem)" />
+        }
+        <img class="retreat-payment-report__receipt-image" [src]="previewUrl" [alt]="receipt.receipt_name || 'Recibo del pago'" (load)="onReceiptImageLoad()" (error)="onReceiptImageError()" />
+      </div>
+    } @else {
+      <p-skeleton width="100%" height="min(70vh, 42rem)" />
+    }
+  </p-dialog>
+}
