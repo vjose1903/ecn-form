@@ -24,9 +24,49 @@
       <div class="history-card__content">
         <div class="history-card__top">
           <p-tag [value]="getActionLabel(item)" [severity]="getActionSeverity(item)" [rounded]="true" />
-          <span class="history-card__date">{{ item.message === 'Pago de pre retiro registrado' ? 'Registrado: ' : '' }}{{ formatHappenedAt(item.happened_at) }}</span>
+          <div class="history-card__top-actions">
+            <span class="history-card__date">
+              <i class="pi pi-clock" aria-hidden="true"></i>
+              <span class="history-card__date-label">Registrado:</span> {{ formatHappenedAt(item.happened_at) }}
+            </span>
+            @if (isPaymentEvent(item) || canRevertInformation(item)) {
+            <p-button
+              [icon]="isPaymentEvent(item) ? 'pi pi-trash' : 'pi pi-undo'"
+              [pTooltip]="isPaymentEvent(item) ? 'Eliminar pago' : 'Revertir informado'"
+              tooltipPosition="left"
+              [ariaLabel]="isPaymentEvent(item) ? 'Eliminar pago' : 'Revertir informado'"
+              severity="secondary"
+              [text]="true"
+              styleClass="history-card__action-button"
+              [loading]="deletingEventId() === item.id"
+              [disabled]="deletingEventId() !== null"
+              (onClick)="confirmRemoveEvent(item)"
+            />
+            }
+          </div>
         </div>
 
+        @if (isPaymentEvent(item)) {
+        <div class="history-payment-layout">
+          <div class="history-payment-details__values">
+            <div class="history-payment-value">
+              <i class="pi pi-wallet" aria-hidden="true"></i>
+              <span><small>Monto</small><strong>{{ formatPaymentAmount(item) }}</strong></span>
+            </div>
+            <span class="history-payment-details__divider" aria-hidden="true"></span>
+            <div class="history-payment-value">
+              <i class="pi pi-calendar" aria-hidden="true"></i>
+              <span><small>Fecha del pago</small><strong>{{ getChangeValue(item, 'Fecha del pago') }}</strong></span>
+            </div>
+          </div>
+          @if (item.receipt_url) {
+          <button class="history-receipt-preview" type="button" (click)="showReceipt(item)" [attr.aria-label]="'Ver recibo ' + (item.receipt_name || 'del pago')">
+            <img [src]="item.receipt_url" [alt]="item.receipt_name || 'Vista previa del recibo'" />
+            <span>Ver recibo</span>
+          </button>
+          }
+        </div>
+        } @else {
         @if (item.message) {
         <p class="history-card__message">{{ item.message }}</p>
         }
@@ -58,7 +98,6 @@
           </div>
           }
         </div>
-
         @if (item.changes?.length && !isInformationStatusChange(item)) {
         <div class="history-card__changes">
           <p class="history-card__changes-title">Campos modificados</p>
@@ -83,6 +122,8 @@
           </div>
         </div>
         }
+        }
+
       </div>
     </article>
     }
@@ -94,3 +135,9 @@
   </div>
   }
 </div>
+
+@if (receiptPreview(); as receipt) {
+<p-dialog [visible]="true" (visibleChange)="onReceiptVisibilityChange($event)" [modal]="false" appendTo="body" styleClass="request-history-receipt-dialog" [header]="receipt.receipt_name || 'Recibo de pago'" [draggable]="false" [resizable]="false" [style]="{ width: 'min(92vw, 48rem)' }">
+  <img class="history-receipt-preview__image" [src]="receipt.receipt_url" [alt]="receipt.receipt_name || 'Recibo del pago'" />
+</p-dialog>
+}

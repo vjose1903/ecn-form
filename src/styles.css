@@ -18,6 +18,11 @@
   box-shadow: none !important;
 }
 
+.request-history-receipt-dialog .p-dialog-content {
+  padding: 1.25rem 1rem !important;
+  background: #f1f5f9 !important;
+}
+
 
 @theme {
   --color-brand-primary: #a83044;

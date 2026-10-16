@@ -26,6 +26,7 @@ export class TransferRequestModal implements OnInit {
   saving = signal(false);
   requests: RequestClass[] = [];
   currentRetreat!: RetreatClass;
+  requestOrigins: Record<string, RetreatClass> = {};
   isArchivedView = false;
   retreats = signal<RetreatClass[]>([]);
   selectedRetreatId = signal<string | null>(null);
@@ -36,10 +37,14 @@ export class TransferRequestModal implements OnInit {
       value: retreat.id,
     }))
   );
+  get sourceRetreatCount(): number {
+    return new Set([this.currentRetreat?.id, ...Object.values(this.requestOrigins).map(retreat => retreat.id)].filter(Boolean)).size;
+  }
 
   ngOnInit(): void {
     this.requests = this.config.data.requests ?? [this.config.data.request];
-    this.currentRetreat = this.config.data.retreat;
+    this.requestOrigins = this.config.data.requestOrigins ?? {};
+    this.currentRetreat = this.config.data.retreat ?? this.requestOrigins[this.requests[0]?.id];
     this.isArchivedView = Boolean(this.config.data.isArchivedView);
     void this.loadRetreats();
   }
@@ -48,7 +53,8 @@ export class TransferRequestModal implements OnInit {
     try {
       this.loading.set(true);
       const retreats = await this.retreatService.getAll();
-      this.retreats.set(retreats.filter(retreat => retreat.id !== this.currentRetreat.id));
+      const sourceIds = new Set([this.currentRetreat?.id, ...Object.values(this.requestOrigins).map(retreat => retreat.id)]);
+      this.retreats.set(retreats.filter(retreat => !sourceIds.has(retreat.id)));
     } catch (error) {
       console.error('Error cargando retiros para transferir:', error);
       Ss.toastService.error({
@@ -78,7 +84,7 @@ export class TransferRequestModal implements OnInit {
         try {
           await this.requestService.transferRequest({
             request,
-            fromRetreat: this.currentRetreat,
+            fromRetreat: this.requestOrigins[request.id] ?? this.currentRetreat,
             toRetreat: selectedRetreat,
             isArchived: this.isArchivedView,
           });

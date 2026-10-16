@@ -42,6 +42,27 @@
           <p-inputnumber [formControlName]="FormControlName.number" [inputId]="FormFieldId.number + '_control'" placeholder="Ingrese el número del retiro" [min]="1" class="w-full" />
           <form-error-msg [control]="form.get(FormControlName.number)" />
         </div>
+        <!-- Monto por persona -->
+        <div class="col-span-1 md:col-span-6 lg:col-span-4 relative" [id]="FormFieldId.amount_per_person">
+          <div class="flex gap-1">
+            <label class="font-bold" [for]="FormFieldId.amount_per_person + '_control'">Monto por persona (opcional)</label>
+          </div>
+          <p-inputnumber
+            [formControlName]="FormControlName.amount_per_person"
+            [inputId]="FormFieldId.amount_per_person + '_control'"
+            mode="currency"
+            currency="DOP"
+            locale="es-DO"
+            [min]="0.01"
+            [minFractionDigits]="0"
+            [maxFractionDigits]="2"
+            placeholder="Sin monto definido"
+            class="w-full" />
+          <form-error-msg [control]="form.get(FormControlName.amount_per_person)" />
+          @if (coupleAmountPreview; as coupleAmount) {
+            <small class="text-slate-500">{{ perPersonAmountPreview }} · {{ coupleAmount }}</small>
+          }
+        </div>
         <!-- Fecha Límite de Solicitudes -->
         <div class="col-span-1 md:col-span-4 relative" [id]="FormFieldId.max_request_date">
           <div class="flex gap-1">

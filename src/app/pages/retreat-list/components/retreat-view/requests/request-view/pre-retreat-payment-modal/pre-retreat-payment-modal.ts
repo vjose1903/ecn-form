@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnDestroy, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -7,17 +7,19 @@ import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { DividerLine } from '@core/components/divider-line/divider-line';
 import { RequestClass } from '@core/entities/request/request.class';
+import { PreRetreatPaymentI } from '@core/entities/request/request.model';
 import { RequestService } from '@core/entities/request/request.service';
 import { RetreatClass } from '@core/entities/retreat/retreat.class';
 import { Ss } from '@core/services/singleton.service';
+import { DialogModule } from 'primeng/dialog';
 
 @Component({
   selector: 'app-pre-retreat-payment-modal',
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, DatePickerModule, InputNumberModule, DividerLine],
+  imports: [CommonModule, ReactiveFormsModule, ButtonModule, DatePickerModule, InputNumberModule, DividerLine, DialogModule],
   templateUrl: './pre-retreat-payment-modal.html',
   styleUrl: './pre-retreat-payment-modal.scss',
 })
-export class PreRetreatPaymentModal {
+export class PreRetreatPaymentModal implements OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly config = inject(DynamicDialogConfig);
   readonly ref = inject(DynamicDialogRef);
@@ -26,6 +28,8 @@ export class PreRetreatPaymentModal {
   readonly today = new Date();
   readonly loading = signal(false);
   readonly receipt = signal<File | null>(null);
+  readonly receiptPreviewUrl = signal<string | null>(null);
+  readonly receiptPreview = signal<PreRetreatPaymentI | null>(null);
   readonly request = this.config.data.request as RequestClass;
   readonly retreat = this.config.data.retreat as RetreatClass;
   readonly isArchived = Boolean(this.config.data.isArchivedView);
@@ -42,11 +46,24 @@ export class PreRetreatPaymentModal {
     if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
       Ss.toastService.warning({ message: 'Selecciona una imagen de recibo de máximo 5 MB', title: 'Archivo no válido' });
       this.receipt.set(null);
+      this.clearReceiptPreview();
       (event.target as HTMLInputElement).value = '';
       return;
     }
 
     this.receipt.set(file);
+    this.clearReceiptPreview();
+    this.receiptPreviewUrl.set(URL.createObjectURL(file));
+  }
+
+  ngOnDestroy(): void {
+    this.clearReceiptPreview();
+  }
+
+  private clearReceiptPreview(): void {
+    const previewUrl = this.receiptPreviewUrl();
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    this.receiptPreviewUrl.set(null);
   }
 
   async save(): Promise<void> {
@@ -79,6 +96,14 @@ export class PreRetreatPaymentModal {
 
   formatDate(value: Date | string): string {
     return new Date(value).toLocaleDateString('es-DO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  showReceipt(payment: PreRetreatPaymentI): void {
+    this.receiptPreview.set(payment);
+  }
+
+  onReceiptVisibilityChange(visible: boolean): void {
+    if (!visible) this.receiptPreview.set(null);
   }
 
   formatAmount(amount: number): string {

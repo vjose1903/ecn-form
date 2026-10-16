@@ -110,6 +110,18 @@
   color: #9a6b00;
 }
 
+.request-card__payment-indicator {
+  display: grid;
+  place-items: center;
+  flex: 0 0 1.45rem;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 50%;
+  background: #fff4cc;
+  color: #b77900;
+  font-size: 0.7rem;
+}
+
 .request-card__arrow {
   display: grid;
   place-items: center;

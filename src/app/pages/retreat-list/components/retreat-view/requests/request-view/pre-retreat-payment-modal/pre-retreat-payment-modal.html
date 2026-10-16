@@ -4,11 +4,21 @@
       <h2>Pagos registrados</h2>
       @for (payment of payments; track payment.id) {
         <article class="pre-retreat-payment__record">
-          <div>
-            <strong>{{ formatAmount(payment.amount) }}</strong>
-            <span>{{ formatDate(payment.payment_date) }}</span>
+          <div class="pre-retreat-payment__record-details">
+            <div class="pre-retreat-payment__record-value">
+              <i class="pi pi-wallet" aria-hidden="true"></i>
+              <span><small>Monto</small><strong>{{ formatAmount(payment.amount) }}</strong></span>
+            </div>
+            <span class="pre-retreat-payment__record-divider" aria-hidden="true"></span>
+            <div class="pre-retreat-payment__record-value">
+              <i class="pi pi-calendar" aria-hidden="true"></i>
+              <span><small>Fecha del pago</small><strong>{{ formatDate(payment.payment_date) }}</strong></span>
+            </div>
+            <button class="pre-retreat-payment__receipt" type="button" (click)="showReceipt(payment)" [attr.aria-label]="'Ver recibo ' + payment.receipt_name">
+              <img [src]="payment.receipt_url" [alt]="payment.receipt_name || 'Vista previa del recibo'" />
+              <span>Ver recibo</span>
+            </button>
           </div>
-          <a [href]="payment.receipt_url" target="_blank" rel="noopener noreferrer">Ver recibo</a>
         </article>
       }
     </section>
@@ -45,12 +55,32 @@
 
     <div class="pre-retreat-payment__field">
       <label for="pre-retreat-payment-receipt">Imagen del recibo</label>
-      <input #receiptInput id="pre-retreat-payment-receipt" type="file" accept="image/*" (change)="onReceiptSelected($event)" />
+      <div class="pre-retreat-payment__dropzone" [class.pre-retreat-payment__dropzone--preview]="receiptPreviewUrl()">
+        <input #receiptInput id="pre-retreat-payment-receipt" type="file" accept="image/*" (change)="onReceiptSelected($event)" [attr.aria-label]="receiptPreviewUrl() ? 'Cambiar imagen del recibo' : 'Seleccionar imagen del recibo'" />
+        @if (receiptPreviewUrl(); as previewUrl) {
+          <img [src]="previewUrl" [alt]="receipt()?.name || 'Vista previa del recibo'" />
+          <span>Cambiar imagen</span>
+        } @else {
+          <span><i class="pi pi-upload" aria-hidden="true"></i>Seleccionar o arrastrar imagen</span>
+        }
+      </div>
       <small>Imagen de hasta 5 MB.</small>
-      @if (receipt(); as file) {
-        <span class="pre-retreat-payment__filename"><i class="pi pi-image" aria-hidden="true"></i>{{ file.name }}</span>
-      }
     </div>
+
+@if (receiptPreview(); as receipt) {
+  <p-dialog
+    [visible]="true"
+    (visibleChange)="onReceiptVisibilityChange($event)"
+    [modal]="false"
+    appendTo="body"
+    styleClass="request-history-receipt-dialog"
+    [header]="receipt.receipt_name || 'Recibo de pago'"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: 'min(92vw, 48rem)' }">
+    <img class="pre-retreat-payment__receipt-image" [src]="receipt.receipt_url" [alt]="receipt.receipt_name || 'Recibo del pago'" />
+  </p-dialog>
+}
 
     <footer>
       <p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" [disabled]="loading()" (onClick)="ref.close()" />

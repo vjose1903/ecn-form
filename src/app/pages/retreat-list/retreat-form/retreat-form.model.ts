@@ -10,6 +10,7 @@ export enum FormControlName {
   is_active = 'is_active',
   accept_requests = 'accept_requests',
   community_name = 'community_name',
+  amount_per_person = 'amount_per_person',
 }
 
 export enum FormFieldId {
@@ -22,5 +23,6 @@ export enum FormFieldId {
   is_active = 'is_active_field',
   accept_requests = 'accept_requests_field',
   community_name = 'community_name_field',
+  amount_per_person = 'amount_per_person_field',
 }
 

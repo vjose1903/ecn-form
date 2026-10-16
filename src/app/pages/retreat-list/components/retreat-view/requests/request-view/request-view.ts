@@ -84,7 +84,7 @@ export class RequestView implements OnInit, AfterViewInit {
       ],
     };
 
-    const preRetreatActions: MenuItem[] = this.canShowPreRetreat()
+    const preRetreatActions: MenuItem[] = !this.isArchivedView() && this.canShowPreRetreat()
       ? [
           {
             label: 'Pre Retiro',
@@ -106,7 +106,17 @@ export class RequestView implements OnInit, AfterViewInit {
       : [];
 
     if (this.isArchivedView()) {
-      return [...preRetreatActions, exportActions];
+      return [
+        {
+          label: 'Acciones',
+          items: [
+            { label: 'Transferir solicitud', icon: 'pi pi-send', command: () => this.openTransferModal() },
+            { label: 'Desarchivar solicitud', icon: 'pi pi-replay', command: () => this.unarchiveRequest() },
+          ],
+        },
+        { separator: true },
+        exportActions,
+      ];
     }
 
     return [
@@ -186,7 +196,7 @@ export class RequestView implements OnInit, AfterViewInit {
     if (!dialogService || !request || !this.retreat) return;
 
     const dialogRef = dialogService.open(PreRetreatPaymentModal, {
-      header: 'Pagos de Pre Retiro',
+      header: 'Pagos',
       width: '34rem',
       modal: true,
       draggable: false,
@@ -285,6 +295,8 @@ export class RequestView implements OnInit, AfterViewInit {
       focusOnShow: false,
       data: {
         request: this.request(),
+        retreat: this.retreat,
+        isArchivedView: this.isArchivedView(),
       },
       breakpoints: { '960px': '80vw', '640px': '95vw' },
     });

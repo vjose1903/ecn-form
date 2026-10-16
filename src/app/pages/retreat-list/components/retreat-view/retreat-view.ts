@@ -1,7 +1,7 @@
 import { Ss } from '@core/services/singleton.service';
 import { Component, inject, OnInit, signal, OnDestroy, computed } from '@angular/core';
 import { RetreatClass } from '@core/entities/retreat/retreat.class';
-import { CommonModule, LowerCasePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
@@ -21,13 +21,14 @@ import { PdfService, CoupleInfo } from '../../utils/pdf.service';
 import { ExcelService } from '../../utils/excel.service';
 import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
+import { PopoverModule } from 'primeng/popover';
 import { ExportType, ReportType } from '@pages/retreat-list/utils/export.utils';
 import { ArchivedRequestsModal } from './archived-requests-modal/archived-requests-modal';
 import { TransferRequestModal } from './requests/request-view/transfer-request-modal/transfer-request-modal';
 
 @Component({
   selector: 'app-retreat-view',
-  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, BadgeModule, RequestCard, SelectModule, FormsModule, LowerCasePipe, InputTextModule, ViewItem, MenuModule],
+  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, BadgeModule, RequestCard, SelectModule, FormsModule, InputTextModule, ViewItem, MenuModule, PopoverModule],
   templateUrl: './retreat-view.html',
   styleUrl: './retreat-view.scss',
 })
@@ -44,6 +45,8 @@ export class RetreatView implements OnInit, OnDestroy {
   requestFiltered = computed(() => {
     const word = this.filterWord();
     const status = this.selectedRequestStatus();
+    const payments = this.selectedPaymentFilter();
+    const informed = this.selectedInformedFilter();
 
     // Primero filtrar por palabra de búsqueda en los nombres completos
     let filteredRequests = this.requests();
@@ -58,17 +61,23 @@ export class RetreatView implements OnInit, OnDestroy {
       });
     }
 
-    // Luego filtrar por estado seleccionado
-    if (status === RequestStatus.ALL) {
-      return filteredRequests;
-    }
-
-    return filteredRequests.filter(request => request.status === status);
+    return filteredRequests.filter(request =>
+      (status === RequestStatus.ALL || request.status === status) &&
+      (payments === 'all' || this.getPaymentStatus(request) === payments) &&
+      (informed === 'all' || (informed === 'yes') === !!request.is_informado)
+    );
   });
 
   fetchingRequests = signal(true);
 
   selectedRequestStatus = signal<RequestStatus>(RequestStatus.ALL);
+  selectedPaymentFilter = signal<'all' | 'none' | 'paid' | 'partial' | 'complete'>('all');
+  selectedInformedFilter = signal<'all' | 'yes' | 'no'>('all');
+  activeFilterCount = computed(() =>
+    Number(this.selectedRequestStatus() !== RequestStatus.ALL) +
+    Number(this.selectedPaymentFilter() !== 'all') +
+    Number(this.selectedInformedFilter() !== 'all')
+  );
   filterWord = signal<string>('');
   requestStatusOptions = [
     { label: 'Todas', value: RequestStatus.ALL },
@@ -76,6 +85,44 @@ export class RetreatView implements OnInit, OnDestroy {
     { label: 'Aceptadas', value: RequestStatus.ACCEPTED },
     { label: 'Rechazadas', value: RequestStatus.REJECTED },
   ];
+  get paymentFilterOptions() {
+    const canClassify = !!this.retreat?.amount_per_person;
+    return [
+      { label: 'Todos', value: 'all' },
+      { label: 'Sin pagos', value: 'none' },
+      { label: 'Con pagos', value: 'paid' },
+      ...(canClassify ? [
+        { label: 'Pago parcial', value: 'partial' },
+        { label: 'Pago completo', value: 'complete' },
+      ] : []),
+    ];
+  }
+  informedFilterOptions = [
+    { label: 'Todas', value: 'all' },
+    { label: 'Informadas', value: 'yes' },
+    { label: 'Sin informar', value: 'no' },
+  ];
+
+  clearFilters(): void {
+    this.selectedRequestStatus.set(RequestStatus.ALL);
+    this.selectedPaymentFilter.set('all');
+    this.selectedInformedFilter.set('all');
+  }
+
+  getPaymentStatus(request: RequestClass): 'none' | 'paid' | 'partial' | 'complete' {
+    const paid = (request.pre_retreat_payments ?? []).reduce((total, payment) => total + payment.amount, 0);
+    if (paid <= 0) return 'none';
+    const amountPerPerson = this.retreat?.amount_per_person ?? 0;
+    if (amountPerPerson <= 0) return 'paid';
+    const coupleTotal = amountPerPerson * 2;
+    return paid >= coupleTotal ? 'complete' : 'partial';
+  }
+
+  formatRetreatAmount(amount: number): string {
+    return new Intl.NumberFormat('es-DO', {
+      style: 'currency', currency: 'DOP', maximumFractionDigits: 2,
+    }).format(amount);
+  }
 
   requestStats = signal<RequestStats>({
     [RequestStatus.PENDING]: { amount: 0, tooltip: 'Pendientes', severity: 'secondary' as const, label: 'Pendiente', labelPlural: 'Pendientes' },

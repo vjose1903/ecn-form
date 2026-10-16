@@ -29,6 +29,14 @@ export class RequestCard implements OnDestroy {
   private holdTriggered = false;
   private suppressClick = false;
 
+  showPreRetreatIndicators(): boolean {
+    const startDate = this.retreat()?.start_date?.slice(0, 10);
+    if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return false;
+    const today = new Date();
+    const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    return todayDate <= startDate;
+  }
+
   onPointerDown(event: PointerEvent): void {
     if (event.button !== 0 || !this.request() || this.skeleton() || this.selectionMode()) return;
     const menuAnchor = event.currentTarget as HTMLElement;

@@ -12,7 +12,25 @@
           <view-item title="Fecha límite" icon="pi pi-calendar" [content]="getMaxRequestDateFormatted()" />
         </div>
         <div class="retreat-detail">
-          <view-item title="Período del retiro" icon="pi pi-calendar" [content]="retreat.displayDateRange" />
+          <view-item title="Período del retiro" icon="pi pi-calendar">
+            <p class="retreat-detail__date-range">
+              @for (date of retreat.displayDateRange.split(' - '); track $index) {
+                <span>{{ date }}</span>
+              }
+            </p>
+          </view-item>
+        </div>
+        <div class="retreat-detail">
+          <view-item title="Monto por persona" icon="pi pi-wallet">
+            @if (retreat.amount_per_person !== null && retreat.amount_per_person > 0) {
+              <p class="retreat-detail__amount">
+                <strong>{{ formatRetreatAmount(retreat.amount_per_person) }} P/P</strong>
+                <small>{{ formatRetreatAmount(retreat.amount_per_person * 2) }} pareja</small>
+              </p>
+            } @else {
+              <p>No definido</p>
+            }
+          </view-item>
         </div>
       </div>
     </section>
@@ -31,7 +49,7 @@
             </div>
           </div>
           <div class="retreat-request-actions">
-            <p-button [icon]="selectionMode() ? 'pi pi-times' : 'pi pi-check-square'" severity="secondary" [text]="true" [pTooltip]="selectionMode() ? 'Cancelar selección múltiple' : 'Seleccionar solicitudes'" [attr.aria-label]="selectionMode() ? 'Cancelar selección múltiple' : 'Seleccionar solicitudes'" (click)="toggleSelectionMode()" />
+            <p-button [icon]="selectionMode() ? 'pi pi-times' : 'pi pi-check-square'" severity="secondary" [text]="true" [pTooltip]="selectionMode() ? 'Cancelar selección múltiple' : 'Seleccionar solicitudes'" tooltipPosition="left" [attr.aria-label]="selectionMode() ? 'Cancelar selección múltiple' : 'Seleccionar solicitudes'" (click)="toggleSelectionMode()" />
             <p-button icon="pi pi-inbox" severity="secondary" [text]="true" pTooltip="Solicitudes archivadas" (click)="openArchivedRequestsModal()" />
             <p-button icon="pi pi-download" severity="secondary" [text]="true" pTooltip="Exportar contactos de parejas" (click)="menu.toggle($event)" />
             <p-menu #menu [model]="exportActions" [popup]="true" [appendTo]="'body'" [autoZIndex]="true" />
@@ -44,7 +62,26 @@
             <input type="text" pInputText placeholder="Buscar pareja" [ngModel]="filterWord()" (ngModelChange)="filterWord.set($event)" aria-label="Buscar pareja" />
             <p-button icon="pi pi-times" size="small" severity="secondary" [rounded]="true" [text]="true" aria-label="Limpiar búsqueda" (onClick)="filterWord.set('')" />
           </div>
-          <p-select [options]="requestStatusOptions" optionLabel="label" optionValue="value" [ngModel]="selectedRequestStatus()" (onChange)="selectedRequestStatus.set($event.value)" appendTo="body" aria-label="Filtrar solicitudes por estado" />
+          <p-button
+            [label]="activeFilterCount() ? 'Filtros (' + activeFilterCount() + ')' : 'Filtros'"
+            icon="pi pi-filter"
+            severity="secondary"
+            [outlined]="activeFilterCount() === 0"
+            (onClick)="filtersPopover.toggle($event)"
+            aria-label="Abrir filtros de solicitudes" />
+          <p-popover #filtersPopover [appendTo]="'body'">
+            <div class="request-filter-menu">
+              <label for="request-status-filter">Estado</label>
+              <p-select id="request-status-filter" [options]="requestStatusOptions" optionLabel="label" optionValue="value" [ngModel]="selectedRequestStatus()" (onChange)="selectedRequestStatus.set($event.value)" />
+              <label for="request-payment-filter">Pagos</label>
+              <p-select id="request-payment-filter" [options]="paymentFilterOptions" optionLabel="label" optionValue="value" [ngModel]="selectedPaymentFilter()" (onChange)="selectedPaymentFilter.set($event.value)" />
+              <label for="request-informed-filter">Información</label>
+              <p-select id="request-informed-filter" [options]="informedFilterOptions" optionLabel="label" optionValue="value" [ngModel]="selectedInformedFilter()" (onChange)="selectedInformedFilter.set($event.value)" />
+              @if (activeFilterCount()) {
+                <p-button label="Limpiar filtros" icon="pi pi-times" severity="secondary" [text]="true" size="small" (onClick)="clearFilters()" />
+              }
+            </div>
+          </p-popover>
         </div>
       </header>
 
@@ -56,7 +93,7 @@
         } } @else {
           <div class="retreat-empty-state">
             <i class="pi pi-id-card" aria-hidden="true"></i>
-            <p>No hay solicitudes {{ selectedRequestStatus() === RequestStatus.ALL ? '' : (getRequestStatusInfo(selectedRequestStatus()).labelPlural | lowercase) }}</p>
+            <p>No hay solicitudes que coincidan con los filtros</p>
           </div>
         }
       </div>

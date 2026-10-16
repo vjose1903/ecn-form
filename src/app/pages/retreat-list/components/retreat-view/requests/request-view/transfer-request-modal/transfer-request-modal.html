@@ -15,7 +15,11 @@
       />
       <p class="text-sm text-gray-500">
         {{ requests.length === 1 ? 'La solicitud se transferirá' : requests.length + ' solicitudes se transferirán' }} desde
-        <strong>Retiro #{{ currentRetreat.displayNumber }} - {{ currentRetreat.displayCommunityName }}</strong>.
+        @if (sourceRetreatCount > 1) {
+          <strong>{{ sourceRetreatCount }} retiros de origen seleccionados</strong>.
+        } @else {
+          <strong>Retiro #{{ currentRetreat.displayNumber }} - {{ currentRetreat.displayCommunityName }}</strong>.
+        }
       </p>
     </div>
 

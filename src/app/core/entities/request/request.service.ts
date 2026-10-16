@@ -88,7 +88,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
       const next = { ...previous, ...payload, id: request.id! };
       transaction.update(requestRef, payload);
 
-      const record = (message: string, changes: RequestHistoryChangeI[]) => {
+      const record = (message: string, changes: RequestHistoryChangeI[], receipt?: PreRetreatPaymentI) => {
         transaction.set(doc(this.getHistoryCollectionRef(userId)), this.buildHistoryPayload({
           requestId: next.id,
           action: RequestAction.UPDATED,
@@ -96,6 +96,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
           collectionState,
           message,
           changes,
+          ...(receipt ? { receipt_url: receipt.receipt_url, receipt_name: receipt.receipt_name, payment_id: receipt.id } : {}),
         }));
       };
 
@@ -113,7 +114,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
           { label: 'Monto', previous_value: '', next_value: String(payment.amount) },
           { label: 'Fecha del pago', previous_value: '', next_value: this.formatHistoryValue(payment.payment_date) },
           { label: 'Recibo', previous_value: '', next_value: payment.receipt_name },
-        ]);
+        ], payment);
       }
 
       return next;
@@ -170,6 +171,73 @@ export class RequestService extends FirebaseRequest<RequestI> {
       await deleteObject(storageRef).catch(() => undefined);
       throw error;
     }
+  }
+
+  async removeHistoryEvent(args: {
+    request: RequestClass;
+    retreat?: RetreatClass | null;
+    event: RequestHistoryI;
+    isArchived?: boolean;
+  }): Promise<{ request: RequestI; receiptDeleted: boolean }> {
+    const { request, retreat, event, isArchived = false } = args;
+    const userId = this.authService.current_user()?.id;
+    if (!request.id || !userId) throw new Error('Solicitud o usuario no disponible');
+    if (!isArchived && !retreat) throw new Error('No se encontró el retiro de la solicitud');
+
+    const requestRef = isArchived
+      ? doc(this.firestore, `${this.userService.collectionName}/${userId}/${this.archivedCollectionName}/${request.id}`)
+      : doc(this.firestore, `${retreat!.completeRefString()}/request/${request.id}`);
+    const historyRef = doc(this.getHistoryCollectionRef(userId), event.id);
+
+    const result = await runTransaction(this.firestore, async transaction => {
+      const [requestSnapshot, historySnapshot] = await Promise.all([transaction.get(requestRef), transaction.get(historyRef)]);
+      if (!requestSnapshot.exists() || !historySnapshot.exists()) throw new Error('El movimiento ya no está disponible');
+
+      const current = requestSnapshot.data() as RequestI;
+      const history = historySnapshot.data() as RequestHistoryI;
+      if (history.request_id !== request.id) throw new Error('El movimiento no pertenece a esta solicitud');
+      let receiptUrl = '';
+      let next: RequestI;
+
+      if (history.message === 'Pareja marcada como informada') {
+        if (!current.is_informado) throw new Error('La pareja ya no está marcada como informada');
+        next = { ...current, is_informado: false };
+      } else if (history.message === 'Pago de pre retiro registrado') {
+        const changes = (history.changes ?? []).filter((change): change is RequestHistoryChangeI => typeof change !== 'string');
+        const value = (label: string) => changes.find(change => change.label === label)?.next_value ?? '';
+        const payments = current.pre_retreat_payments ?? [];
+        let payment = payments.find(item => item.id === history.payment_id || item.id === event.payment_id)
+          ?? payments.find(item => item.receipt_url === (history.receipt_url || event.receipt_url));
+        if (!payment) {
+          const matches = payments.filter(item => item.receipt_name === value('Recibo') && String(item.amount) === value('Monto') && this.formatHistoryValue(item.payment_date) === value('Fecha del pago'));
+          if (matches.length !== 1) throw new Error('No se pudo identificar de forma única el pago asociado a este movimiento');
+          payment = matches[0];
+        }
+        if (!payment) throw new Error('No se encontró el pago asociado a este movimiento');
+        receiptUrl = payment.receipt_url;
+        next = { ...current, pre_retreat_payments: payments.filter(item => item.id !== payment.id) };
+      } else {
+        throw new Error('Este movimiento no se puede revertir');
+      }
+
+      transaction.update(requestRef, history.message === 'Pareja marcada como informada'
+        ? { is_informado: false }
+        : { pre_retreat_payments: next.pre_retreat_payments ?? [] });
+      transaction.delete(historyRef);
+      return { request: { ...next, id: request.id }, receiptUrl };
+    });
+
+    if (!isArchived) this.updateRequestInCache(result.request, 'update');
+    let receiptDeleted = true;
+    if (result.receiptUrl) {
+      try {
+        await deleteObject(ref(this.storage, result.receiptUrl));
+      } catch (error) {
+        receiptDeleted = false;
+        console.error('No se pudo eliminar el recibo del pago:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
+      }
+    }
+    return { request: result.request, receiptDeleted };
   }
 
   private parseUserIdFromRefString(refString: string): string | null {
@@ -350,6 +418,9 @@ export class RequestService extends FirebaseRequest<RequestI> {
     collectionState: 'request' | 'requests-archived';
     changes?: RequestHistoryChangeI[];
     message?: string;
+    receipt_url?: string;
+    receipt_name?: string;
+    payment_id?: string;
   }) {
     const retreat = args.targetRetreat ?? args.retreat ?? args.sourceRetreat;
 
@@ -363,6 +434,9 @@ export class RequestService extends FirebaseRequest<RequestI> {
       ...(args.targetRetreat?.id ? { target_retreat_id: args.targetRetreat.id } : {}),
       ...(args.changes?.length ? { changes: args.changes } : {}),
       ...(args.message ? { message: args.message } : {}),
+      ...(args.receipt_url ? { receipt_url: args.receipt_url } : {}),
+      ...(args.receipt_name ? { receipt_name: args.receipt_name } : {}),
+      ...(args.payment_id ? { payment_id: args.payment_id } : {}),
       ...(this.getRetreatLabel(retreat) ? { retreat_label: this.getRetreatLabel(retreat) } : {}),
       ...(this.getRetreatLabel(args.sourceRetreat) ? { source_retreat_label: this.getRetreatLabel(args.sourceRetreat) } : {}),
       ...(this.getRetreatLabel(args.targetRetreat) ? { target_retreat_label: this.getRetreatLabel(args.targetRetreat) } : {}),

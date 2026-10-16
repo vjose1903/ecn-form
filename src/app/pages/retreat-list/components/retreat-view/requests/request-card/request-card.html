@@ -21,14 +21,21 @@
         @if (showStatus()) {
         <p-tag [severity]="status()?.severity" [value]="status()?.label" [rounded]="true" />
         }
-        <span
-          class="request-card__informed"
-          [class.request-card__informed--yes]="request()?.is_informado"
-          [class.request-card__informed--no]="!request()?.is_informado"
-          [attr.aria-label]="request()?.is_informado ? 'Pareja informada' : 'Pareja sin informar'">
-          <i [class]="request()?.is_informado ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i>
-          {{ request()?.is_informado ? 'Informada' : 'Sin informar' }}
-        </span>
+        @if (showPreRetreatIndicators()) {
+          @if (request()?.pre_retreat_payments?.length) {
+            <span class="request-card__payment-indicator" title="Pago de pre retiro registrado" aria-label="La pareja ha realizado al menos un pago">
+              <i class="pi pi-wallet" aria-hidden="true"></i>
+            </span>
+          }
+          <span
+            class="request-card__informed"
+            [class.request-card__informed--yes]="request()?.is_informado"
+            [class.request-card__informed--no]="!request()?.is_informado"
+            [attr.aria-label]="request()?.is_informado ? 'Pareja informada' : 'Pareja sin informar'">
+            <i [class]="request()?.is_informado ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i>
+            {{ request()?.is_informado ? 'Informada' : 'Sin informar' }}
+          </span>
+        }
         @if (selectionMode()) {
           <span class="request-card__selection" [attr.aria-label]="selected() ? 'Solicitud seleccionada' : 'Solicitud no seleccionada'">
             <i [class]="selected() ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i>

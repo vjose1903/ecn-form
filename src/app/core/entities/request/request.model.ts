@@ -121,6 +121,9 @@ export interface RequestHistoryI {
   collection_state: 'request' | 'requests-archived';
   changes?: Array<string | RequestHistoryChangeI>;
   message?: string;
+  receipt_url?: string;
+  receipt_name?: string;
+  payment_id?: string;
   retreat_label?: string;
   source_retreat_label?: string;
   target_retreat_label?: string;

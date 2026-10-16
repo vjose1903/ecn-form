@@ -26,6 +26,7 @@ export class RetreatClass {
   mixedModalityData: { [date: string]: RetreatModalityType } = {};
   accept_requests: boolean = true;
   request_count: number = 0;
+  amount_per_person: number | null = null;
 
   // Propiedades computadas para optimizar el rendimiento
   private _displayNumber: string | null = null;
@@ -56,6 +57,7 @@ export class RetreatClass {
     this.is_active = retreat.is_active ?? true;
     this.accept_requests = retreat.accept_requests ?? true;
     this.request_count = retreat.request_count || 0;
+    this.amount_per_person = retreat.amount_per_person ?? null;
 
     this.initializeRetreatHome(retreat.retreat_home);
   }
@@ -310,6 +312,7 @@ export class RetreatClass {
       mixedModalityData: this.mixedModalityData,
       is_active: this.is_active,
       accept_requests: this.accept_requests,
+      amount_per_person: this.amount_per_person,
     };
   }
 
@@ -468,6 +471,7 @@ export class RetreatClass {
     this.mixedModalityData = other.mixedModalityData;
     this.is_active = other.is_active;
     this.accept_requests = other.accept_requests;
+    this.amount_per_person = other.amount_per_person;
 
     // Limpiar caché de propiedades computadas
     this._displayNumber = null;

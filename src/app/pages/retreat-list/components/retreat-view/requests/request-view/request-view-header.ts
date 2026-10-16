@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { RequestClass } from '@core/entities/request/request.class';
+import { RetreatClass } from '@core/entities/retreat/retreat.class';
 import { DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
@@ -35,7 +36,7 @@ import { RequestHistoryModal } from './request-history-modal/request-history-mod
   `,
 })
 export class RequestViewHeader {
-  protected config = inject(DynamicDialogConfig<{ request: RequestClass }>);
+  protected config = inject(DynamicDialogConfig<{ request: RequestClass; retreat?: RetreatClass | null; isArchivedView?: boolean }>);
 
   openHistoryModal(): void {
     const dialogService = Ss.dialogService;
@@ -56,6 +57,8 @@ export class RequestViewHeader {
       focusOnShow: false,
       data: {
         request,
+        retreat: this.config.data.retreat,
+        isArchivedView: this.config.data.isArchivedView,
       },
       breakpoints: { '960px': '80vw', '640px': '95vw' },
     });

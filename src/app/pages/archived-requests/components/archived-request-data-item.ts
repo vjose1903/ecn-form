@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Directive, Input } from '@angular/core';
+import { Component, Directive, Input, OnDestroy } from '@angular/core';
 import { RequestClass } from '@core/entities/request/request.class';
 import { RetreatClass } from '@core/entities/retreat/retreat.class';
 
@@ -24,13 +24,73 @@ const archivedRequestSharedStyles = `
   .archived-request-name { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .archived-request-retreat { margin: 0; color: #26354c; font-size: .85rem; line-height: 1.4; overflow-wrap: anywhere; }
   .archived-request-date { display: flex; align-items: center; gap: .7rem; color: #bc1020; font-size: .8rem; font-weight: 700; }
+  .archived-request-selection { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; flex: 0 0 1.8rem; border-radius: 50%; background: #fff; color: #64748b; }
+  .archived-request-selection--selected { color: #168044; }
+  .archived-request--selected { outline: 2px solid #35c875; outline-offset: -2px; }
 `;
 
 @Directive()
-class ArchivedRequestItemBase {
+class ArchivedRequestItemBase implements OnDestroy {
   @Input() item!: ArchivedRequestItemData;
   @Input() showRetreatMeta = false;
   @Input() afterClose?: () => void | Promise<void>;
+  @Input() selectionMode: () => boolean = () => false;
+  @Input() isSelected: (requestId: string) => boolean = () => false;
+  @Input() toggleSelection: (request: RequestClass) => void = () => {};
+  private holdTimer?: ReturnType<typeof setTimeout>;
+  private holdTriggered = false;
+  private suppressClick = false;
+
+  onPointerDown(event: PointerEvent): void {
+    if (event.button !== 0 || !this.item?.request || this.selectionMode()) return;
+    const menuAnchor = event.currentTarget as HTMLElement;
+    this.holdTriggered = false;
+    this.holdTimer = setTimeout(() => {
+      this.holdTriggered = true;
+      this.suppressClick = true;
+      void this.item.request.openView({ retreat: this.item.retreat, isArchived: true, actionsOnly: true, menuAnchor }).then(() => this.afterClose?.());
+    }, 250);
+  }
+
+  onPointerUp(): void {
+    this.clearHoldTimer();
+    if (this.holdTriggered) setTimeout(() => (this.suppressClick = false));
+  }
+
+  onPointerCancel(): void {
+    this.clearHoldTimer();
+    this.holdTriggered = false;
+  }
+
+  onCardKeydown(event: KeyboardEvent): void {
+    if (!this.selectionMode() || !['Enter', ' '].includes(event.key)) return;
+    event.preventDefault();
+    this.toggleSelection(this.item.request);
+  }
+
+  async onCardClick(event: MouseEvent): Promise<void> {
+    if (this.selectionMode()) {
+      event.preventDefault();
+      this.toggleSelection(this.item.request);
+      return;
+    }
+    if (this.suppressClick) {
+      this.suppressClick = false;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    await this.openRequest();
+  }
+
+  ngOnDestroy(): void {
+    this.clearHoldTimer();
+  }
+
+  private clearHoldTimer(): void {
+    if (this.holdTimer) clearTimeout(this.holdTimer);
+    this.holdTimer = undefined;
+  }
 
   async openRequest(): Promise<void> {
     if (!this.item?.request) {
@@ -51,8 +111,8 @@ class ArchivedRequestItemBase {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <button type="button" class="archived-request-button" (click)="openRequest()">
-      <article class="archived-request-list">
+    <button type="button" class="archived-request-button" (pointerdown)="onPointerDown($event)" (pointerup)="onPointerUp()" (pointercancel)="onPointerCancel()" (pointerleave)="onPointerCancel()" (click)="onCardClick($event)" (keydown)="onCardKeydown($event)" [attr.role]="selectionMode() ? 'checkbox' : null" [attr.aria-checked]="selectionMode() ? isSelected(item.request.id) : null" [attr.tabindex]="selectionMode() ? 0 : null">
+      <article class="archived-request-list" [class.archived-request--selected]="selectionMode() && isSelected(item.request.id)">
         <div class="archived-request-list__rail"></div>
         <div class="archived-request-list__body">
           <div class="archived-request-list__header">
@@ -60,6 +120,9 @@ class ArchivedRequestItemBase {
               <i class="pi pi-calendar" aria-hidden="true"></i>
               {{ item.request.displayArchivedAt }}
             </span>
+            @if (selectionMode()) {
+              <span class="archived-request-selection" [class.archived-request-selection--selected]="isSelected(item.request.id)"><i [class]="isSelected(item.request.id) ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i></span>
+            }
           </div>
 
           <div class="archived-request-list__content">
@@ -92,7 +155,7 @@ class ArchivedRequestItemBase {
       .archived-request-button:hover .archived-request-list { box-shadow: 0 18px 38px rgb(15 23 42 / 10%); }
       .archived-request-list__rail { background: linear-gradient(180deg, #ed0025, #fb7185); }
       .archived-request-list__body { min-width: 0; padding: 1.25rem 1.75rem; }
-      .archived-request-list__header { margin-bottom: .85rem; }
+      .archived-request-list__header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .85rem; }
       .archived-request-list__content { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1.75rem; align-items: center; }
       .archived-request-list__section { min-width: 0; }
       .archived-request-list__title { font-size: 1.25rem; line-height: 1.45; }
@@ -113,8 +176,8 @@ export class ArchivedRequestListItem extends ArchivedRequestItemBase {}
   standalone: true,
   imports: [CommonModule],
   template: `
-    <button type="button" class="archived-request-button" (click)="openRequest()">
-      <article class="archived-request-grid">
+    <button type="button" class="archived-request-button" (pointerdown)="onPointerDown($event)" (pointerup)="onPointerUp()" (pointercancel)="onPointerCancel()" (pointerleave)="onPointerCancel()" (click)="onCardClick($event)" (keydown)="onCardKeydown($event)" [attr.role]="selectionMode() ? 'checkbox' : null" [attr.aria-checked]="selectionMode() ? isSelected(item.request.id) : null" [attr.tabindex]="selectionMode() ? 0 : null">
+      <article class="archived-request-grid" [class.archived-request--selected]="selectionMode() && isSelected(item.request.id)">
         <div class="archived-request-grid__hero">
           <div class="archived-request-grid__glow"></div>
           <div class="archived-request-grid__top">
@@ -122,6 +185,9 @@ export class ArchivedRequestListItem extends ArchivedRequestItemBase {}
               <i class="pi pi-calendar" aria-hidden="true"></i>
               {{ item.request.displayArchivedAt }}
             </span>
+            @if (selectionMode()) {
+              <span class="archived-request-selection" [class.archived-request-selection--selected]="isSelected(item.request.id)"><i [class]="isSelected(item.request.id) ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i></span>
+            }
           </div>
 
           <div class="archived-request-grid__content">
@@ -167,6 +233,7 @@ export class ArchivedRequestListItem extends ArchivedRequestItemBase {}
         background: radial-gradient(circle at 95% 88%, rgb(255 255 255 / 22%) 0 27%, transparent 28%),
           linear-gradient(125deg, #fcd5d9, #fce7e9 52%, #fbd0d5);
       }
+      .archived-request-grid__top { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
       .archived-request-grid__glow { display: none; }
       .archived-request-grid__headline { min-width: 0; }
       .archived-request-grid__title { font-size: 1.1rem; line-height: 1.5; }
