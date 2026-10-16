@@ -23,7 +23,12 @@
         }
         @if (showPreRetreatIndicators()) {
           @if (request()?.pre_retreat_payments?.length) {
-            <span class="request-card__payment-indicator" title="Pago de pre retiro registrado" aria-label="La pareja ha realizado al menos un pago">
+            @let paymentStatus = getPaymentStatus();
+            <span
+              class="request-card__payment-indicator"
+              [class.request-card__payment-indicator--partial]="paymentStatus === 'partial' || paymentStatus === 'paid'"
+              title="{{ paymentStatus === 'partial' ? 'Pago parcial' : paymentStatus === 'complete' ? 'Pago completo' : 'Pago de pre retiro registrado' }}"
+              [attr.aria-label]="paymentStatus === 'partial' ? 'La pareja tiene un pago parcial' : paymentStatus === 'complete' ? 'La pareja completó el pago' : 'La pareja ha realizado al menos un pago'">
               <i class="pi pi-wallet" aria-hidden="true"></i>
             </span>
           }
