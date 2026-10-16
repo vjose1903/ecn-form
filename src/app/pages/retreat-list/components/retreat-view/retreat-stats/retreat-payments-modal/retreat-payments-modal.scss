@@ -1,0 +1,156 @@
+.retreat-payment-report {
+  display: grid;
+  gap: 1rem;
+  color: #172033;
+}
+
+.retreat-payment-report__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .85rem 1rem;
+  border: 1px solid #f2e8e4;
+  border-radius: 1rem;
+  background: linear-gradient(110deg, #fff8f4, #fff 72%);
+}
+
+.retreat-payment-report__summary-total {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+
+.retreat-payment-report__summary-icon {
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  flex: 0 0 2.6rem;
+  border: 1px solid #fee2d5;
+  border-radius: .85rem;
+  background: #fff;
+  color: #c2410c;
+  font-size: 1rem;
+}
+
+.retreat-payment-report__summary-total div {
+  display: grid;
+  gap: .15rem;
+}
+
+.retreat-payment-report__summary-total small {
+  color: #64748b;
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.retreat-payment-report__summary-total strong {
+  color: #172033;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+
+.retreat-payment-report__count {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .45rem .7rem;
+  border: 1px solid #e8edf4;
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  font-size: .75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.retreat-payment-report__table {
+  font-size: .85rem;
+}
+
+:host ::ng-deep .retreat-payment-report__table .p-datatable-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+:host ::ng-deep .retreat-payment-report__table .p-datatable-thead > tr > th {
+  padding: .8rem .9rem;
+  border-color: #e8edf4;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: .67rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+:host ::ng-deep .retreat-payment-report__table .p-datatable-tbody > tr > td,
+:host ::ng-deep .retreat-payment-report__table .p-datatable-tfoot > tr > td {
+  padding: .8rem .9rem;
+  border-color: #edf1f5;
+}
+
+:host ::ng-deep .retreat-payment-report__table .p-datatable-tbody > tr {
+  transition: background-color .15s ease;
+}
+
+:host ::ng-deep .retreat-payment-report__table .p-datatable-tbody > tr:hover {
+  background: #f8fafc;
+}
+
+:host ::ng-deep .retreat-payment-report__table .p-datatable-tfoot > tr > td {
+  border-top: 1px solid #dbe3ed;
+  background: #f8fafc;
+  color: #172033;
+}
+
+.retreat-payment-report__description {
+  display: block;
+  min-width: 11rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.retreat-payment-report__table td {
+  white-space: nowrap;
+}
+
+.retreat-payment-report__table td:first-child {
+  white-space: normal;
+}
+
+.retreat-payment-report__amount {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.retreat-payment-report__empty {
+  padding: 2rem 1rem;
+  color: #64748b;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .retreat-payment-report__summary {
+    padding: .7rem;
+  }
+
+  .retreat-payment-report__summary-total strong {
+    font-size: 1.05rem;
+  }
+
+  .retreat-payment-report__count {
+    padding: .4rem .55rem;
+    font-size: .68rem;
+  }
+
+  :host ::ng-deep .retreat-payment-report__table .p-datatable-thead > tr > th,
+  :host ::ng-deep .retreat-payment-report__table .p-datatable-tbody > tr > td,
+  :host ::ng-deep .retreat-payment-report__table .p-datatable-tfoot > tr > td {
+    padding: .65rem .6rem;
+  }
+}

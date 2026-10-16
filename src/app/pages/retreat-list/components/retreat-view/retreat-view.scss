@@ -173,6 +173,16 @@
   flex-wrap: wrap;
 }
 
+:host ::ng-deep .request-stat-badge--informed {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+:host ::ng-deep .request-stat-badge--uninformed {
+  background: #fff4cc;
+  color: #9a6b00;
+}
+
 .retreat-request-actions {
   flex: 0 0 auto;
   gap: .15rem;

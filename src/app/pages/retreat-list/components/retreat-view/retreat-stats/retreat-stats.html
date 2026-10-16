@@ -1,0 +1,58 @@
+<section class="retreat-stats" aria-label="Estadísticas del retiro">
+  <h3><i class="pi pi-chart-pie" aria-hidden="true"></i> Estadísticas del retiro</h3>
+
+  <section class="retreat-stats__section" aria-label="Registro">
+    <h4>Registro</h4>
+    <article class="retreat-stats__item retreat-stats__item--total">
+      <i class="pi pi-users" aria-hidden="true"></i>
+      <div><span>Parejas registradas</span><strong>{{ requests().length }}</strong></div>
+    </article>
+  </section>
+
+  <section class="retreat-stats__section" aria-label="Información">
+    <h4>Información</h4>
+    <div class="retreat-stats__grid">
+      <article class="retreat-stats__item retreat-stats__item--informed">
+        <i class="pi pi-check-circle" aria-hidden="true"></i>
+        <div><span>Informadas</span><strong>{{ stats().informed }}</strong></div>
+      </article>
+      <article class="retreat-stats__item retreat-stats__item--uninformed">
+        <i class="pi pi-bell-slash" aria-hidden="true"></i>
+        <div><span>Sin informar</span><strong>{{ requests().length - stats().informed }}</strong></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="retreat-stats__section" aria-label="Pagos">
+    <h4>Pagos</h4>
+    <article class="retreat-stats__item retreat-stats__item--paid retreat-stats__item--featured">
+      <i class="pi pi-wallet" aria-hidden="true"></i>
+      <div><span>Total recibido</span><strong>{{ formatAmount(stats().amountPaid) }}</strong>
+        <small>{{ stats().paid }} pareja{{ stats().paid === 1 ? '' : 's' }} con pagos</small>
+      </div>
+      <button class="retreat-stats__details" type="button" aria-label="Ver detalle de pagos recibidos" (click)="openPayments()">
+        <i class="pi pi-arrow-up-right" aria-hidden="true"></i>
+      </button>
+    </article>
+    <div class="retreat-stats__grid retreat-stats__grid--payments">
+    @if (amountPerPerson() != null && amountPerPerson()! > 0) {
+      <article class="retreat-stats__item retreat-stats__item--complete">
+        <i class="pi pi-check-circle" aria-hidden="true"></i>
+        <div><span>Pagos completos</span><strong>{{ stats().complete }}</strong></div>
+      </article>
+      <article class="retreat-stats__item retreat-stats__item--partial">
+        <i class="pi pi-clock" aria-hidden="true"></i>
+        <div><span>Pagos parciales</span><strong>{{ stats().partial }}</strong></div>
+      </article>
+    }
+    <article class="retreat-stats__item retreat-stats__item--unpaid">
+      <i class="pi pi-credit-card" aria-hidden="true"></i>
+      <div><span>Sin pagos</span><strong>{{ stats().unpaid }}</strong></div>
+    </article>
+    </div>
+  </section>
+
+  @if (amountPerPerson() == null || amountPerPerson()! <= 0) {
+    <p class="retreat-stats__hint">Define el monto por persona para clasificar pagos completos y parciales.</p>
+  }
+</section>

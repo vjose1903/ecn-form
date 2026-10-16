@@ -678,6 +678,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
     try {
       const requestPayload = {
         ...payload,
+        created_at: serverTimestamp(),
         is_informado: payload.is_informado ?? false,
         pre_retreat_payments: payload.pre_retreat_payments ?? [],
         action: RequestAction.NEW,
@@ -1018,6 +1019,36 @@ export class RequestService extends FirebaseRequest<RequestI> {
       });
       throw error;
     }
+  }
+
+  async getRequestCreationDates(requestIds: string[]): Promise<Map<string, number>> {
+    const userId = this.authService.current_user()?.id;
+    if (!userId || requestIds.length === 0) return new Map();
+
+    const batches: string[][] = [];
+    for (let index = 0; index < requestIds.length; index += 30) {
+      batches.push(requestIds.slice(index, index + 30));
+    }
+
+    const snapshots = await Promise.all(batches.map(ids =>
+      getDocs(query(this.getHistoryCollectionRef(userId), where('request_id', 'in', ids)))
+    ));
+    const creationDates = new Map<string, number>();
+
+    for (const snapshot of snapshots) {
+      for (const history of snapshot.docs) {
+        const data = history.data();
+        if (data['message'] !== 'Solicitud creada' || data['collection_state'] !== 'request') continue;
+
+        const requestId = data['request_id'] as string;
+        const happenedAt = this.historyTime(data['happened_at'] as Timestamp | Date | string | null);
+        if (happenedAt && (!creationDates.has(requestId) || happenedAt < creationDates.get(requestId)!)) {
+          creationDates.set(requestId, happenedAt);
+        }
+      }
+    }
+
+    return creationDates;
   }
 
   /**

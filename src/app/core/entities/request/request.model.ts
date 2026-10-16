@@ -13,6 +13,7 @@ export interface RequestI {
   she: CoupleI;
   he: CoupleI;
   is_active?: boolean;
+  created_at?: Date | string | null;
   is_informado?: boolean;
   pre_retreat_payments?: PreRetreatPaymentI[];
   status: RequestStatus;
@@ -96,7 +97,7 @@ export enum RequestStatus {
 export interface RequestStatusInfo {
   amount: number;
   tooltip: string;
-  severity: 'secondary' | 'success' | 'danger' | 'warn';
+  severity: 'secondary' | 'success' | 'danger' | 'warn' | 'info';
   label: string;
   labelPlural: string;
 }

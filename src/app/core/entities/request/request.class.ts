@@ -26,6 +26,7 @@ export class RequestClass {
   he: CoupleI = this.getDefaultCouple();
   status: RequestStatus = RequestStatus.PENDING;
   action: RequestAction = RequestAction.NEW;
+  created_at: Date | string | null = null;
   is_informado = false;
   pre_retreat_payments: PreRetreatPaymentI[] = [];
 
@@ -197,6 +198,7 @@ export class RequestClass {
     this.he = this.initializeCouple(request.he);
     this.status = request.status || RequestStatus.PENDING;
     this.action = request.action || RequestAction.NEW;
+    this.created_at = request.created_at ? fun.convertFirebaseTimestamp(request.created_at) : null;
     this.is_informado = request.is_informado ?? false;
     this.pre_retreat_payments = (request.pre_retreat_payments ?? []).map(payment => ({
       ...payment,
@@ -260,6 +262,7 @@ export class RequestClass {
       is_active: this.is_active,
       status: this.status,
       action: this.action,
+      ...(this.created_at ? { created_at: new Date(this.created_at) } : {}),
       is_informado: this.is_informado,
       pre_retreat_payments: this.pre_retreat_payments.map(payment => ({
         ...payment,
