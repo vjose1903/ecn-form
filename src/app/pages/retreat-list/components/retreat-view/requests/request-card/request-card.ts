@@ -29,6 +29,16 @@ export class RequestCard implements OnDestroy {
   private holdTriggered = false;
   private suppressClick = false;
 
+  getPaymentStatus(): 'none' | 'paid' | 'partial' | 'complete' {
+    const payments = this.request()?.pre_retreat_payments ?? [];
+    const paid = payments.reduce((total, payment) => total + payment.amount, 0);
+    if (paid <= 0) return 'none';
+
+    const amountPerPerson = this.retreat()?.amount_per_person ?? 0;
+    if (amountPerPerson <= 0) return 'paid';
+    return paid >= amountPerPerson * 2 ? 'complete' : 'partial';
+  }
+
   showPreRetreatIndicators(): boolean {
     const startDate = this.retreat()?.start_date?.slice(0, 10);
     if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return false;
