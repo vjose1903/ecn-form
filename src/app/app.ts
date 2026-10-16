@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, inject, Injector, NgZone, OnDestroy, OnInit, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, Injector, isDevMode, NgZone, OnDestroy, OnInit, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { SwUpdate } from '@angular/service-worker';
 import { Ss } from '@core/services/singleton.service';
@@ -14,7 +14,8 @@ import { ConfirmationService } from 'primeng/api';
 import { DialogService } from 'primeng/dynamicdialog';
 import { FileService } from '@core/entities/file/file.service';
 import { CommonModule } from '@angular/common';
-import { filter, firstValueFrom, from, timeout } from 'rxjs';
+import { filter, Subscription } from 'rxjs';
+import { buildVersion } from '../environments/build-version';
 
 @Component({
   selector: 'app-root',
@@ -26,6 +27,8 @@ export class App implements OnInit, OnDestroy {
   protected readonly title = 'ECN Platform';
   protected readonly isReady = signal(false);
   protected readonly updateDialogVisible = signal(false);
+  protected readonly updateInProgress = signal(false);
+  protected readonly updateError = signal('');
   protected readonly toastBreakpoints = {
     '768px': {
       width: 'calc(100vw - 1rem)',
@@ -53,16 +56,25 @@ export class App implements OnInit, OnDestroy {
   private readonly fileService = inject(FileService);
   private readonly swUpdate = inject(SwUpdate);
   private readonly router = inject(Router);
-  private readonly updateCheckIntervalMs = 30 * 60 * 1000;
-  private pendingUpdate = false;
+  private updateReady = false;
   private updatePromptDismissed = false;
-  private updateCheckInProgress = false;
   private pendingDeployment: string | null = null;
-  private deploymentCheck: Promise<void> | null = null;
-  private updateCheckInterval: ReturnType<typeof setInterval> | null = null;
-  private visibilityHandler: (() => void) | null = null;
-  private readonly resumeHandler = (): void => {
-    void this.checkForAppUpdate();
+  private updateCheckTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly updateSubscriptions = new Subscription();
+  private readonly checkOnReturn = (): void => {
+    if (document.visibilityState === 'hidden') return;
+    this.startUpdateTimer();
+    void this.checkForUpdate();
+    this.handleReadyUpdate();
+  };
+  private startUpdateTimer(): void {
+    this.updateCheckTimer ??= setInterval(() => { void this.checkForUpdate(); }, 5 * 60 * 1000);
+  }
+  private readonly stopUpdateTimer = (): void => {
+    if (this.updateCheckTimer !== null) {
+      clearInterval(this.updateCheckTimer);
+      this.updateCheckTimer = null;
+    }
   };
 
   ngOnInit(): void {
@@ -71,41 +83,30 @@ export class App implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.updateCheckInterval) {
-      clearInterval(this.updateCheckInterval);
-    }
-    if (this.visibilityHandler) {
-      document.removeEventListener('visibilitychange', this.visibilityHandler);
-      this.visibilityHandler = null;
-    }
-    window.removeEventListener('pageshow', this.resumeHandler);
-    window.removeEventListener('focus', this.resumeHandler);
-    window.removeEventListener('online', this.resumeHandler);
+    this.stopUpdateTimer();
+    this.updateSubscriptions.unsubscribe();
+    window.removeEventListener('pageshow', this.checkOnReturn);
+    window.removeEventListener('focus', this.checkOnReturn);
+    window.removeEventListener('online', this.checkOnReturn);
+    document.removeEventListener('visibilitychange', this.checkOnReturn);
+    window.removeEventListener('pagehide', this.stopUpdateTimer);
   }
 
-  protected async reloadForUpdate(): Promise<void> {
-    if (this.isFormRoute()) {
+  protected reloadForUpdate(): void {
+    if (this.updateInProgress()) {
       return;
     }
 
-    let activated = false;
-    try {
-      activated = await firstValueFrom(from(this.swUpdate.activateUpdate()).pipe(timeout(10000)));
-    } catch (error) {
-      console.warn('No se pudo activar la nueva versión antes de refrescar', error);
-    } finally {
-      if (activated) {
-        window.location.reload();
-      } else {
-        // Un worker desactualizado o degradado no debe volver a entregar el HTML anterior.
-        const url = new URL(window.location.href);
-        url.searchParams.set('ngsw-bypass', 'true');
-        window.location.replace(url.href);
-      }
-    }
+    this.updateInProgress.set(true);
+    this.updateError.set('');
+    this.updateDialogVisible.set(false);
+    // VERSION_READY significa que Angular ya descargó y validó el deploy.
+    // Recargar el documento permite que shell y chunks se resuelvan juntos.
+    window.location.reload();
   }
 
   protected dismissUpdateDialog(): void {
+    if (this.updateInProgress()) return;
     this.updatePromptDismissed = true;
     this.updateDialogVisible.set(false);
   }
@@ -122,7 +123,7 @@ export class App implements OnInit, OnDestroy {
 
       this.isReady.set(true);
       this.cdRef.detectChanges();
-      void this.checkForAppUpdate();
+      this.handleReadyUpdate();
     } catch (error) {
       console.error('❌ [App] Error durante la inicialización:', error);
       // Aún marcar como lista para que la app funcione
@@ -149,135 +150,93 @@ export class App implements OnInit, OnDestroy {
   }
 
   private watchAppUpdates(): void {
-    if (!this.swUpdate.isEnabled) {
+    if (isDevMode()) {
       return;
     }
 
-    this.swUpdate.versionUpdates.subscribe(event => {
-      if (event.type === 'VERSION_READY' || event.type === 'NO_NEW_VERSION_DETECTED') {
-        // Con freshness, el documento puede ser más reciente que la versión asignada por el worker.
-        void this.checkDeployedVersion();
-      } else if (event.type === 'VERSION_INSTALLATION_FAILED') {
-        console.warn('No se pudo descargar la nueva versión para uso sin conexión', event.error);
-        void this.checkDeployedVersion();
-      }
-    });
-
-    this.swUpdate.unrecoverable.subscribe(() => {
-      if (this.isFormRoute()) {
-        return;
-      }
-
-      this.updateDialogVisible.set(true);
-    });
-
-    this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
-      this.showUpdateDialogIfAllowed();
-    });
-
-    this.updateCheckInterval = setInterval(() => {
-      void this.checkForAppUpdate();
-    }, this.updateCheckIntervalMs);
-
-    this.visibilityHandler = () => {
-      if (document.visibilityState === 'visible') {
-        this.resumeHandler();
-      }
-    };
-    document.addEventListener('visibilitychange', this.visibilityHandler);
-    window.addEventListener('pageshow', this.resumeHandler);
-    window.addEventListener('focus', this.resumeHandler);
-    window.addEventListener('online', this.resumeHandler);
-    this.resumeHandler();
-  }
-
-  private async checkForAppUpdate(): Promise<void> {
-    if (!this.swUpdate.isEnabled || this.updateCheckInProgress) {
-      return;
-    }
-
-    this.updateCheckInProgress = true;
-    try {
-      // La comprobación directa funciona aunque VERSION_READY ya se haya emitido o el worker falle.
-      await Promise.all([
-        this.checkDeployedVersion(),
-        firstValueFrom(from(this.swUpdate.checkForUpdate()).pipe(timeout(15000))).catch(error => {
-          console.warn('No se pudo verificar la actualización del service worker', error);
-        }),
-      ]);
-    } finally {
-      this.updateCheckInProgress = false;
-    }
-  }
-
-  private checkDeployedVersion(): Promise<void> {
-    if (!this.deploymentCheck) {
-      this.deploymentCheck = this.fetchDeployedVersion().finally(() => {
-        this.deploymentCheck = null;
-      });
-    }
-    return this.deploymentCheck;
-  }
-
-  private async fetchDeployedVersion(): Promise<void> {
-    const controller = new AbortController();
-    const requestTimeout = setTimeout(() => controller.abort(), 15000);
-    try {
-      const response = await fetch(new URL('ngsw.json', document.baseURI), {
-        cache: 'no-store',
-        headers: { 'ngsw-bypass': 'true' },
-        signal: controller.signal,
-      });
-      if (!response.ok) {
-        throw new Error(`No se pudo consultar el despliegue: HTTP ${response.status}`);
-      }
-
-      const manifest = await response.json() as { hashTable?: Record<string, string> };
-      if (!manifest.hashTable || typeof manifest.hashTable !== 'object') {
-        throw new Error('El servidor no devolvió un manifiesto de Angular válido');
-      }
-
-      // outputHashing: all identifica el código y los estilos realmente cargados en esta ventana.
-      const isAppFile = (path: string): boolean => /\/(main|runtime|styles)\.[a-f0-9]+\.(js|css)$/.test(path);
-      const deployedFiles = Object.keys(manifest.hashTable).filter(isAppFile).sort();
-      const loadedFiles = Array.from(document.querySelectorAll('script[src], link[rel="stylesheet"][href]'))
-        .map(element => new URL(element.getAttribute('src') ?? element.getAttribute('href')!, document.baseURI))
-        .filter(url => url.origin === window.location.origin && isAppFile(url.pathname))
-        .map(url => url.pathname);
-
-      if (!deployedFiles.length || !loadedFiles.length) {
-        return;
-      }
-
-      if (loadedFiles.some(path => !deployedFiles.includes(path))) {
-        const deployment = deployedFiles.join('|');
-        if (deployment !== this.pendingDeployment) {
-          this.pendingDeployment = deployment;
+    this.updateSubscriptions.add(this.swUpdate.versionUpdates.subscribe(event => this.ngZone.run(() => {
+      if (event.type === 'VERSION_READY') {
+        if (!this.updateReady) {
+          this.pendingDeployment = event.latestVersion.hash;
           this.updatePromptDismissed = false;
+          this.updateError.set('');
         }
-        this.pendingUpdate = true;
-      } else {
-        this.pendingUpdate = false;
-        this.pendingDeployment = null;
+        this.updateReady = true;
+        this.handleReadyUpdate();
+      } else if (event.type === 'VERSION_INSTALLATION_FAILED') {
+        console.warn('No se pudo preparar la nueva versión', event);
       }
-      this.showUpdateDialogIfAllowed();
+    })));
+
+    this.updateSubscriptions.add(this.swUpdate.unrecoverable.subscribe(() => {
+      console.warn('La versión activa no se puede recuperar; se recargará la aplicación.');
+      window.location.reload();
+    }));
+
+    this.updateSubscriptions.add(this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
+      this.handleReadyUpdate();
+      void this.checkForUpdate();
+    }));
+
+    window.addEventListener('pageshow', this.checkOnReturn);
+    window.addEventListener('focus', this.checkOnReturn);
+    window.addEventListener('online', this.checkOnReturn);
+    document.addEventListener('visibilitychange', this.checkOnReturn);
+    window.addEventListener('pagehide', this.stopUpdateTimer);
+    this.startUpdateTimer();
+    void this.checkForUpdate();
+  }
+
+  private async checkForUpdate(): Promise<void> {
+    if (!this.swUpdate.isEnabled) return;
+    try {
+      try {
+        const publishedLabel = await this.checkPublishedVersion();
+        if (publishedLabel !== null && publishedLabel !== buildVersion.label) {
+          this.markPublishedUpdateReady(publishedLabel);
+        }
+      } catch (error) {
+        console.warn('No se pudo consultar el número de versión publicado', error);
+      }
+      await this.swUpdate.checkForUpdate();
     } catch (error) {
-      console.warn('No se pudo consultar la versión publicada de la app', error);
-    } finally {
-      clearTimeout(requestTimeout);
+      console.warn('No se pudo comprobar la actualización', error);
     }
   }
 
-  private showUpdateDialogIfAllowed(): void {
-    if (!this.pendingUpdate || this.updatePromptDismissed || this.isFormRoute()) {
-      this.updateDialogVisible.set(false);
+  private async checkPublishedVersion(): Promise<string | null> {
+    const url = new URL('version.json', document.baseURI);
+    url.searchParams.set('t', String(Date.now()));
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const published = await response.json() as { label?: unknown };
+    return typeof published.label === 'string' ? published.label : null;
+  }
+
+  private markPublishedUpdateReady(publishedLabel: string): void {
+    if (this.pendingDeployment !== publishedLabel) {
+      this.pendingDeployment = publishedLabel;
+      this.updatePromptDismissed = false;
+      this.updateError.set('');
+    }
+    this.updateReady = true;
+    this.ngZone.run(() => this.handleReadyUpdate());
+  }
+
+  private handleReadyUpdate(): void {
+    if (!this.updateReady) return;
+    if (this.authService.isLoading()) return;
+    if (this.isFormRoute() || this.authService.isAuthenticated() !== true) {
+      this.reloadForUpdate();
       return;
     }
-
+    if (this.updatePromptDismissed) return;
     this.updateDialogVisible.set(true);
+    this.cdRef.markForCheck();
   }
 
   private isFormRoute(): boolean {
-    return this.router.url.startsWith('/formulario');
+    const path = this.router.url === '/' ? window.location.pathname : this.router.url;
+    return path.startsWith('/formulario');
   }
 }

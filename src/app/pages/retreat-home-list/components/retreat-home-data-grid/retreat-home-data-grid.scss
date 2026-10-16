@@ -6,9 +6,9 @@
   position: relative;
   display: grid;
   overflow: hidden;
-  border-radius: 1.48rem;
+  border-radius: 1.25rem;
   border: 1px solid rgba(226, 232, 240, 0.95);
-  background: linear-gradient(180deg, #ffffff 0%, #fff8f8 62%, #f8fafc 100%);
+  background: #fff;
   box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
   transition:
     transform 180ms ease,
@@ -82,11 +82,18 @@
 .retreat-home-grid-card__actions {
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
-  padding: 0.26rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(10px);
+  flex-shrink: 0;
+  gap: .35rem;
+  --p-button-text-secondary-color: #64748b;
+  --p-button-text-danger-color: #ed001b;
+
+  ::ng-deep .p-button {
+    width: 2.4rem;
+    height: 2.4rem;
+    border: 1px solid #e5eaf3;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 90%);
+  }
 }
 
 .retreat-home-grid-card__body {
@@ -124,21 +131,28 @@
 
 .retreat-home-grid-card__detail {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.62rem;
-  align-items: start;
-  padding: 0.78rem 0.8rem;
-  border-radius: 0.92rem;
-  background: rgba(248, 250, 252, 0.88);
-  border: 1px solid rgba(226, 232, 240, 0.92);
-  color: #334155;
-  font-size: 0.74rem;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: .7rem;
+  align-items: center;
+  padding: .45rem .5rem;
+  border-radius: .95rem;
+  background: #fcfdff;
+  border: 1px solid #e9edf5;
+  color: #172033;
+  font-size: .75rem;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .retreat-home-grid-card__detail i {
-  margin-top: 0.1rem;
-  color: #dc2626;
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: #fff0f2;
+  color: #ed001b;
+  font-size: 1.15rem;
 }
 
 .retreat-home-grid-card__footer {
@@ -146,6 +160,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.78rem;
+  flex-wrap: wrap;
+  border-top: 1px solid #f0f2f6;
+  padding-top: 1rem;
 }
 
 .retreat-home-grid-card__metric {
@@ -154,7 +171,7 @@
 }
 
 .retreat-home-grid-card__metric-label {
-  color: #94a3b8;
+  color: #69778e;
 }
 
 .retreat-home-grid-card__metric strong {
@@ -167,23 +184,18 @@
 .retreat-home-grid-card__cta {
   display: inline-flex;
   align-items: center;
-  gap: 0.56rem;
-  color: #475569;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  gap: .85rem;
+  min-height: 2.65rem;
+  padding: .65rem 1rem;
+  border-radius: .8rem;
+  background: #870c1b;
+  color: #fff;
+  font-size: .8rem;
 }
 
 .retreat-home-grid-card__cta i {
-  display: inline-grid;
-  place-items: center;
-  width: 1.84rem;
-  height: 1.84rem;
-  border-radius: 999px;
-  background: #0f172a;
   color: #fff;
-  font-size: 0.66rem;
+  font-size: .85rem;
 }
 
 .retreat-home-grid-card__loading {
@@ -249,4 +261,14 @@
     height: 1.65rem;
     font-size: 0.66rem;
   }
+}
+
+.retreat-home-grid-card__detail-label {
+  display: block;
+  margin-bottom: .15rem;
+  color: #69778e;
+  font-size: .56rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
 }

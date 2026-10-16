@@ -1,3 +1,32 @@
 :host {
   display: block;
 }
+
+.archived-requests-modal__toolbar { display: flex; justify-content: flex-end; }
+
+.archived-bulk-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: grid;
+  gap: .45rem;
+  padding: .65rem .8rem;
+  border: 1px solid #e5eaf1;
+  border-radius: .9rem;
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 8px 24px rgb(23 32 51 / 12%);
+  backdrop-filter: blur(10px);
+}
+
+.archived-bulk-actions__summary,
+.archived-bulk-actions__buttons { display: flex; align-items: center; gap: .5rem; }
+.archived-bulk-actions__summary { justify-content: space-between; color: #334155; font-size: .85rem; }
+.archived-bulk-actions__summary button { padding: .25rem .35rem; border: 0; background: transparent; color: #64748b; cursor: pointer; font: inherit; text-decoration: underline; }
+.archived-bulk-actions__summary button:disabled { cursor: not-allowed; opacity: .45; }
+.archived-bulk-actions__buttons { justify-content: flex-end; flex-wrap: wrap; }
+
+@media (max-width: 640px) {
+  .archived-bulk-actions { padding: .5rem; }
+  .archived-bulk-actions__buttons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .3rem; }
+  .archived-bulk-actions__buttons p-button { width: 100%; }
+}

@@ -1,80 +1,55 @@
+@if (actionsOnly) {
+  <p-menu #actionsMenu [model]="actions" [popup]="true" [appendTo]="'body'" [autoZIndex]="true" [baseZIndex]="1200" (onHide)="closeActionsMenu()" />
+} @else {
 @if (request(); as req) {
-<div>
-  <!-- Información básica -->
-  <div class="grid grid-cols-12 gap-6">
-    <!-- Estado -->
-    <div class="col-span-12">
-      <view-item title="Estado" icon="pi pi-info-circle" [isRow]="true" [content]="req.statusInfo.label">
+<div class="request-view">
+  <div class="request-overview">
+  <section class="request-summary" aria-label="Información principal de la solicitud">
+    <div class="request-summary__item">
+      <view-item title="Estado" icon="pi pi-info-circle" [content]="req.statusInfo.label">
         <p-tag [severity]="req.statusInfo.severity" [value]="req.statusInfo.label" [rounded]="true" />
       </view-item>
     </div>
-
-    <div class="col-span-12 md:col-span-6">
-      <view-item title="Acción reciente" icon="pi pi-bolt" [content]="req.actionLabel" />
+    <div class="request-summary__item">
+      <view-item title="Acción reciente" icon="pi pi-bolt" [content]="recentAction()" />
     </div>
-
     @if (isArchivedView()) {
-    <div class="col-span-12 md:col-span-6">
-      <view-item title="Fecha de archivado" icon="pi pi-inbox" [content]="req.displayArchivedAt" />
-    </div>
+      <div class="request-summary__item">
+        <view-item title="Fecha de archivado" icon="pi pi-inbox" [content]="req.displayArchivedAt" />
+      </div>
     }
-
-    <div class="col-span-12 md:hidden">
-      <divider-line separatorClass="my-0" />
+    <div class="request-summary__item">
+      <view-item title="Tiempo de noviazgo" icon="pi pi-id-card" [content]="req.displayDatingPeriod" />
     </div>
-
-    <!-- Tiempo de Noviazgo -->
-    <div class="col-span-12 md:col-span-6">
-      <view-item title="Tiempo de Noviazgo" icon="pi pi-id-card" [content]="req.displayDatingPeriod" />
+    <div class="request-summary__item">
+      <view-item title="Tiene fecha de boda" icon="pi pi-check-circle" [content]="req.have_wedding_date ? 'Sí' : 'No'" />
     </div>
-
-    <div class="col-span-12 md:hidden">
-      <divider-line separatorClass="my-0" />
-    </div>
-
-    <!-- Tiene fecha de boda -->
-    <div class="col-span-6 {{req.have_wedding_date ? 'md:col-span-3' : ''}} ">
-      <view-item title="Tiene fecha boda" icon="pi pi-check-circle" [content]="req.have_wedding_date ? 'Si' : 'No'" />
-    </div>
-
-    <!-- Fecha de boda -->
     @if (req.have_wedding_date) {
-    <div class="col-span-6 md:col-span-3">
-      <view-item title="Fecha de boda" icon="pi pi-calendar" [content]="req.displayWeddingDate" />
-    </div>
+      <div class="request-summary__item">
+        <view-item title="Fecha de boda" icon="pi pi-calendar" [content]="req.displayWeddingDate" />
+      </div>
     }
+  </section>
 
-    <div class="col-span-12">
-      <divider-line separatorClass="my-0" />
+  <section class="request-origin" aria-label="Cómo conocieron el retiro">
+    <div class="request-summary__item">
+      <view-item title="Cómo se enteraron del retiro" icon="pi pi-megaphone" [content]="req.displayHowFindUs" />
     </div>
-
-    <!-- Como se enteraron del retiro -->
-    <div class="col-span-12 md:col-span-6">
-      <view-item title="Como se enteraron del retiro" icon="pi pi-megaphone" [content]="req.displayHowFindUs" />
-    </div>
-
-    <div class="col-span-12 md:hidden">
-      <divider-line separatorClass="my-0" />
-    </div>
-
-    <!-- Quien los invitó al Retiro -->
-    <div class="col-span-6 {{req.who_invited_you_phone ? 'md:col-span-3' : ''}} ">
-      @if (req.who_invited_you) {
-      <view-item title="Quien los invitó al Retiro" icon="pi pi-user-plus" [content]="req.who_invited_you" />
-      }
-    </div>
-
-    <!-- Telefono de quien los invitó -->
+    @if (req.who_invited_you) {
+      <div class="request-summary__item">
+        <view-item title="Quién los invitó al retiro" icon="pi pi-user-plus" [content]="req.who_invited_you" />
+      </div>
+    }
     @if (req.who_invited_you_phone) {
-    <div class="col-span-6 md:col-span-3">
-      <view-item title="Telefono de quien los invitó" icon="pi pi-phone" [content]="req.who_invited_you_phone" />
-    </div>
+      <div class="request-summary__item">
+        <view-item title="Teléfono de quien los invitó" icon="pi pi-phone" [content]="req.who_invited_you_phone" />
+      </div>
     }
+  </section>
 
-    <div class="col-span-12">
-      <divider-line separatorClass="my-2" />
-    </div>
+  </div>
 
+  <div class="grid grid-cols-12 gap-6">
     <div class="col-span-12 md:col-span-6">
       <couple-view [couple]="req.she" [coupleType]="CoupleType.SHE" />
     </div>
@@ -110,4 +85,5 @@
     </div>
   </div>
 </div>
+}
 }

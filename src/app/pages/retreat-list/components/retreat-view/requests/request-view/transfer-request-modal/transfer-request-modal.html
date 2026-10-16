@@ -14,14 +14,18 @@
         appendTo="body"
       />
       <p class="text-sm text-gray-500">
-        La solicitud se transferirá desde
-        <strong>Retiro #{{ currentRetreat.displayNumber }} - {{ currentRetreat.displayCommunityName }}</strong>.
+        {{ requests.length === 1 ? 'La solicitud se transferirá' : requests.length + ' solicitudes se transferirán' }} desde
+        @if (sourceRetreatCount > 1) {
+          <strong>{{ sourceRetreatCount }} retiros de origen seleccionados</strong>.
+        } @else {
+          <strong>Retiro #{{ currentRetreat.displayNumber }} - {{ currentRetreat.displayCommunityName }}</strong>.
+        }
       </p>
     </div>
 
     <div class="flex justify-end gap-3 pt-2">
       <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="ref.close()" />
-      <p-button label="Transferir" icon="pi pi-send" severity="help" [loading]="saving()" (onClick)="transfer()" />
+      <p-button [label]="requests.length === 1 ? 'Transferir solicitud' : 'Transferir solicitudes'" icon="pi pi-send" severity="help" [loading]="saving()" (onClick)="transfer()" />
     </div>
   }
 </div>

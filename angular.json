@@ -22,6 +22,15 @@
             "main": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
+            "allowedCommonJsDependencies": [
+              "photoswipe",
+              "photoswipe/dist/photoswipe-ui-default",
+              "core-js",
+              "raf",
+              "rgbcolor",
+              "html2canvas",
+              "exceljs"
+            ],
             "assets": [
               "src/_redirects",
               {

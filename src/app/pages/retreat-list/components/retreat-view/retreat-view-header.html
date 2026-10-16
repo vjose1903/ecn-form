@@ -1,0 +1,16 @@
+@if (retreat) {
+  <div class="retreat-dialog-header">
+    <div class="retreat-dialog-header__copy">
+      <span class="retreat-dialog-header__eyebrow">Vista general</span>
+      <h1>Retiro No. {{ retreat.displayNumber }}</h1>
+      <p class="retreat-dialog-header__community">Comunidad: {{ retreat.displayCommunityName }}</p>
+      <p class="retreat-dialog-header__description">Datos principales del retiro y su programación.</p>
+    </div>
+    <div class="retreat-dialog-header__controls">
+      <p-tag [severity]="retreat.statusSeverity" [value]="retreat.statusText" [rounded]="true" [attr.aria-label]="'Estado: ' + retreat.statusText" />
+      <button class="retreat-dialog-header__close" type="button" aria-label="Cerrar retiro" (click)="ref.close()">
+        <i class="pi pi-times" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+}

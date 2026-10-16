@@ -1,13 +1,12 @@
 import { Ss } from '@core/services/singleton.service';
 import { Component, inject, OnInit, signal, OnDestroy, computed } from '@angular/core';
 import { RetreatClass } from '@core/entities/retreat/retreat.class';
-import { CommonModule, LowerCasePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
 import { TagModule } from 'primeng/tag';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
-import { DividerLine } from '@core/components/divider-line/divider-line';
 import { Subject, takeUntil } from 'rxjs';
 import { BadgeModule } from 'primeng/badge';
 import { RequestClass } from '@core/entities/request/request.class';
@@ -22,17 +21,23 @@ import { PdfService, CoupleInfo } from '../../utils/pdf.service';
 import { ExcelService } from '../../utils/excel.service';
 import { MenuItem } from 'primeng/api';
 import { MenuModule } from 'primeng/menu';
+import { PopoverModule } from 'primeng/popover';
 import { ExportType, ReportType } from '@pages/retreat-list/utils/export.utils';
 import { ArchivedRequestsModal } from './archived-requests-modal/archived-requests-modal';
+import { TransferRequestModal } from './requests/request-view/transfer-request-modal/transfer-request-modal';
 
 @Component({
   selector: 'app-retreat-view',
-  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, DividerLine, BadgeModule, RequestCard, SelectModule, FormsModule, LowerCasePipe, InputTextModule, ViewItem, MenuModule],
+  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, BadgeModule, RequestCard, SelectModule, FormsModule, InputTextModule, ViewItem, MenuModule, PopoverModule],
   templateUrl: './retreat-view.html',
   styleUrl: './retreat-view.scss',
 })
 export class RetreatView implements OnInit, OnDestroy {
   requests = signal<RequestClass[]>([]);
+  selectionMode = signal(false);
+  selectedRequestIds = signal<string[]>([]);
+  selectedRequests = computed(() => this.requests().filter(request => this.selectedRequestIds().includes(request.id)));
+  batchLoading = signal(false);
   requestsService = inject(RequestService);
   pdfService = inject(PdfService);
   excelService = inject(ExcelService);
@@ -40,6 +45,8 @@ export class RetreatView implements OnInit, OnDestroy {
   requestFiltered = computed(() => {
     const word = this.filterWord();
     const status = this.selectedRequestStatus();
+    const payments = this.selectedPaymentFilter();
+    const informed = this.selectedInformedFilter();
 
     // Primero filtrar por palabra de búsqueda en los nombres completos
     let filteredRequests = this.requests();
@@ -54,17 +61,23 @@ export class RetreatView implements OnInit, OnDestroy {
       });
     }
 
-    // Luego filtrar por estado seleccionado
-    if (status === RequestStatus.ALL) {
-      return filteredRequests;
-    }
-
-    return filteredRequests.filter(request => request.status === status);
+    return filteredRequests.filter(request =>
+      (status === RequestStatus.ALL || request.status === status) &&
+      (payments === 'all' || this.getPaymentStatus(request) === payments) &&
+      (informed === 'all' || (informed === 'yes') === !!request.is_informado)
+    );
   });
 
   fetchingRequests = signal(true);
 
   selectedRequestStatus = signal<RequestStatus>(RequestStatus.ALL);
+  selectedPaymentFilter = signal<'all' | 'none' | 'paid' | 'partial' | 'complete'>('all');
+  selectedInformedFilter = signal<'all' | 'yes' | 'no'>('all');
+  activeFilterCount = computed(() =>
+    Number(this.selectedRequestStatus() !== RequestStatus.ALL) +
+    Number(this.selectedPaymentFilter() !== 'all') +
+    Number(this.selectedInformedFilter() !== 'all')
+  );
   filterWord = signal<string>('');
   requestStatusOptions = [
     { label: 'Todas', value: RequestStatus.ALL },
@@ -72,6 +85,44 @@ export class RetreatView implements OnInit, OnDestroy {
     { label: 'Aceptadas', value: RequestStatus.ACCEPTED },
     { label: 'Rechazadas', value: RequestStatus.REJECTED },
   ];
+  get paymentFilterOptions() {
+    const canClassify = !!this.retreat?.amount_per_person;
+    return [
+      { label: 'Todos', value: 'all' },
+      { label: 'Sin pagos', value: 'none' },
+      { label: 'Con pagos', value: 'paid' },
+      ...(canClassify ? [
+        { label: 'Pago parcial', value: 'partial' },
+        { label: 'Pago completo', value: 'complete' },
+      ] : []),
+    ];
+  }
+  informedFilterOptions = [
+    { label: 'Todas', value: 'all' },
+    { label: 'Informadas', value: 'yes' },
+    { label: 'Sin informar', value: 'no' },
+  ];
+
+  clearFilters(): void {
+    this.selectedRequestStatus.set(RequestStatus.ALL);
+    this.selectedPaymentFilter.set('all');
+    this.selectedInformedFilter.set('all');
+  }
+
+  getPaymentStatus(request: RequestClass): 'none' | 'paid' | 'partial' | 'complete' {
+    const paid = (request.pre_retreat_payments ?? []).reduce((total, payment) => total + payment.amount, 0);
+    if (paid <= 0) return 'none';
+    const amountPerPerson = this.retreat?.amount_per_person ?? 0;
+    if (amountPerPerson <= 0) return 'paid';
+    const coupleTotal = amountPerPerson * 2;
+    return paid >= coupleTotal ? 'complete' : 'partial';
+  }
+
+  formatRetreatAmount(amount: number): string {
+    return new Intl.NumberFormat('es-DO', {
+      style: 'currency', currency: 'DOP', maximumFractionDigits: 2,
+    }).format(amount);
+  }
 
   requestStats = signal<RequestStats>({
     [RequestStatus.PENDING]: { amount: 0, tooltip: 'Pendientes', severity: 'secondary' as const, label: 'Pendiente', labelPlural: 'Pendientes' },
@@ -80,6 +131,7 @@ export class RetreatView implements OnInit, OnDestroy {
   });
 
   RequestStatus = RequestStatus;
+  ExportType = ExportType;
 
   retreat!: RetreatClass;
   loading = signal(false);
@@ -100,6 +152,11 @@ export class RetreatView implements OnInit, OnDestroy {
         },
       ],
     },
+  ];
+
+  bulkExportActions: MenuItem[] = [
+    { label: 'Exportar selección en PDF', icon: 'pi pi-file-pdf', command: () => this.exportSelected(ExportType.PDF) },
+    { label: 'Exportar selección en Excel', icon: 'pi pi-file-excel', command: () => this.exportSelected(ExportType.EXCEL) },
   ];
 
   private destroy$ = new Subject<void>();
@@ -282,19 +339,18 @@ export class RetreatView implements OnInit, OnDestroy {
     return 'No definida';
   }
 
-  async exportCouplesCallInfo(args: { type: ExportType }): Promise<void> {
+  async exportCouplesCallInfo(args: { type: ExportType; requests?: RequestClass[] }): Promise<void> {
     const { type } = args;
     try {
-      // Obtener las solicitudes aceptadas para el reporte
-      const acceptedRequests = this.requests().filter(request => request.status === RequestStatus.ACCEPTED);
+      const exportRequests = args.requests ?? this.requests().filter(request => request.status === RequestStatus.ACCEPTED);
 
-      if (acceptedRequests.length === 0) {
+      if (exportRequests.length === 0) {
         Ss.toastService.warning({ message: 'No hay solicitudes aceptadas para exportar', title: 'Sin datos' });
         return;
       }
 
       // Convertir las solicitudes a formato de parejas
-      const couples: CoupleInfo[] = acceptedRequests.map(request => ({
+      const couples: CoupleInfo[] = exportRequests.map(request => ({
         novia: {
           name: request.she.full_name,
           familyContact: [
@@ -369,5 +425,108 @@ export class RetreatView implements OnInit, OnDestroy {
         title: 'Error',
       });
     }
+  }
+
+  toggleSelectionMode(): void {
+    this.selectionMode.update(active => !active);
+    this.selectedRequestIds.set([]);
+  }
+
+  toggleRequestSelection(request: RequestClass): void {
+    this.selectedRequestIds.update(ids => ids.includes(request.id) ? ids.filter(id => id !== request.id) : [...ids, request.id]);
+  }
+
+  private canManagePreRetreat(): boolean {
+    if (!this.retreat?.start_date) return false;
+    const start = new Date(this.retreat.start_date);
+    const today = new Date();
+    start.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    return today <= start;
+  }
+
+  get canManagePreRetreatActions(): boolean {
+    return this.canManagePreRetreat();
+  }
+
+  async setSelectedInformed(isInformed: boolean): Promise<void> {
+    if (!this.canManagePreRetreat() || !this.selectedRequests().length) return;
+    const requests = this.selectedRequests().filter(request => request.is_informado !== isInformed);
+    if (!requests.length) {
+      Ss.toastService.info({ message: `Todas las solicitudes seleccionadas ya están ${isInformed ? 'informadas' : 'sin informar'}`, title: 'Sin cambios' });
+      return;
+    }
+
+    this.batchLoading.set(true);
+    let succeeded = 0;
+    for (const request of requests) {
+      try {
+        await this.requestsService.updatePreRetreatRequest({ id: request.id, is_informado: isInformed }, this.retreat);
+        succeeded++;
+      } catch (error) {
+        console.error(`Error actualizando la solicitud ${request.id}:`, error);
+      }
+    }
+    this.batchLoading.set(false);
+    const result = { message: `${succeeded} de ${requests.length} solicitudes ${isInformed ? 'marcadas como informadas' : 'marcadas como no informadas'}`, title: succeeded === requests.length ? 'Cambios guardados' : 'Proceso incompleto' };
+    if (succeeded === requests.length) Ss.toastService.success(result);
+    else Ss.toastService.warning(result);
+  }
+
+  archiveSelected(): void {
+    const requests = this.selectedRequests();
+    if (!requests.length) return;
+    Ss.confirmationService.confirm({
+      message: `Se archivarán ${requests.length} solicitudes y dejarán de aparecer en este retiro. ¿Deseas continuar?`,
+      header: 'Archivar solicitudes',
+      icon: 'pi pi-inbox',
+      acceptLabel: 'Archivar',
+      rejectLabel: 'Cancelar',
+      acceptButtonStyleClass: 'p-button-secondary',
+      rejectButtonStyleClass: 'p-button-text',
+      accept: async () => {
+        this.batchLoading.set(true);
+        let succeeded = 0;
+        for (const request of requests) {
+          try {
+            await this.requestsService.archiveRequest({ request, retreat: this.retreat });
+            succeeded++;
+          } catch (error) {
+            console.error(`Error archivando la solicitud ${request.id}:`, error);
+          }
+        }
+        this.selectedRequestIds.update(ids => ids.filter(id => this.requests().some(request => request.id === id)));
+        this.batchLoading.set(false);
+        const result = { message: `${succeeded} de ${requests.length} solicitudes archivadas`, title: succeeded === requests.length ? 'Proceso completado' : 'Proceso incompleto' };
+        if (succeeded === requests.length) Ss.toastService.success(result);
+        else Ss.toastService.warning(result);
+      },
+    });
+  }
+
+  transferSelected(): void {
+    const dialogService = Ss.dialogService;
+    const requests = this.selectedRequests();
+    if (!dialogService || !requests.length) return;
+    const dialogRef = dialogService.open(TransferRequestModal, {
+      header: `Transferir ${requests.length} solicitudes`,
+      width: '32rem',
+      modal: true,
+      draggable: false,
+      resizable: false,
+      closable: true,
+      focusOnShow: false,
+      data: { requests, retreat: this.retreat },
+      breakpoints: { '960px': '80vw', '640px': '95vw' },
+    });
+    dialogRef?.onClose.subscribe((result?: { transferredRequestIds?: string[] }) => {
+      if (result?.transferredRequestIds?.length) {
+        this.selectedRequestIds.update(ids => ids.filter(id => !result.transferredRequestIds!.includes(id)));
+      }
+    });
+  }
+
+  exportSelected(type: ExportType): void {
+    void this.exportCouplesCallInfo({ type, requests: this.selectedRequests() });
   }
 }

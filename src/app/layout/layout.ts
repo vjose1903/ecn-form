@@ -16,6 +16,7 @@ import { RetreatHomeService } from '@core/entities/retreat-home/retreat-home.ser
 import { CityClass } from '@core/entities/city/city.class';
 import { UserService } from '@core/entities/user/user.service';
 import { SkeletonModule } from 'primeng/skeleton';
+import { buildVersion } from '../../environments/build-version';
 
 @Component({
   selector: 'app-layout',
@@ -25,6 +26,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 })
 export class Layout implements OnInit {
   currentYear = new Date().getFullYear();
+  appVersion = buildVersion.label;
   router = inject(Router);
   menuService = inject(MenuService);
   private cdRef = inject(ChangeDetectorRef);

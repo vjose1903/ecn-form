@@ -1,0 +1,101 @@
+<div class="pre-retreat-payment">
+  @if (payments.length) {
+    <section class="pre-retreat-payment__history" aria-label="Pagos registrados">
+      <h2>Pagos registrados</h2>
+      @for (payment of payments; track payment.id) {
+        <article class="pre-retreat-payment__record">
+          <div class="pre-retreat-payment__record-details">
+            <div class="pre-retreat-payment__record-value">
+              <i class="pi pi-wallet" aria-hidden="true"></i>
+              <span><small>Monto</small><strong>{{ formatAmount(payment.amount) }}</strong></span>
+            </div>
+            <span class="pre-retreat-payment__record-divider" aria-hidden="true"></span>
+            <div class="pre-retreat-payment__record-value">
+              <i class="pi pi-calendar" aria-hidden="true"></i>
+              <span><small>Fecha del pago</small><strong>{{ formatDate(payment.payment_date) }}</strong></span>
+            </div>
+            <button class="pre-retreat-payment__receipt" type="button" (click)="showReceipt(payment)" [attr.aria-label]="'Ver recibo ' + payment.receipt_name">
+              @if (paymentReceiptPreviews()[payment.id]; as previewUrl) {
+                <img [src]="previewUrl" [alt]="payment.receipt_name || 'Vista previa del recibo'" />
+              } @else if (loadingPaymentReceiptPreviews()) {
+                <p-skeleton width="2.5rem" height="2.5rem" aria-hidden="true" />
+              } @else {
+                <i class="pi pi-image" aria-hidden="true"></i>
+              }
+              <span>Ver recibo</span>
+            </button>
+          </div>
+        </article>
+      }
+    </section>
+    <divider-line />
+  }
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="pre-retreat-payment__field">
+      <label for="pre-retreat-payment-date">Fecha del pago</label>
+      <p-datepicker
+        inputId="pre-retreat-payment-date"
+        inputStyleClass="w-full"
+        formControlName="payment_date"
+        dateFormat="dd/mm/yy"
+        [maxDate]="today"
+        [showIcon]="true"
+        [readonlyInput]="false"
+        appendTo="body" />
+    </div>
+
+    <div class="pre-retreat-payment__field">
+      <label for="pre-retreat-payment-amount">Monto del pago</label>
+      <p-inputnumber
+        inputId="pre-retreat-payment-amount"
+        inputStyleClass="w-full"
+        formControlName="amount"
+        mode="currency"
+        currency="DOP"
+        locale="es-DO"
+        [min]="0.01"
+        [minFractionDigits]="0"
+        [maxFractionDigits]="0" />
+    </div>
+
+    <div class="pre-retreat-payment__field">
+      <label for="pre-retreat-payment-receipt">Imagen del recibo</label>
+      <div class="pre-retreat-payment__dropzone" [class.pre-retreat-payment__dropzone--preview]="receiptPreviewUrl()">
+        <input #receiptInput id="pre-retreat-payment-receipt" type="file" accept="image/*" (change)="onReceiptSelected($event)" [attr.aria-label]="receiptPreviewUrl() ? 'Cambiar imagen del recibo' : 'Seleccionar imagen del recibo'" />
+        @if (receiptPreviewUrl(); as previewUrl) {
+          <img [src]="previewUrl" [alt]="receipt()?.name || 'Vista previa del recibo'" />
+          <span>Cambiar imagen</span>
+        } @else {
+          <span><i class="pi pi-upload" aria-hidden="true"></i>Seleccionar o arrastrar imagen</span>
+        }
+      </div>
+      <small>Imagen de hasta 5 MB.</small>
+    </div>
+
+@if (receiptPreview(); as receipt) {
+  <p-dialog
+    [visible]="true"
+    (visibleChange)="onReceiptVisibilityChange($event)"
+    [modal]="false"
+    appendTo="body"
+    styleClass="request-history-receipt-dialog"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: 'min(92vw, 48rem)' }">
+    <ng-template pTemplate="header">
+      <div class="receipt-dialog-header">
+        <span class="receipt-dialog-header__title">{{ formatAmount(receipt.amount) }} · {{ formatDate(receipt.payment_date) }}</span>
+        <span class="receipt-dialog-header__subtitle">{{ receipt.receipt_name || 'Recibo de pago' }}</span>
+      </div>
+    </ng-template>
+    <img class="pre-retreat-payment__receipt-image" [src]="openedReceiptPreviewUrl()" [alt]="receipt.receipt_name || 'Recibo del pago'" />
+  </p-dialog>
+}
+
+    <footer>
+      <p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" [disabled]="loading()" (onClick)="ref.close()" />
+      <p-button type="submit" label="Guardar pago" icon="pi pi-check" [loading]="loading()" />
+    </footer>
+  </form>
+</div>

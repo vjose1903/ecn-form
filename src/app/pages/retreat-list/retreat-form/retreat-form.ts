@@ -94,6 +94,18 @@ export class RetreatForm implements OnInit, OnDestroy {
     return true;
   }
 
+  get coupleAmountPreview(): string | null {
+    const amount = Number(this.form?.get(FormControlName.amount_per_person)?.value);
+    if (!Number.isFinite(amount) || amount <= 0) return null;
+    return `${new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP', maximumFractionDigits: 2 }).format(amount * 2)} por pareja`;
+  }
+
+  get perPersonAmountPreview(): string | null {
+    const amount = Number(this.form?.get(FormControlName.amount_per_person)?.value);
+    if (!Number.isFinite(amount) || amount <= 0) return null;
+    return `${new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP', maximumFractionDigits: 2 }).format(amount)} P/P`;
+  }
+
   constructor() {
     this.setupFormEffects();
   }
@@ -126,6 +138,7 @@ export class RetreatForm implements OnInit, OnDestroy {
       [FormControlName.modality]: [{ value: retreat?.modality ?? null, disabled: true }, [Validators.required]],
       [FormControlName.is_active]: [retreat?.is_active ?? true],
       [FormControlName.accept_requests]: [retreat?.accept_requests ?? true],
+      [FormControlName.amount_per_person]: [retreat?.amount_per_person ?? null, [Validators.min(0.01)]],
     });
 
     this.formGroup.set(form);

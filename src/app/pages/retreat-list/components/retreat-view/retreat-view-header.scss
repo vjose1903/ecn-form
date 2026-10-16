@@ -1,0 +1,109 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.retreat-dialog-header {
+  --header-control-right: .8rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  position: relative;
+  padding: 1rem 4.5rem 1rem 1.1rem;
+}
+
+.retreat-dialog-header__copy {
+  min-width: 0;
+  position: relative;
+  padding-left: .9rem;
+}
+
+.retreat-dialog-header__copy::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 999px;
+  background: #c12c3b;
+  content: '';
+}
+
+.retreat-dialog-header__eyebrow {
+  display: block;
+  margin-bottom: .25rem;
+  color: #c12c3b;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.retreat-dialog-header h1 {
+  margin: 0;
+  color: #172033;
+  font-size: clamp(1.75rem, 2.2vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: -.04em;
+  line-height: 1.05;
+}
+
+.retreat-dialog-header__community {
+  margin: .28rem 0 0;
+  color: #41516a;
+  font-size: 1.12rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.retreat-dialog-header__description {
+  margin: .35rem 0 0;
+  color: #64748b;
+  font-size: .8rem;
+}
+
+.retreat-dialog-header__controls {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  position: absolute;
+  top: .4rem;
+  right: .8rem;
+}
+
+.retreat-dialog-header__close {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.retreat-dialog-header__close:hover {
+  background: #f1f5f9;
+  color: #172033;
+}
+
+@media (max-width: 640px) {
+  .retreat-dialog-header {
+    padding: .15rem 2.9rem .15rem .15rem;
+  }
+
+  .retreat-dialog-header h1 {
+    font-size: 1.55rem;
+  }
+
+  .retreat-dialog-header__community {
+    font-size: .95rem;
+  }
+
+  .retreat-dialog-header__controls {
+    top: .15rem;
+    right: .15rem;
+  }
+}

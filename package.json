@@ -1,12 +1,13 @@
 {
   "name": "ecn-form",
-  "version": "0.0.0",
+  "version": "1.2.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve --port 4203",
     "start:external": "ng serve --port 4203 --host 0.0.0.0",
     "build:dev": "ng build --configuration development",
-    "build": "ng build --configuration production",
+    "build": "node scripts/write-build-version.mjs && ng build --configuration production",
+    "release": "node scripts/release-version.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },

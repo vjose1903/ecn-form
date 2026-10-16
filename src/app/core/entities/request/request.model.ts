@@ -13,10 +13,27 @@ export interface RequestI {
   she: CoupleI;
   he: CoupleI;
   is_active?: boolean;
+  is_informado?: boolean;
+  pre_retreat_payments?: PreRetreatPaymentI[];
   status: RequestStatus;
   action: RequestAction;
   archived_retreat_id?: string;
   archived_at?: Date | string | null;
+}
+
+export interface PreRetreatPaymentI {
+  id: string;
+  payment_date: Date | string;
+  amount: number;
+  receipt_path?: string;
+  receipt_url?: string;
+  receipt_name: string;
+}
+
+export interface NewPreRetreatPaymentI {
+  payment_date: Date;
+  amount: number;
+  receipt: File;
 }
 
 export enum RequestAction {
@@ -105,6 +122,11 @@ export interface RequestHistoryI {
   collection_state: 'request' | 'requests-archived';
   changes?: Array<string | RequestHistoryChangeI>;
   message?: string;
+  receipt_url?: string;
+  receipt_path?: string;
+  receipt_name?: string;
+  payment_id?: string;
+  deletion_pending?: boolean;
   retreat_label?: string;
   source_retreat_label?: string;
   target_retreat_label?: string;

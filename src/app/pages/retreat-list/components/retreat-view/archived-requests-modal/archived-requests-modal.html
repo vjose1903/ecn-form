@@ -1,4 +1,14 @@
 <div class="grid gap-4">
+  <div class="archived-requests-modal__toolbar">
+    <p-button
+      type="button"
+      [icon]="selectionMode() ? 'pi pi-times' : 'pi pi-check-square'"
+      severity="secondary"
+      [text]="true"
+      [attr.aria-label]="selectionMode() ? 'Cancelar selección múltiple' : 'Seleccionar solicitudes'"
+      (onClick)="toggleSelectionMode()"
+    />
+  </div>
   @if (loading()) {
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       @for (item of [1, 2, 3]; track item) {
@@ -12,5 +22,19 @@
       <i class="pi pi-inbox text-gray-200" style="font-size: 4rem"></i>
       <p class="text-lg font-medium text-gray-500">Este retiro no tiene solicitudes archivadas</p>
     </div>
+  }
+  @if (selectionMode()) {
+    <footer class="archived-bulk-actions" aria-label="Acciones para solicitudes archivadas seleccionadas">
+      <div class="archived-bulk-actions__summary">
+        <strong>{{ selectedRequestIds().length }} seleccionada{{ selectedRequestIds().length === 1 ? '' : 's' }}</strong>
+        <button type="button" [disabled]="!selectedRequestIds().length || batchLoading()" (click)="selectedRequestIds.set([])">Limpiar</button>
+      </div>
+      <div class="archived-bulk-actions__buttons">
+        <p-button label="Desarchivar" icon="pi pi-replay" severity="success" size="small" [disabled]="!selectedRequests().length || batchLoading()" [loading]="batchLoading()" (onClick)="unarchiveSelected()" />
+        <p-button label="Transferir" icon="pi pi-send" severity="help" size="small" [disabled]="!selectedRequests().length || batchLoading()" (onClick)="transferSelected()" />
+        <p-button label="Exportar" icon="pi pi-download" iconPos="right" severity="secondary" [outlined]="true" size="small" [disabled]="!selectedRequests().length || batchLoading()" (onClick)="bulkExportMenu.toggle($event)" />
+        <p-menu #bulkExportMenu [model]="bulkExportActions" [popup]="true" [appendTo]="'body'" [autoZIndex]="true" />
+      </div>
+    </footer>
   }
 </div>

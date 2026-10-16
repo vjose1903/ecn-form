@@ -1,0 +1,127 @@
+:host { display: block; }
+
+.request-view {
+  container: request-view / inline-size;
+  display: grid;
+  gap: 1.25rem;
+  color: #172033;
+}
+
+.request-overview {
+  overflow: hidden;
+  padding: .25rem 1rem;
+  border: 1px solid #e8edf4;
+  border-radius: 1rem;
+  background: #fff;
+}
+
+.request-origin {
+  border-top: 1px solid #edf0f5;
+}
+
+.request-summary,
+.request-origin {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: .8rem 0;
+  padding: 1rem 0;
+}
+
+.request-summary__item {
+  min-width: 0;
+  padding: .4rem 1rem;
+}
+
+.request-summary__item + .request-summary__item {
+  border-left: 1px solid #edf0f5;
+}
+
+.request-summary__item ::ng-deep view-item > div {
+  display: grid;
+  grid-template-columns: 2.15rem minmax(0, 1fr);
+  align-items: start;
+  gap: .35rem .7rem;
+}
+
+.request-summary__item ::ng-deep view-item > div > div:first-child {
+  display: contents;
+}
+
+.request-summary__item ::ng-deep view-item i {
+  display: grid;
+  place-items: center;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: .7rem;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: .9rem;
+}
+
+.request-summary__item:nth-child(2) ::ng-deep view-item i {
+  background: #ecfeff;
+  color: #0891b2;
+}
+
+.request-summary__item:nth-child(3) ::ng-deep view-item i {
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.request-summary__item:nth-child(4) ::ng-deep view-item i {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.request-summary__item ::ng-deep view-item > div > div:first-child > span {
+  grid-column: 2;
+  grid-row: 1;
+  color: #68778d;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.request-summary__item ::ng-deep view-item p,
+.request-summary__item ::ng-deep view-item p-tag {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  margin: 0;
+  color: #172033;
+  font-size: .92rem;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+ .request-summary__item ::ng-deep view-item p-tag {
+  justify-self: start;
+  width: fit-content;
+}
+
+@container request-view (max-width: 850px) {
+  .request-summary,
+  .request-origin { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .request-summary__item:nth-child(odd) { border-left: 0; }
+}
+
+@container request-view (max-width: 500px) {
+  .request-summary,
+  .request-origin { grid-template-columns: 1fr; padding: .4rem .25rem; gap: .1rem; }
+  .request-summary__item + .request-summary__item { border-left: 0; }
+  .request-summary__item { padding: .4rem .3rem; }
+  .request-overview { padding: .15rem .5rem; }
+  .request-summary__item ::ng-deep view-item > div {
+    grid-template-columns: 1.9rem minmax(0, 1fr);
+    gap: .2rem .6rem;
+  }
+  .request-summary__item ::ng-deep view-item i {
+    width: 1.9rem;
+    height: 1.9rem;
+  }
+}

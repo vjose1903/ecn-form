@@ -5,6 +5,7 @@ import { RetreatService } from './retreat.service';
 import { RetreatHomeClass } from '../retreat-home/retreat-home.class';
 import { RetreatForm } from 'app/pages/retreat-list/retreat-form/retreat-form';
 import { RetreatView } from 'app/pages/retreat-list/components/retreat-view/retreat-view';
+import { RetreatViewHeader } from 'app/pages/retreat-list/components/retreat-view/retreat-view-header';
 import { fun } from '@core/services/functions.service';
 import { RequestClass } from '../request/request.class';
 import { RequestService } from '../request/request.service';
@@ -25,6 +26,7 @@ export class RetreatClass {
   mixedModalityData: { [date: string]: RetreatModalityType } = {};
   accept_requests: boolean = true;
   request_count: number = 0;
+  amount_per_person: number | null = null;
 
   // Propiedades computadas para optimizar el rendimiento
   private _displayNumber: string | null = null;
@@ -55,6 +57,7 @@ export class RetreatClass {
     this.is_active = retreat.is_active ?? true;
     this.accept_requests = retreat.accept_requests ?? true;
     this.request_count = retreat.request_count || 0;
+    this.amount_per_person = retreat.amount_per_person ?? null;
 
     this.initializeRetreatHome(retreat.retreat_home);
   }
@@ -309,6 +312,7 @@ export class RetreatClass {
       mixedModalityData: this.mixedModalityData,
       is_active: this.is_active,
       accept_requests: this.accept_requests,
+      amount_per_person: this.amount_per_person,
     };
   }
 
@@ -359,18 +363,20 @@ export class RetreatClass {
     }
 
     const dialogRef = dialogService.open(RetreatView, {
-      header: `Retiro No. ${this.displayNumber}  Comunidad: ${this.displayCommunityName}`,
+      header: '',
+      templates: { header: RetreatViewHeader },
       width: '70vw',
+      styleClass: 'retreat-view-dialog',
       modal: true,
       draggable: false,
       resizable: false,
-      closable: true,
+      closable: false,
       focusOnShow: false,
       data: {
         retreat: this,
         autoOpenRequestId: args.autoOpenRequestId ?? null,
       },
-      breakpoints: { '960px': '75vw', '640px': '90vw' },
+      breakpoints: { '960px': '82vw', '640px': '95vw' },
     });
 
     dialogRef?.onClose.subscribe();
@@ -465,6 +471,7 @@ export class RetreatClass {
     this.mixedModalityData = other.mixedModalityData;
     this.is_active = other.is_active;
     this.accept_requests = other.accept_requests;
+    this.amount_per_person = other.amount_per_person;
 
     // Limpiar caché de propiedades computadas
     this._displayNumber = null;

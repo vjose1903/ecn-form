@@ -78,7 +78,13 @@
       }
     ]
   },
-  "storage": {
-    "rules": "storage.rules"
-  }
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": [
+    {
+      "bucket": "ecn-platform.firebasestorage.app",
+      "rules": "storage.rules"
+    }
+  ]
 }

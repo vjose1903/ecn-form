@@ -1,0 +1,602 @@
+:host {
+  display: block;
+}
+
+.retreat-view {
+  --retreat-ink: #172033;
+  --retreat-muted: #64748b;
+  --retreat-accent: #c12c3b;
+  --retreat-surface: #f7f8fb;
+
+  container: retreat-view / inline-size;
+  display: grid;
+  gap: 1.25rem;
+  position: relative;
+  color: var(--retreat-ink);
+}
+
+.retreat-summary,
+.retreat-requests {
+  display: grid;
+  gap: 1.15rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: 1.15rem;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(30 41 59 / 5%);
+}
+
+.retreat-summary {
+  border: 1px solid #e8edf4;
+}
+
+.retreat-requests {
+  padding: 0;
+  box-shadow: none;
+}
+
+.retreat-requests__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.retreat-requests h2 {
+  margin: 0;
+  color: var(--retreat-ink);
+  font-size: 1.12rem;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+
+.retreat-details {
+  display: grid;
+  grid-template-columns: 1.25fr .85fr .9fr 1.1fr 1.1fr;
+  gap: 0;
+}
+
+.retreat-detail {
+  min-width: 0;
+  position: relative;
+  display: grid;
+  align-content: center;
+  min-height: 5rem;
+  padding: .4rem 1.25rem;
+}
+
+.retreat-detail:not(:last-child) {
+  border-right: 1px solid #edf0f5;
+}
+
+.retreat-detail ::ng-deep view-item > div {
+  display: grid;
+  grid-template-columns: 2.15rem minmax(0, 1fr);
+  align-items: start;
+  gap: .7rem;
+}
+
+.retreat-detail ::ng-deep view-item > div > div:first-child {
+  display: contents;
+  align-items: center;
+}
+
+.retreat-detail ::ng-deep view-item i {
+  display: grid;
+  place-items: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: .7rem;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: .9rem;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+
+.retreat-detail:nth-child(2) ::ng-deep view-item i {
+  background: #ecfeff;
+  color: #0891b2;
+}
+
+.retreat-detail:nth-child(3) ::ng-deep view-item i {
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.retreat-detail:nth-child(4) ::ng-deep view-item i {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.retreat-detail ::ng-deep view-item span {
+  grid-column: 2;
+  grid-row: 1;
+  color: #7b8798;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.retreat-detail ::ng-deep view-item p {
+  grid-column: 2;
+  min-width: 0;
+  margin: 0;
+  color: #172033;
+  font-size: .92rem;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  grid-row: 2;
+}
+
+.retreat-detail__amount small {
+  display: block;
+  color: rgb(23 32 51 / 55%);
+  font-size: .78rem;
+  font-weight: 500;
+}
+
+.retreat-detail ::ng-deep view-item .retreat-detail__date-range span {
+  display: block;
+  color: #000;
+}
+
+.retreat-detail__date-range {
+  color: #172033;
+}
+
+.retreat-requests__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  gap: .75rem;
+}
+
+.retreat-requests__title-line,
+.retreat-request-stats,
+.retreat-request-actions,
+.retreat-request-filters {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+}
+
+.retreat-requests__title-line {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.retreat-request-stats {
+  flex-wrap: wrap;
+}
+
+.retreat-request-actions {
+  flex: 0 0 auto;
+  gap: .15rem;
+}
+
+.retreat-request-filters {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.retreat-search {
+  display: flex;
+  align-items: center;
+  position: relative;
+  min-width: 12rem;
+  height: 2.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: .75rem;
+  background: #fff;
+  transition: border-color .2s ease;
+}
+
+.retreat-search:hover {
+  border-color: var(--p-form-field-hover-border-color);
+}
+
+.retreat-search:focus-within {
+  border-color: var(--p-form-field-focus-border-color);
+}
+
+::ng-deep .request-filter-menu {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: .45rem;
+  width: min(17rem, calc(100vw - 2rem));
+}
+
+::ng-deep .request-filter-menu label {
+  color: #64748b;
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+::ng-deep .request-filter-menu__hint {
+  color: #64748b;
+  font-size: .7rem;
+  line-height: 1.35;
+}
+
+::ng-deep .request-filter-menu p-select {
+  width: 100%;
+  border-color: #cbd5e1;
+  border-radius: .75rem;
+  background: #fff;
+}
+
+.retreat-search > i {
+  position: absolute;
+  left: .85rem;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.retreat-search input {
+  width: 100%;
+  height: 100%;
+  padding: 0 2.5rem;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--retreat-ink);
+}
+
+.retreat-search p-button {
+  position: absolute;
+  right: .15rem;
+}
+
+.retreat-requests-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.retreat-bulk-actions {
+  position: sticky;
+  bottom: -.5rem;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .85rem 1rem;
+  border: 1px solid #e5eaf1;
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 10px 28px rgb(23 32 51 / 12%);
+  backdrop-filter: blur(10px);
+}
+
+.retreat-bulk-actions__summary,
+.retreat-bulk-actions__buttons {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.retreat-bulk-actions__summary {
+  flex: 0 0 auto;
+  color: #334155;
+  font-size: .85rem;
+}
+
+.retreat-bulk-actions__clear {
+  padding: .25rem .35rem;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+}
+
+.retreat-bulk-actions__clear:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.retreat-bulk-actions__buttons {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.retreat-empty-state {
+  grid-column: 1 / -1;
+  display: grid;
+  place-items: center;
+  gap: .6rem;
+  min-height: 10rem;
+  color: var(--retreat-muted);
+  text-align: center;
+}
+
+.retreat-empty-state i {
+  color: #cbd5e1;
+  font-size: 2rem;
+}
+
+.retreat-empty-state p {
+  margin: 0;
+  font-size: .9rem;
+}
+
+.retreat-incomplete {
+  display: flex;
+  align-items: flex-start;
+  gap: .8rem;
+  padding: 1rem 1.15rem;
+  border-radius: 1rem;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.retreat-incomplete > i {
+  margin-top: .1rem;
+  font-size: 1.15rem;
+}
+
+.retreat-incomplete strong,
+.retreat-incomplete p {
+  display: block;
+  margin: 0;
+}
+
+.retreat-incomplete p {
+  margin-top: .2rem;
+  color: #c2410c;
+  font-size: .82rem;
+}
+
+.retreat-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: .65rem;
+}
+
+.retreat-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  gap: .45rem;
+  border-radius: 1.35rem;
+  background: rgb(255 255 255 / 82%);
+  color: var(--retreat-accent);
+  text-align: center;
+  backdrop-filter: blur(3px);
+}
+
+.retreat-loading i {
+  font-size: 1.8rem;
+}
+
+.retreat-loading p {
+  margin: 0;
+  color: var(--retreat-muted);
+  font-size: .85rem;
+}
+
+:host ::ng-deep .retreat-view-dialog {
+  width: min(70vw, 1100px);
+  max-height: 92vh;
+  overflow: hidden;
+  border: 0;
+  border-radius: 1.35rem;
+  box-shadow: 0 24px 70px rgb(15 23 42 / 18%);
+}
+
+:host ::ng-deep .retreat-view-dialog .p-dialog-header {
+  position: relative;
+  padding: 0;
+  background: #fff;
+}
+
+:host ::ng-deep .retreat-view-dialog .p-dialog-title {
+  display: none;
+}
+
+:host ::ng-deep .retreat-view-dialog .p-dialog-content {
+  padding: 1.75rem 1.75rem 1.5rem;
+  background: #fff;
+  overflow-y: auto;
+}
+
+@container retreat-view (max-width: 850px) {
+  .retreat-summary {
+    padding: .65rem .8rem;
+  }
+
+  .retreat-details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .retreat-detail {
+    min-height: auto;
+    padding: .5rem .65rem;
+  }
+
+  .retreat-detail ::ng-deep view-item > div {
+    gap: .35rem .65rem;
+  }
+
+  .retreat-detail:nth-child(even) {
+    border-right: 0;
+  }
+
+  .retreat-requests__header {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: .65rem;
+  }
+
+  .retreat-request-filters {
+    justify-content: flex-start;
+  }
+
+  .retreat-bulk-actions {
+    align-items: center;
+    flex-direction: row;
+    gap: .45rem;
+    padding: .55rem .65rem;
+  }
+
+  .retreat-bulk-actions__buttons {
+    justify-content: flex-end;
+  }
+
+  .retreat-requests-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container retreat-view (max-width: 600px) {
+  .retreat-summary,
+  .retreat-requests {
+    gap: 1rem;
+    padding: .75rem;
+    border-radius: 1.05rem;
+  }
+
+  .retreat-details,
+  .retreat-requests-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .retreat-detail {
+    min-height: auto;
+    padding: .55rem .4rem;
+  }
+
+  .retreat-detail:not(:last-child) {
+    border-right: 0;
+  }
+
+  .retreat-summary {
+    padding: .5rem .6rem;
+  }
+
+  .retreat-requests {
+    padding: .35rem;
+  }
+
+  .retreat-request-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .retreat-bulk-actions {
+    padding: .75rem;
+  }
+
+  .retreat-bulk-actions__buttons {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    width: 100%;
+    gap: .3rem;
+  }
+
+  .retreat-bulk-actions__buttons p-button {
+    width: 100%;
+  }
+
+  :host ::ng-deep .retreat-bulk-actions__buttons p-button .p-button {
+    width: 100%;
+    min-width: 0;
+    min-height: 2.1rem;
+    justify-content: center;
+    flex-direction: column;
+    gap: .15rem;
+    padding: .3rem .15rem;
+  }
+
+  .retreat-bulk-actions {
+    align-items: stretch;
+    flex-direction: column;
+    gap: .35rem;
+    width: calc(100% + 3.8rem);
+    margin-inline: -1.9rem;
+    padding: .45rem .5rem;
+    border-radius: .8rem;
+  }
+
+  .retreat-bulk-actions__summary {
+    justify-content: space-between;
+    width: 100%;
+    gap: .15rem;
+    font-size: .7rem;
+    line-height: 1.1;
+  }
+
+  .retreat-bulk-actions__summary strong {
+    max-width: none;
+  }
+
+  .retreat-bulk-actions__clear {
+    padding: .1rem .15rem;
+    font-size: .68rem;
+  }
+
+  :host ::ng-deep .retreat-bulk-actions__buttons .p-button-label {
+    display: inline;
+    font-size: .58rem;
+    line-height: 1;
+    text-align: center;
+    white-space: normal;
+  }
+
+  :host ::ng-deep .retreat-bulk-actions__buttons .p-button-icon {
+    margin: 0;
+  }
+
+  .retreat-requests__toolbar {
+    gap: .35rem;
+  }
+
+  .retreat-requests__title-line,
+  .retreat-request-stats,
+  .retreat-request-actions,
+  .retreat-request-filters {
+    gap: .35rem;
+  }
+
+  .retreat-request-actions {
+    margin-left: auto;
+  }
+
+  .retreat-search,
+  .retreat-request-filters > p-button {
+    grid-column: auto;
+    width: 100%;
+    min-width: 0;
+  }
+
+}
+
+@media (max-width: 640px) {
+  .retreat-view {
+    gap: .9rem;
+  }
+
+  :host ::ng-deep .retreat-view-dialog {
+    width: 95vw;
+    max-height: 94vh;
+    border-radius: 1.05rem;
+  }
+
+  :host ::ng-deep .retreat-view-dialog .p-dialog-header {
+    padding: 0;
+  }
+
+  :host ::ng-deep .retreat-view-dialog .p-dialog-content {
+    padding: .15rem;
+  }
+}

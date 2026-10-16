@@ -1,0 +1,25 @@
+.couple-identity {
+  display: grid;
+  gap: .1rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.couple-identity__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .4rem .6rem;
+}
+
+.couple-identity__meta small {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.couple-identity__meta p-badge {
+  flex-shrink: 0;
+  white-space: nowrap;
+}

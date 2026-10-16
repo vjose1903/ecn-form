@@ -78,6 +78,32 @@
   letter-spacing: 0;
 }
 
+.update-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  max-width: 31rem;
+  margin-top: 20px;
+  padding: 13px 15px;
+  color: #b42318;
+  border: 1px solid #f3a6a0;
+  border-radius: 10px;
+  background: #fff1f0;
+  font-size: 0.97rem;
+  font-weight: 650;
+  line-height: 1.4;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.update-error i {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: #d92d20;
+  font-size: 1.1rem;
+}
+
 .update-modal-actions {
   display: flex;
   justify-content: center;

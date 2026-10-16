@@ -4,6 +4,14 @@
     <div class="flex items-center gap-3 ml-auto">
       <p-button
         type="button"
+        [icon]="selectionMode() ? 'pi pi-times' : 'pi pi-check-square'"
+        severity="secondary"
+        [text]="true"
+        [attr.aria-label]="selectionMode() ? 'Cancelar selección múltiple' : 'Seleccionar solicitudes'"
+        (onClick)="toggleSelectionMode()"
+      />
+      <p-button
+        type="button"
         icon="pi pi-refresh"
         severity="secondary"
         [text]="true"
@@ -21,6 +29,12 @@
           <request-card [skeleton]="true" />
         }
       </div>
+    } @else if (loadError()) {
+      <div class="text-center flex flex-col items-center gap-4 py-10" role="alert">
+        <i class="pi pi-exclamation-circle text-red-600 text-3xl" aria-hidden="true"></i>
+        <p>No se pudieron cargar las solicitudes archivadas.</p>
+        <p-button label="Reintentar" icon="pi pi-refresh" severity="secondary" (onClick)="refresh()" />
+      </div>
     } @else if (archivedRequestsWithRetreat().length > 0) {
       <dynamic-dataview [config]="dataviewConfig" />
     } @else {
@@ -28,6 +42,20 @@
         <i class="pi pi-inbox text-gray-200" style="font-size: 4rem"></i>
         <p class="text-lg font-medium text-gray-500">No hay solicitudes archivadas</p>
       </div>
+    }
+    @if (selectionMode()) {
+      <footer class="archived-bulk-actions" aria-label="Acciones para solicitudes archivadas seleccionadas">
+        <div class="archived-bulk-actions__summary">
+          <strong>{{ selectedRequestIds().length }} seleccionada{{ selectedRequestIds().length === 1 ? '' : 's' }}</strong>
+          <button type="button" [disabled]="!selectedRequestIds().length || batchLoading()" (click)="clearSelection()">Limpiar</button>
+        </div>
+        <div class="archived-bulk-actions__buttons">
+          <p-button label="Desarchivar" icon="pi pi-replay" severity="success" size="small" [disabled]="!selectedItems().length || batchLoading()" [loading]="batchLoading()" (onClick)="unarchiveSelected()" />
+          <p-button label="Transferir" icon="pi pi-send" severity="help" size="small" [disabled]="!selectedItems().length || batchLoading()" (onClick)="transferSelected()" />
+          <p-button label="Exportar" icon="pi pi-download" iconPos="right" severity="secondary" [outlined]="true" size="small" [disabled]="!selectedItems().length || batchLoading()" (onClick)="bulkExportMenu.toggle($event)" />
+          <p-menu #bulkExportMenu [model]="bulkExportActions" [popup]="true" [appendTo]="'body'" [autoZIndex]="true" />
+        </div>
+      </footer>
     }
   </div>
 </div>

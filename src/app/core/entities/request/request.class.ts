@@ -1,4 +1,4 @@
-import { RequestAction, RequestI, CoupleI, RequestStatus, RequestStatusInfo } from './request.model';
+import { RequestAction, RequestI, CoupleI, PreRetreatPaymentI, RequestStatus, RequestStatusInfo } from './request.model';
 import { Ss } from '@core/services/singleton.service';
 import { RequestService } from './request.service';
 import { RetreatClass } from '../retreat/retreat.class';
@@ -26,6 +26,8 @@ export class RequestClass {
   he: CoupleI = this.getDefaultCouple();
   status: RequestStatus = RequestStatus.PENDING;
   action: RequestAction = RequestAction.NEW;
+  is_informado = false;
+  pre_retreat_payments: PreRetreatPaymentI[] = [];
 
   // Propiedades computadas para optimizar el rendimiento
   private _displayDatingPeriod: string | null = null;
@@ -195,6 +197,11 @@ export class RequestClass {
     this.he = this.initializeCouple(request.he);
     this.status = request.status || RequestStatus.PENDING;
     this.action = request.action || RequestAction.NEW;
+    this.is_informado = request.is_informado ?? false;
+    this.pre_retreat_payments = (request.pre_retreat_payments ?? []).map(payment => ({
+      ...payment,
+      payment_date: fun.convertFirebaseTimestamp(payment.payment_date) || payment.payment_date,
+    }));
   }
 
   private initializeCouple(couple: CoupleI): CoupleI {
@@ -253,6 +260,11 @@ export class RequestClass {
       is_active: this.is_active,
       status: this.status,
       action: this.action,
+      is_informado: this.is_informado,
+      pre_retreat_payments: this.pre_retreat_payments.map(payment => ({
+        ...payment,
+        payment_date: new Date(payment.payment_date),
+      })),
       archived_retreat_id: this.archived_retreat_id || undefined,
       archived_at: this.archived_at ? new Date(this.archived_at) : null,
     };
@@ -271,7 +283,7 @@ export class RequestClass {
   /**
    * Abre la vista detallada del retiro
    */
-  openView(args: { retreat?: RetreatClass | null; isArchived?: boolean } = {}): Promise<void> {
+  openView(args: { retreat?: RetreatClass | null; isArchived?: boolean; actionsOnly?: boolean; menuAnchor?: HTMLElement } = {}): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       const dialogService = Ss.dialogService;
       const retreat = args.retreat ?? this.retreatData;
@@ -289,10 +301,13 @@ export class RequestClass {
       const dialogRef = dialogService.open(RequestView, {
         header: dialogTitle,
         width: '90vw',
-        modal: true,
+        modal: !args.actionsOnly,
         draggable: false,
         resizable: false,
-        closable: true,
+        closable: !args.actionsOnly,
+        showHeader: !args.actionsOnly,
+        styleClass: 'request-view-dialog',
+        ...(args.actionsOnly ? { style: { width: '0', height: '0', padding: '0', margin: '0', overflow: 'visible' }, contentStyle: { padding: '0', overflow: 'visible' }, styleClass: 'request-actions-menu-host' } : {}),
         focusOnShow: false,
         templates: {
           header: RequestViewHeader,
@@ -301,6 +316,8 @@ export class RequestClass {
           request: this,
           retreat,
           isArchivedView: args.isArchived ?? this.isArchived,
+          actionsOnly: Boolean(args.actionsOnly),
+          menuAnchor: args.menuAnchor,
         },
         breakpoints: { '960px': '75vw', '640px': '90vw' },
       });
@@ -388,6 +405,8 @@ export class RequestClass {
     this.is_active = other.is_active;
     this.status = other.status;
     this.action = other.action;
+    this.is_informado = other.is_informado;
+    this.pre_retreat_payments = other.pre_retreat_payments;
     this.archived_retreat_id = other.archived_retreat_id;
     this.archived_at = other.archived_at;
 

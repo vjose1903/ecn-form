@@ -69,14 +69,14 @@
       @if (item.displayAddress) {
         <div class="retreat-home-grid-card__detail">
           <i class="pi pi-map-marker" aria-hidden="true"></i>
-          <span [title]="item.displayAddress">{{ item.displayAddress }}</span>
+          <div><span class="retreat-home-grid-card__detail-label">Dirección</span><span>{{ item.displayAddress }}</span></div>
         </div>
       }
 
       @if (item.hasPhone) {
         <div class="retreat-home-grid-card__detail">
           <i class="pi pi-phone" aria-hidden="true"></i>
-          <span [title]="item.phone">{{ item.phone }}</span>
+          <div><span class="retreat-home-grid-card__detail-label">Teléfono</span><span>{{ item.phone }}</span></div>
         </div>
       }
     </div>

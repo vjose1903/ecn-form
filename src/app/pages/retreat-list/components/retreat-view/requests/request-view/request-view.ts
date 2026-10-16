@@ -1,6 +1,7 @@
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Ss } from '@core/services/singleton.service';
 
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, AfterViewInit, ViewChild, DestroyRef } from '@angular/core';
 import { DividerLine } from '@core/components/divider-line/divider-line';
 import { RequestClass } from '@core/entities/request/request.class';
 import { DynamicDialogConfig } from 'primeng/dynamicdialog';
@@ -14,6 +15,7 @@ import { RetreatClass } from '@core/entities/retreat/retreat.class';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { MenuModule } from 'primeng/menu';
+import { Menu } from 'primeng/menu';
 import { MenuItem } from 'primeng/api';
 import { FormPage } from '@pages/form-page/form-page';
 import { PdfService } from '@pages/retreat-list/utils/pdf.service';
@@ -21,6 +23,7 @@ import { ExcelService } from '@pages/retreat-list/utils/excel.service';
 import { ExportType, ReportType } from '@pages/retreat-list/utils/export.utils';
 import { RequestHistoryModal } from './request-history-modal/request-history-modal';
 import { TransferRequestModal } from './transfer-request-modal/transfer-request-modal';
+import { PreRetreatPaymentModal } from './pre-retreat-payment-modal/pre-retreat-payment-modal';
 
 @Component({
   selector: 'app-request-view',
@@ -28,12 +31,15 @@ import { TransferRequestModal } from './transfer-request-modal/transfer-request-
   templateUrl: './request-view.html',
   styleUrl: './request-view.scss',
 })
-export class RequestView implements OnInit {
+export class RequestView implements OnInit, AfterViewInit {
   private ref = inject(DynamicDialogRef);
   private config = inject(DynamicDialogConfig);
   requestService = inject(RequestService);
   pdfService = inject(PdfService);
   excelService = inject(ExcelService);
+
+  private destroyRef = inject(DestroyRef);
+  recentAction = signal('Cargando…');
 
   loading = signal(false);
   isArchivedView = signal(false);
@@ -44,12 +50,37 @@ export class RequestView implements OnInit {
   RequestStatus = RequestStatus;
 
   actions: MenuItem[] = [];
+  actionsOnly = false;
+  @ViewChild('actionsMenu') private actionsMenu?: Menu;
 
   ngOnInit(): void {
     this._request.set(this.config.data.request);
     this.retreat = this.config.data.retreat ?? null;
     this.isArchivedView.set(Boolean(this.config.data.isArchivedView));
+    this.actionsOnly = Boolean(this.config.data.actionsOnly);
     this.actions = this.buildActions();
+    const request = this.request();
+    if (!this.actionsOnly && request) {
+      this.requestService.watchLatestRequestHistory(request.id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: event => this.recentAction.set(event?.message === 'Pago de pre retiro registrado' ? 'Pago registrado' : event?.message || request.actionLabel),
+          error: error => {
+            this.recentAction.set('No disponible');
+            console.error('Error al cargar la acción reciente:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
+          },
+        });
+    }
+  }
+
+  ngAfterViewInit(): void {
+    const anchor = this.config.data.menuAnchor as HTMLElement | undefined;
+    if (!this.actionsOnly || !this.actionsMenu || !anchor) return;
+    this.actionsMenu.toggle({ currentTarget: anchor, target: anchor } as unknown as MouseEvent);
+  }
+
+  closeActionsMenu(): void {
+    if (this.actionsOnly) setTimeout(() => this.ref.close(), 0);
   }
 
   private buildActions(): MenuItem[] {
@@ -69,11 +100,43 @@ export class RequestView implements OnInit {
       ],
     };
 
+    const preRetreatActions: MenuItem[] = !this.isArchivedView() && this.canShowPreRetreat()
+      ? [
+          {
+            label: 'Pre Retiro',
+            items: [
+              {
+                label: this.request()?.is_informado ? 'Marcar como no informado' : 'Marcar como informado',
+                icon: this.request()?.is_informado ? 'pi pi-eye-slash' : 'pi pi-check-circle',
+                command: () => void this.togglePreRetreatInformed(),
+              },
+              {
+                label: 'Pagos',
+                icon: 'pi pi-wallet',
+                command: () => this.openPreRetreatPayments(),
+              },
+            ],
+          },
+          { separator: true },
+        ]
+      : [];
+
     if (this.isArchivedView()) {
-      return [exportActions];
+      return [
+        {
+          label: 'Acciones',
+          items: [
+            { label: 'Transferir solicitud', icon: 'pi pi-send', command: () => this.openTransferModal() },
+            { label: 'Desarchivar solicitud', icon: 'pi pi-replay', command: () => this.unarchiveRequest() },
+          ],
+        },
+        { separator: true },
+        exportActions,
+      ];
     }
 
     return [
+      ...preRetreatActions,
       {
         label: 'Acciones',
         items: [
@@ -104,6 +167,67 @@ export class RequestView implements OnInit {
       },
       exportActions,
     ];
+  }
+
+  private canShowPreRetreat(): boolean {
+    if (!this.retreat?.start_date) return false;
+
+    const startDate = new Date(this.retreat.start_date);
+    const today = new Date();
+    startDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    return today <= startDate;
+  }
+
+  async togglePreRetreatInformed(): Promise<void> {
+    const currentRequest = this.request();
+    if (this.loading() || !currentRequest || !this.retreat) return;
+
+    const isInformado = !currentRequest.is_informado;
+    this.loading.set(true);
+    try {
+      const updated = await this.requestService.updatePreRetreatRequest(
+        { id: currentRequest.id, is_informado: isInformado },
+        this.retreat,
+        this.isArchivedView()
+      );
+      this._request.set(new RequestClass(updated));
+      this.config.data.request = this._request();
+      this.actions = this.buildActions();
+      Ss.toastService.success({
+        message: isInformado ? 'La pareja fue marcada como informada' : 'La pareja fue marcada como no informada',
+        title: 'Pre Retiro',
+      });
+    } catch (error) {
+      console.error('Error al actualizar el estado de informado:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : error));
+      Ss.toastService.error({ message: 'No se pudo actualizar el estado de informado', title: 'Error' });
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  openPreRetreatPayments(): void {
+    const dialogService = Ss.dialogService;
+    const request = this.request();
+    if (!dialogService || !request || !this.retreat) return;
+
+    const dialogRef = dialogService.open(PreRetreatPaymentModal, {
+      header: 'Pagos',
+      width: '34rem',
+      modal: true,
+      draggable: false,
+      resizable: false,
+      closable: true,
+      focusOnShow: false,
+      data: { request, retreat: this.retreat, isArchivedView: this.isArchivedView() },
+      breakpoints: { '640px': '95vw' },
+    });
+
+    dialogRef?.onClose.subscribe((updated?: RequestI) => {
+      if (!updated) return;
+      this._request.set(new RequestClass(updated));
+      this.config.data.request = this._request();
+    });
   }
 
   toggleStatus(status: RequestStatus) {
@@ -187,6 +311,8 @@ export class RequestView implements OnInit {
       focusOnShow: false,
       data: {
         request: this.request(),
+        retreat: this.retreat,
+        isArchivedView: this.isArchivedView(),
       },
       breakpoints: { '960px': '80vw', '640px': '95vw' },
     });

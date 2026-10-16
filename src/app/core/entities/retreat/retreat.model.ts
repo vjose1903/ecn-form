@@ -22,6 +22,7 @@ export interface RetreatI {
   is_active?: boolean;
   accept_requests?: boolean;
   request_count?: number;
+  amount_per_person?: number | null;
   mixedModalityData?: {
     [date: string]: RetreatModalityType;
   };

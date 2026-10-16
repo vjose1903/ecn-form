@@ -5,15 +5,16 @@
 } @else {
 <router-outlet />
 <p-toast styleClass="app-toast" [breakpoints]="toastBreakpoints" />
-<p-confirmdialog>
+<p-confirmdialog [style]="{ width: 'min(92vw, 40rem)' }">
   <ng-template #message let-message>
-    <div class="flex items-center w-full gap-4">
-      <i [ngClass]="message.icon" class="!text-3xl text-primary-500"></i>
-      <p [innerHTML]="message.message"></p>
+    <div class="app-confirmation-message">
+      <i [ngClass]="message.icon" class="app-confirmation-message__icon !text-3xl text-primary-500"></i>
+      <div class="app-confirmation-message__content" [innerHTML]="message.message"></div>
     </div>
   </ng-template>
 </p-confirmdialog>
 <p-dialog />
+}
 <p-dialog
   [visible]="updateDialogVisible()"
   [modal]="true"
@@ -21,6 +22,8 @@
   [draggable]="false"
   [resizable]="false"
   [showHeader]="false"
+  appendTo="body"
+  [baseZIndex]="20000"
   styleClass="update-version-dialog"
   [style]="{ width: 'min(86vw, 36rem)' }">
   <div class="update-modal-content">
@@ -35,18 +38,23 @@
 
     <h2>¡Nueva versión disponible!</h2>
     <p>Hay una versión nueva de la aplicación. Se necesita refrescar la ventana para cargar la última versión.</p>
+    @if (updateError()) {
+      <div class="update-error" role="alert">
+        <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+        <span>{{ updateError() }}</span>
+      </div>
+    }
 
     <div class="update-modal-actions">
-      <button type="button" class="update-secondary-button" (click)="dismissUpdateDialog()">
+      <button type="button" class="update-secondary-button" [disabled]="updateInProgress()" (click)="dismissUpdateDialog()">
         <i class="pi pi-times"></i>
         <span>Ahora no</span>
       </button>
 
-      <button type="button" class="update-primary-button" (click)="reloadForUpdate()">
-        <i class="pi pi-refresh"></i>
-        <span>Refrescar</span>
+      <button type="button" class="update-primary-button" [disabled]="updateInProgress()" (click)="reloadForUpdate()">
+        <i class="pi pi-refresh" [class.pi-spin]="updateInProgress()"></i>
+        <span>{{ updateInProgress() ? 'Actualizando…' : 'Refrescar' }}</span>
       </button>
     </div>
   </div>
 </p-dialog>
-}

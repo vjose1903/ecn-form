@@ -45,6 +45,7 @@
   --history-archived: #ea580c;
   --history-desarchived: #0f766e;
   --history-transferred: #7c3aed;
+  --history-payment: #c2410c;
 
   display: grid;
   gap: 1rem;
@@ -140,6 +141,24 @@
   background: linear-gradient(180deg, currentColor 0%, rgba(255, 255, 255, 0.35) 100%);
 }
 
+.history-card--payment {
+  color: var(--history-payment);
+  background: linear-gradient(115deg, #fffaf5 0%, #ffffff 58%);
+  border-color: #fed7aa;
+}
+
+.history-card--payment .history-card__content {
+  padding: 0.75rem 0.9rem 0.8rem;
+}
+
+.history-card__message--payment {
+  margin: 0.45rem 0 0.55rem;
+  color: #17243a;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
 .history-card__content {
   padding: 0.8rem 0.9rem 0.85rem;
 }
@@ -153,9 +172,33 @@
 }
 
 .history-card__date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--history-muted);
+}
+
+.history-card__date-label {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.history-card__date i {
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+.history-card--payment .history-card__date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.74rem;
+}
+
+.history-card--payment .history-card__date i {
+  font-size: 0.72rem;
 }
 
 .history-card__message {
@@ -170,7 +213,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-top: 0.65rem;
+  margin-top: 0.35rem;
 }
 
 .history-detail-chip {
@@ -292,6 +335,111 @@
   word-break: break-word;
 }
 
+.history-payment-layout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-top: 0.3rem;
+  min-width: 0;
+}
+
+.history-receipt-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 0.2rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #ea580c;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.history-payment-details__values {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.history-payment-value {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.history-payment-value > i {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 2rem;
+  border-radius: 0.7rem;
+  background: #fff0e2;
+  color: #ea580c;
+  font-size: 0.9rem;
+}
+
+.history-payment-value > span {
+  display: grid;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.history-payment-details__divider {
+  width: 1px;
+  height: 2rem;
+  background: #e2e8f0;
+}
+
+.history-payment-value strong {
+  color: #17243a;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.history-payment-value small {
+  color: #64748b;
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.history-receipt-preview img {
+  width: 3rem;
+  height: 3rem;
+  padding: 0.25rem;
+  border-radius: 0.55rem;
+  background: #fff;
+  box-shadow: 0 0.3rem 1rem #17243a12;
+  object-fit: contain;
+}
+
+.history-receipt-preview span {
+  font-size: 0.62rem;
+}
+
+:host ::ng-deep .history-card--payment .p-tag {
+  background: #ffead8;
+  color: #c2410c;
+  font-weight: 700;
+}
+
+.history-receipt-preview__image {
+  display: block;
+  max-width: 100%;
+  max-height: 75vh;
+  margin: auto;
+  background: #fff;
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.12);
+  object-fit: contain;
+}
+
 .history-state-card {
   padding: 2rem 1.25rem;
   border-radius: 1.4rem;
@@ -334,6 +482,44 @@
   color: var(--history-transferred);
 }
 
+.history-card--informed {
+  color: #0f766e;
+}
+
+.history-card--not-informed {
+  color: #9a6b00;
+}
+
+.history-card__top-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+:host ::ng-deep .history-card__action-button {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border-radius: 50%;
+  color: #64748b;
+  font-size: 0.76rem;
+}
+
+:host ::ng-deep .history-card__action-button:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+:host ::ng-deep .history-card--informed .p-tag {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+:host ::ng-deep .history-card--not-informed .p-tag {
+  background: #fff5cc;
+  color: #9a6b00;
+}
+
 @media (max-width: 640px) {
   .history-summary {
     flex-direction: column;
@@ -351,6 +537,42 @@
 
   .history-card__content {
     padding: 1rem;
+  }
+
+  .history-card--payment .history-card__content {
+    padding: 0.7rem;
+  }
+
+  .history-payment-details__values {
+    gap: 0.45rem;
+  }
+
+  .history-payment-value {
+    gap: 0.3rem;
+  }
+
+  .history-payment-value > i {
+    width: 1.75rem;
+    height: 1.75rem;
+    flex-basis: 1.75rem;
+    font-size: 0.8rem;
+  }
+
+  .history-payment-details__divider {
+    height: 1.75rem;
+  }
+
+  .history-payment-value small {
+    font-size: 0.62rem;
+  }
+
+  .history-payment-value strong {
+    font-size: 0.78rem;
+  }
+
+  .history-receipt-preview img {
+    width: 2.5rem;
+    height: 2.5rem;
   }
 
   .history-detail-chip {
