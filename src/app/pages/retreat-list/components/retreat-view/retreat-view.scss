@@ -511,6 +511,7 @@
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     width: 100%;
+    min-width: 0;
     gap: .3rem;
   }
 
@@ -532,8 +533,10 @@
     align-items: stretch;
     flex-direction: column;
     gap: .35rem;
-    width: calc(100% + 3.8rem);
-    margin-inline: -1.9rem;
+    width: calc(100% + .5rem);
+    min-width: 0;
+    box-sizing: border-box;
+    margin-inline: -.25rem;
     padding: .45rem .5rem;
     border-radius: .8rem;
   }

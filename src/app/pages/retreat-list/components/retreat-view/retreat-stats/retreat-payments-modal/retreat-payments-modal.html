@@ -4,10 +4,22 @@
       <span class="retreat-payment-report__summary-icon"><i class="pi pi-wallet" aria-hidden="true"></i></span>
       <div><small>Total recibido</small><strong>{{ formatAmount(total()) }}</strong></div>
     </div>
-    <span class="retreat-payment-report__count"><i class="pi pi-receipt" aria-hidden="true"></i>{{ payments().length }} pagos registrados</span>
+    <span class="retreat-payment-report__count">
+      <i class="pi pi-receipt" aria-hidden="true"></i>
+      <span>{{ payments().length }}</span>
+      <span class="retreat-payment-report__count-label">pagos registrados</span>
+    </span>
   </div>
 
-  <p-table [value]="payments()" [scrollable]="true" scrollHeight="min(58vh, 34rem)" styleClass="retreat-payment-report__table">
+  <label class="retreat-payment-report__search">
+    <i class="pi pi-search" aria-hidden="true"></i>
+    <input type="search" placeholder="Buscar por nombre de la pareja" aria-label="Buscar por nombre de la novia o del novio" [value]="searchTerm()" (input)="onSearchInput($event)" />
+    @if (searchTerm()) {
+      <button type="button" aria-label="Limpiar búsqueda" (click)="searchTerm.set('')"><i class="pi pi-times" aria-hidden="true"></i></button>
+    }
+  </label>
+
+  <p-table [value]="filteredPayments()" [scrollable]="true" scrollHeight="min(58vh, 34rem)" [tableStyle]="{ 'min-width': '52rem' }" styleClass="retreat-payment-report__table">
     <ng-template #header>
       <tr>
         <th scope="col">Descripción</th>
@@ -19,27 +31,28 @@
     </ng-template>
     <ng-template #body let-payment>
       <tr>
-        <td><span class="retreat-payment-report__description">{{ payment.couple }}</span></td>
+        <td>
+          <span class="retreat-payment-report__description">- {{ payment.brideName }}</span>
+          <span class="retreat-payment-report__description">- {{ payment.groomName }}</span>
+        </td>
         <td><p-tag [value]="payment.type" [severity]="payment.type === 'Completivo' ? 'success' : payment.type === 'Parcial' ? 'warn' : 'secondary'" [rounded]="true" /></td>
         <td>{{ payment.paymentDate | date:'dd/MM/yyyy' }}</td>
         <td class="retreat-payment-report__amount">{{ formatAmount(payment.amount) }}</td>
         <td class="retreat-payment-report__actions">
-          <button class="retreat-payment-report__receipt-button" type="button" (click)="showReceipt(payment.receipt)" [attr.aria-label]="'Ver recibo del pago de ' + payment.couple">
+          <button class="retreat-payment-report__receipt-button" type="button" (click)="showReceipt(payment.receipt)" [attr.aria-label]="'Ver recibo del pago de ' + payment.brideName + ' y ' + payment.groomName">
             <i class="pi pi-image" aria-hidden="true"></i><span>Ver recibo</span>
           </button>
         </td>
       </tr>
     </ng-template>
-    <ng-template #footer>
-      <tr>
-        <td colspan="4"><strong>Total recibido</strong></td>
-        <td class="retreat-payment-report__amount"><strong>{{ formatAmount(total()) }}</strong></td>
-      </tr>
-    </ng-template>
     <ng-template #emptymessage>
-      <tr><td colspan="5" class="retreat-payment-report__empty">Todavía no hay pagos registrados.</td></tr>
+      <tr><td colspan="5" class="retreat-payment-report__empty">{{ searchTerm() ? 'No se encontraron pagos para esa pareja.' : 'Todavía no hay pagos registrados.' }}</td></tr>
     </ng-template>
   </p-table>
+  <footer class="retreat-payment-report__total-footer">
+    <strong>Total recibido</strong>
+    <strong>{{ formatAmount(total()) }}</strong>
+  </footer>
 </section>
 
 @if (receiptPreview(); as receipt) {

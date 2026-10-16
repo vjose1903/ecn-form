@@ -38,6 +38,8 @@ export class RetreatStats {
     Ss.dialogService?.open(RetreatPaymentsModal, {
       header: 'Pagos recibidos',
       width: 'min(60rem, 92vw)',
+      style: { maxHeight: 'calc(100dvh - 2rem)' },
+      contentStyle: { display: 'flex', flexDirection: 'column', overflow: 'hidden' },
       modal: true,
       draggable: false,
       resizable: false,

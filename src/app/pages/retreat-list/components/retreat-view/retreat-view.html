@@ -55,7 +55,7 @@
           <div class="retreat-request-actions">
             <p-button [icon]="selectionMode() ? 'pi pi-times' : 'pi pi-check-square'" severity="secondary" [text]="true" [attr.aria-label]="selectionMode() ? 'Cancelar selección múltiple' : 'Seleccionar solicitudes'" (click)="toggleSelectionMode()" />
             <p-button icon="pi pi-inbox" severity="secondary" [text]="true" pTooltip="Solicitudes archivadas" (click)="openArchivedRequestsModal()" />
-            <p-button icon="pi pi-chart-bar" severity="secondary" [text]="true" pTooltip="Estadísticas del retiro" aria-label="Estadísticas del retiro" (onClick)="statsPopover.toggle($event)" />
+            <p-button icon="pi pi-chart-bar" severity="secondary" [text]="true" pTooltip="Estadísticas del retiro" tooltipPosition="left" aria-label="Estadísticas del retiro" (onClick)="statsPopover.toggle($event)" />
             <p-button icon="pi pi-download" severity="secondary" [text]="true" pTooltip="Exportar contactos de parejas" (click)="menu.toggle($event)" />
             <p-menu #menu [model]="exportActions" [popup]="true" [appendTo]="'body'" [autoZIndex]="true" />
             <p-popover #statsPopover [appendTo]="'body'">
