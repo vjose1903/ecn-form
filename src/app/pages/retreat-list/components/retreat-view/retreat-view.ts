@@ -63,7 +63,9 @@ export class RetreatView implements OnInit, OnDestroy {
 
     return filteredRequests.filter(request =>
       (status === RequestStatus.ALL || request.status === status) &&
-      (payments === 'all' || this.getPaymentStatus(request) === payments) &&
+      (payments === 'all' || (payments === 'paid'
+        ? this.getPaymentStatus(request) !== 'none'
+        : this.getPaymentStatus(request) === payments)) &&
       (informed === 'all' || (informed === 'yes') === !!request.is_informado)
     );
   });
