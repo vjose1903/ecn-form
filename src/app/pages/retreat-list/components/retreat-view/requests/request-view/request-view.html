@@ -1,3 +1,6 @@
+@if (actionsOnly) {
+  <p-menu #actionsMenu [model]="actions" [popup]="true" [appendTo]="'body'" [autoZIndex]="true" [baseZIndex]="1200" (onHide)="closeActionsMenu()" />
+} @else {
 @if (request(); as req) {
 <div>
   <!-- Información básica -->
@@ -110,4 +113,5 @@
     </div>
   </div>
 </div>
+}
 }

@@ -5,11 +5,11 @@
   [attr.aria-label]="'Retiro: ' + item.displayNumber"
   role="button"
   tabindex="0"
-  (keydown.enter)="openRetreatView()"
-  (keydown.space)="openRetreatView()">
+  (keydown.enter)="$event.target === $event.currentTarget && openRetreatView()"
+  (keydown.space)="$event.target === $event.currentTarget && (openRetreatView()); $event.target === $event.currentTarget && $event.preventDefault()">
   <div class="retreat-grid-card__hero">
     <div class="retreat-grid-card__hero-top">
-      <div class="retreat-grid-card__status">
+      <div class="retreat-grid-card__status" [class.retreat-grid-card__status--inactive]="!item.is_active">
         <p-tag [severity]="item.statusSeverity" [value]="item.statusText" [rounded]="true" [attr.aria-label]="'Estado: ' + item.statusText" />
       </div>
 
@@ -47,6 +47,12 @@
       <span class="retreat-grid-card__eyebrow">Retiro</span>
       <strong class="retreat-grid-card__number">#{{ item.displayNumber }}</strong>
       <h3 class="retreat-grid-card__title">{{ item.displayCommunityName }}</h3>
+      @if (item.hasDates) {
+        <div class="retreat-grid-card__dates">
+          <i class="pi pi-calendar" aria-hidden="true"></i>
+          <span>{{ item.displayDateRange }}</span>
+        </div>
+      }
     </div>
   </div>
 
@@ -55,40 +61,33 @@
       @if (item.hasRetreatHome) {
         <div class="retreat-grid-card__detail">
           <i class="pi pi-home" aria-hidden="true"></i>
-          <span [title]="item.retreatHomeName">{{ item.retreatHomeName }}</span>
+          <div><span class="retreat-grid-card__detail-label">Casa de retiro</span><span>{{ item.retreatHomeName }}</span></div>
         </div>
       }
 
       @if (item.hasModality) {
         <div class="retreat-grid-card__detail">
           <i class="pi pi-globe" aria-hidden="true"></i>
-          <span [title]="item.displayModality">{{ item.displayModality }}</span>
-        </div>
-      }
-
-      @if (item.hasDates) {
-        <div class="retreat-grid-card__detail">
-          <i class="pi pi-calendar" aria-hidden="true"></i>
-          <span [title]="item.displayDateRange">{{ item.displayDateRange }}</span>
+          <div><span class="retreat-grid-card__detail-label">Modalidad</span><span>{{ item.displayModality }}</span></div>
         </div>
       }
 
       <div class="retreat-grid-card__detail">
         <i class="pi pi-check-circle" aria-hidden="true"></i>
-        <span [title]="item.requestsStatusText">{{ item.requestsStatusText }}</span>
+        <div><span class="retreat-grid-card__detail-label">Solicitudes</span><span>{{ item.requestsStatusText }}</span></div>
       </div>
     </div>
 
     <div class="retreat-grid-card__footer">
       <div class="retreat-grid-card__metric">
-        <span class="retreat-grid-card__metric-label">Solicitudes</span>
+        <span class="retreat-grid-card__metric-label">Parejas registradas</span>
         <strong class="retreat-grid-card__metric-value">{{ item.requestCount }}</strong>
       </div>
 
-      <div class="retreat-grid-card__cta">
+      <button type="button" class="retreat-grid-card__cta" [disabled]="loading()" (click)="openRetreatView()">
         <span>Abrir retiro</span>
-        <i class="pi pi-arrow-up-right"></i>
-      </div>
+        <i class="pi pi-arrow-up-right" aria-hidden="true"></i>
+      </button>
     </div>
   </div>
 </article>

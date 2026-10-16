@@ -334,6 +334,24 @@
   color: var(--history-transferred);
 }
 
+.history-card--informed {
+  color: #0f766e;
+}
+
+.history-card--not-informed {
+  color: #9a6b00;
+}
+
+:host ::ng-deep .history-card--informed .p-tag {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+:host ::ng-deep .history-card--not-informed .p-tag {
+  background: #fff5cc;
+  color: #9a6b00;
+}
+
 @media (max-width: 640px) {
   .history-summary {
     flex-direction: column;

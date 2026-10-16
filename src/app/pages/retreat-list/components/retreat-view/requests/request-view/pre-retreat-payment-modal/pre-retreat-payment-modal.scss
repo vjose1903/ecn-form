@@ -1,0 +1,98 @@
+:host {
+  display: block;
+}
+
+.pre-retreat-payment,
+.pre-retreat-payment form {
+  display: grid;
+  gap: 1rem;
+}
+
+.pre-retreat-payment__history {
+  display: grid;
+  gap: .65rem;
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.pre-retreat-payment h2 {
+  margin: 0;
+  color: #172033;
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.pre-retreat-payment__record {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .75rem .85rem;
+  border-radius: .75rem;
+  background: #f8fafc;
+}
+
+.pre-retreat-payment__record div,
+.pre-retreat-payment__field {
+  display: grid;
+  gap: .35rem;
+  min-width: 0;
+}
+
+.pre-retreat-payment__record strong,
+.pre-retreat-payment__field label {
+  color: #263449;
+  font-size: .9rem;
+  font-weight: 650;
+}
+
+.pre-retreat-payment__record span,
+.pre-retreat-payment__field small {
+  color: #64748b;
+  font-size: .8rem;
+}
+
+.pre-retreat-payment__record a {
+  color: #b42336;
+  font-size: .85rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.pre-retreat-payment__field p-datepicker,
+.pre-retreat-payment__field p-inputnumber {
+  width: 100%;
+}
+
+.pre-retreat-payment__field input[type='file'] {
+  width: 100%;
+  padding: .7rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: .7rem;
+  background: #f8fafc;
+  color: #475569;
+  font-size: .85rem;
+}
+
+.pre-retreat-payment__filename {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  color: #475569;
+  font-size: .8rem;
+  overflow-wrap: anywhere;
+}
+
+.pre-retreat-payment footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: .65rem;
+  padding-top: .35rem;
+}
+
+@media (max-width: 480px) {
+  .pre-retreat-payment footer {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

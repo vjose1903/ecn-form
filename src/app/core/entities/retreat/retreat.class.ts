@@ -5,6 +5,7 @@ import { RetreatService } from './retreat.service';
 import { RetreatHomeClass } from '../retreat-home/retreat-home.class';
 import { RetreatForm } from 'app/pages/retreat-list/retreat-form/retreat-form';
 import { RetreatView } from 'app/pages/retreat-list/components/retreat-view/retreat-view';
+import { RetreatViewHeader } from 'app/pages/retreat-list/components/retreat-view/retreat-view-header';
 import { fun } from '@core/services/functions.service';
 import { RequestClass } from '../request/request.class';
 import { RequestService } from '../request/request.service';
@@ -359,18 +360,20 @@ export class RetreatClass {
     }
 
     const dialogRef = dialogService.open(RetreatView, {
-      header: `Retiro No. ${this.displayNumber}  Comunidad: ${this.displayCommunityName}`,
+      header: '',
+      templates: { header: RetreatViewHeader },
       width: '70vw',
+      styleClass: 'retreat-view-dialog',
       modal: true,
       draggable: false,
       resizable: false,
-      closable: true,
+      closable: false,
       focusOnShow: false,
       data: {
         retreat: this,
         autoOpenRequestId: args.autoOpenRequestId ?? null,
       },
-      breakpoints: { '960px': '75vw', '640px': '90vw' },
+      breakpoints: { '960px': '82vw', '640px': '95vw' },
     });
 
     dialogRef?.onClose.subscribe();

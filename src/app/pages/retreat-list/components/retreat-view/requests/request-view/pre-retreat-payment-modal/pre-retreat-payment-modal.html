@@ -1,0 +1,60 @@
+<div class="pre-retreat-payment">
+  @if (payments.length) {
+    <section class="pre-retreat-payment__history" aria-label="Pagos registrados">
+      <h2>Pagos registrados</h2>
+      @for (payment of payments; track payment.id) {
+        <article class="pre-retreat-payment__record">
+          <div>
+            <strong>{{ formatAmount(payment.amount) }}</strong>
+            <span>{{ formatDate(payment.payment_date) }}</span>
+          </div>
+          <a [href]="payment.receipt_url" target="_blank" rel="noopener noreferrer">Ver recibo</a>
+        </article>
+      }
+    </section>
+    <divider-line />
+  }
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="pre-retreat-payment__field">
+      <label for="pre-retreat-payment-date">Fecha del pago</label>
+      <p-datepicker
+        inputId="pre-retreat-payment-date"
+        inputStyleClass="w-full"
+        formControlName="payment_date"
+        dateFormat="dd/mm/yy"
+        [maxDate]="today"
+        [showIcon]="true"
+        [readonlyInput]="false"
+        appendTo="body" />
+    </div>
+
+    <div class="pre-retreat-payment__field">
+      <label for="pre-retreat-payment-amount">Monto del pago</label>
+      <p-inputnumber
+        inputId="pre-retreat-payment-amount"
+        inputStyleClass="w-full"
+        formControlName="amount"
+        mode="currency"
+        currency="DOP"
+        locale="es-DO"
+        [min]="0.01"
+        [minFractionDigits]="0"
+        [maxFractionDigits]="0" />
+    </div>
+
+    <div class="pre-retreat-payment__field">
+      <label for="pre-retreat-payment-receipt">Imagen del recibo</label>
+      <input #receiptInput id="pre-retreat-payment-receipt" type="file" accept="image/*" (change)="onReceiptSelected($event)" />
+      <small>Imagen de hasta 5 MB.</small>
+      @if (receipt(); as file) {
+        <span class="pre-retreat-payment__filename"><i class="pi pi-image" aria-hidden="true"></i>{{ file.name }}</span>
+      }
+    </div>
+
+    <footer>
+      <p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" [disabled]="loading()" (onClick)="ref.close()" />
+      <p-button type="submit" label="Guardar pago" icon="pi pi-check" [loading]="loading()" />
+    </footer>
+  </form>
+</div>

@@ -5,6 +5,19 @@
 
 @import "tailwindcss";
 
+.request-actions-menu-host {
+  position: fixed !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  height: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
 
 @theme {
   --color-brand-primary: #a83044;

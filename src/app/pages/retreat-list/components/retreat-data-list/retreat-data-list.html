@@ -20,7 +20,10 @@
             <span>Pendiente de fecha</span>
           }
         </span>
-        <strong class="retreat-list-card__number">#{{ item.displayNumber }}</strong>
+        <div class="retreat-list-card__number-row">
+          <strong class="retreat-list-card__number">#{{ item.displayNumber }}</strong>
+          <p-tag [severity]="item.statusSeverity" [value]="item.statusText" [rounded]="true" [attr.aria-label]="'Estado: ' + item.statusText" />
+        </div>
       </div>
 
       @if (showActions) {
@@ -54,9 +57,6 @@
     </div>
 
     <div class="retreat-list-card__title-block">
-      <div class="retreat-list-card__status">
-        <p-tag [severity]="item.statusSeverity" [value]="item.statusText" [rounded]="true" [attr.aria-label]="'Estado: ' + item.statusText" />
-      </div>
       <p class="retreat-list-card__label">Comunidad</p>
       <h3 class="retreat-list-card__title" [title]="item.displayCommunityName">{{ item.displayCommunityName }}</h3>
     </div>

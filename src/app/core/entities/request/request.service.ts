@@ -1,13 +1,14 @@
 import { inject, Injectable } from '@angular/core';
 import { FirebaseRequest } from '@core/typescript/firebase/firebaseRequest';
-import { RequestAction, RequestHistoryChangeI, RequestHistoryI, RequestI } from './request.model';
+import { NewPreRetreatPaymentI, PreRetreatPaymentI, RequestAction, RequestHistoryChangeI, RequestHistoryI, RequestI } from './request.model';
 import { RequestClass } from './request.class';
 import { UserService } from '../user/user.service';
 import { AuthService } from '@core/services/auth.service';
 import { Ss } from '@core/services/singleton.service';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { RetreatClass } from '../retreat/retreat.class';
-import { addDoc, Firestore, collection, doc, getDocs, increment, query, serverTimestamp, where, writeBatch } from '@angular/fire/firestore';
+import { addDoc, Firestore, collection, doc, getDocs, increment, query, runTransaction, serverTimestamp, where, writeBatch } from '@angular/fire/firestore';
+import { deleteObject, getDownloadURL, ref, Storage, uploadBytes } from '@angular/fire/storage';
 import { fun } from '@core/services/functions.service';
 
 interface UpdateRequestOptions {
@@ -25,6 +26,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
   private userService = inject(UserService);
   private authService = inject(AuthService);
   private firestore = inject(Firestore);
+  private storage = inject(Storage);
 
   private _requests: BehaviorSubject<RequestClass[]> = new BehaviorSubject<RequestClass[]>([]);
   private _loadingRequestsList: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
@@ -59,6 +61,115 @@ export class RequestService extends FirebaseRequest<RequestI> {
 
   set requests(value: RequestClass[]) {
     this._requests.next(value);
+  }
+
+  async updatePreRetreatRequest(request: Partial<RequestI>, retreat: RetreatClass, isArchived = false): Promise<RequestI> {
+    const userId = this.authService.current_user()?.id;
+    if (!request.id || !userId) {
+      throw new Error('Solicitud o usuario no disponible');
+    }
+
+    const collectionState = isArchived ? 'requests-archived' : 'request';
+    const requestRef = doc(this.firestore, isArchived
+      ? `${this.userService.collectionName}/${userId}/${collectionState}/${request.id}`
+      : `${retreat.completeRefString()}/request/${request.id}`);
+
+    const result = await runTransaction(this.firestore, async transaction => {
+      const snapshot = await transaction.get(requestRef);
+      if (!snapshot.exists()) throw new Error('La solicitud no existe');
+      const previous = snapshot.data() as RequestI;
+      const payload = { ...request };
+      if (payload.pre_retreat_payments) {
+        payload.pre_retreat_payments = [
+          ...(previous.pre_retreat_payments ?? []),
+          ...payload.pre_retreat_payments.filter(payment => !previous.pre_retreat_payments?.some(existing => existing.id === payment.id)),
+        ];
+      }
+      const next = { ...previous, ...payload, id: request.id! };
+      transaction.update(requestRef, payload);
+
+      const record = (message: string, changes: RequestHistoryChangeI[]) => {
+        transaction.set(doc(this.getHistoryCollectionRef(userId)), this.buildHistoryPayload({
+          requestId: next.id,
+          action: RequestAction.UPDATED,
+          retreat,
+          collectionState,
+          message,
+          changes,
+        }));
+      };
+
+      if (request.is_informado !== undefined && request.is_informado !== (previous.is_informado ?? false)) {
+        record(request.is_informado ? 'Pareja marcada como informada' : 'Pareja marcada como no informada', [{
+          label: 'Estado de información',
+          previous_value: previous.is_informado ? 'Informada' : 'Sin informar',
+          next_value: request.is_informado ? 'Informada' : 'Sin informar',
+        }]);
+      }
+
+      for (const payment of request.pre_retreat_payments ?? []) {
+        if (previous.pre_retreat_payments?.some(existing => existing.id === payment.id)) continue;
+        record('Pago de pre retiro registrado', [
+          { label: 'Monto', previous_value: '', next_value: String(payment.amount) },
+          { label: 'Fecha del pago', previous_value: '', next_value: this.formatHistoryValue(payment.payment_date) },
+          { label: 'Recibo', previous_value: '', next_value: payment.receipt_name },
+        ]);
+      }
+
+      return next;
+    });
+
+    if (!isArchived) this.updateRequestInCache(result, 'update');
+    return result;
+  }
+
+  async addPreRetreatPayment(args: {
+    request: RequestClass;
+    retreat: RetreatClass;
+    payment: NewPreRetreatPaymentI;
+    isArchived?: boolean;
+  }): Promise<RequestI> {
+    const { request, retreat, payment, isArchived = false } = args;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const paymentDate = new Date(payment.payment_date);
+    paymentDate.setHours(0, 0, 0, 0);
+
+    if (!request.id || !Number.isFinite(payment.amount) || payment.amount <= 0 || !payment.receipt.type.startsWith('image/') || payment.receipt.size > 5 * 1024 * 1024) {
+      throw new Error('Revisa el monto y selecciona una imagen válida del recibo');
+    }
+    if (Number.isNaN(paymentDate.getTime())) {
+      throw new Error('La fecha del pago no es válida');
+    }
+    if (paymentDate > today) {
+      throw new Error('La fecha del pago no puede ser futura');
+    }
+
+    const safeName = payment.receipt.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storageRef = ref(this.storage, `requests/${request.id}/pre-retreat-payments/${Date.now()}-${safeName}`);
+
+    try {
+      await uploadBytes(storageRef, payment.receipt);
+      const paymentRecord: PreRetreatPaymentI = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        payment_date: paymentDate,
+        amount: payment.amount,
+        receipt_url: await getDownloadURL(storageRef),
+        receipt_name: payment.receipt.name,
+      };
+
+      return await this.updatePreRetreatRequest(
+        {
+          id: request.id,
+          pre_retreat_payments: [...request.pre_retreat_payments, paymentRecord],
+        },
+        retreat,
+        isArchived
+      );
+    } catch (error) {
+      await deleteObject(storageRef).catch(() => undefined);
+      throw error;
+    }
   }
 
   private parseUserIdFromRefString(refString: string): string | null {
@@ -430,6 +541,8 @@ export class RequestService extends FirebaseRequest<RequestI> {
     try {
       const requestPayload = {
         ...payload,
+        is_informado: payload.is_informado ?? false,
+        pre_retreat_payments: payload.pre_retreat_payments ?? [],
         action: RequestAction.NEW,
       };
 

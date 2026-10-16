@@ -7,7 +7,6 @@ import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
 import { TagModule } from 'primeng/tag';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
-import { DividerLine } from '@core/components/divider-line/divider-line';
 import { Subject, takeUntil } from 'rxjs';
 import { BadgeModule } from 'primeng/badge';
 import { RequestClass } from '@core/entities/request/request.class';
@@ -27,7 +26,7 @@ import { ArchivedRequestsModal } from './archived-requests-modal/archived-reques
 
 @Component({
   selector: 'app-retreat-view',
-  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, DividerLine, BadgeModule, RequestCard, SelectModule, FormsModule, LowerCasePipe, InputTextModule, ViewItem, MenuModule],
+  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, BadgeModule, RequestCard, SelectModule, FormsModule, LowerCasePipe, InputTextModule, ViewItem, MenuModule],
   templateUrl: './retreat-view.html',
   styleUrl: './retreat-view.scss',
 })

@@ -42,7 +42,10 @@ export class RequestHistoryModal implements OnInit {
     }
   }
 
-  getActionLabel(action: RequestAction): string {
+  getActionLabel(item: RequestHistoryI): string {
+    if (item.message === 'Pareja marcada como informada') return 'Informada';
+    if (item.message === 'Pareja marcada como no informada') return 'No informada';
+
     const labels: Record<RequestAction, string> = {
       [RequestAction.NEW]: 'Nueva',
       [RequestAction.UPDATED]: 'Actualizada',
@@ -51,10 +54,12 @@ export class RequestHistoryModal implements OnInit {
       [RequestAction.TRANSFERRED]: 'Transferida',
     };
 
-    return labels[action];
+    return labels[item.action];
   }
 
-  getActionSeverity(action: RequestAction): 'secondary' | 'info' | 'warn' | 'success' {
+  getActionSeverity(item: RequestHistoryI): 'secondary' | 'info' | 'warn' | 'success' {
+    if (this.isInformationStatusChange(item)) return 'info';
+
     const severities: Record<RequestAction, 'secondary' | 'info' | 'warn' | 'success'> = {
       [RequestAction.NEW]: 'success',
       [RequestAction.UPDATED]: 'info',
@@ -63,10 +68,13 @@ export class RequestHistoryModal implements OnInit {
       [RequestAction.TRANSFERRED]: 'secondary',
     };
 
-    return severities[action];
+    return severities[item.action];
   }
 
-  getActionCardClass(action: RequestAction): string {
+  getActionCardClass(item: RequestHistoryI): string {
+    if (item.message === 'Pareja marcada como informada') return 'history-card--informed';
+    if (item.message === 'Pareja marcada como no informada') return 'history-card--not-informed';
+
     const classes: Record<RequestAction, string> = {
       [RequestAction.NEW]: 'history-card--new',
       [RequestAction.UPDATED]: 'history-card--updated',
@@ -75,7 +83,11 @@ export class RequestHistoryModal implements OnInit {
       [RequestAction.TRANSFERRED]: 'history-card--transferred',
     };
 
-    return classes[action];
+    return classes[item.action];
+  }
+
+  isInformationStatusChange(item: RequestHistoryI): boolean {
+    return item.message === 'Pareja marcada como informada' || item.message === 'Pareja marcada como no informada';
   }
 
   formatHappenedAt(value: RequestHistoryI['happened_at']): string {

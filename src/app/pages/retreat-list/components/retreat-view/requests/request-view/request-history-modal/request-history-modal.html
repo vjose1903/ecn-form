@@ -19,11 +19,11 @@
 
   <div class="history-timeline">
     @for (item of history(); track item.id) {
-    <article class="history-card" [ngClass]="getActionCardClass(item.action)">
+    <article class="history-card" [ngClass]="getActionCardClass(item)">
       <div class="history-card__accent"></div>
       <div class="history-card__content">
         <div class="history-card__top">
-          <p-tag [value]="getActionLabel(item.action)" [severity]="getActionSeverity(item.action)" [rounded]="true" />
+          <p-tag [value]="getActionLabel(item)" [severity]="getActionSeverity(item)" [rounded]="true" />
           <span class="history-card__date">{{ formatHappenedAt(item.happened_at) }}</span>
         </div>
 
@@ -59,7 +59,7 @@
           }
         </div>
 
-        @if (item.changes?.length) {
+        @if (item.changes?.length && !isInformationStatusChange(item)) {
         <div class="history-card__changes">
           <p class="history-card__changes-title">Campos modificados</p>
           <div class="history-card__changes-list">
