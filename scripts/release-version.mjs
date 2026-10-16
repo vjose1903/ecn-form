@@ -80,11 +80,21 @@ try {
     console.log(`\nPublicado ${versionLabel} en main.`);
   } else {
     runGit('push', 'origin', 'dev');
-    runGit('checkout', 'main');
-    runGit('pull', '--ff-only', 'origin', 'main');
-    runGit('merge', '--no-ff', 'dev', '-m', subject, '-m', description);
-    runGit('push', 'origin', 'main');
-    console.log(`\nPublicado ${versionLabel} en main mediante merge desde dev.`);
+    runGit('fetch', 'origin', 'main');
+
+    const mainCommit = git('rev-parse', 'FETCH_HEAD');
+    const devCommit = git('rev-parse', branch);
+    const mergeTree = git('merge-tree', '--write-tree', mainCommit, devCommit).split('\n')[0];
+    const mergeCommit = execFileSync('git', [
+      'commit-tree', mergeTree,
+      '-p', mainCommit,
+      '-p', devCommit,
+      '-m', subject,
+      '-m', description,
+    ], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] }).trim();
+
+    runGit('push', 'origin', `${mergeCommit}:refs/heads/main`);
+    console.log(`\nPublicado ${versionLabel} en main mediante merge desde ${branch}. El checkout permanece en ${branch}.`);
   }
 } finally {
   rl.close();
