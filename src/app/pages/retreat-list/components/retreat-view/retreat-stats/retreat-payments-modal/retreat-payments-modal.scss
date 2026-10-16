@@ -1,6 +1,6 @@
 .retreat-payment-report {
   display: grid;
-  gap: 1rem;
+  gap: .65rem;
   min-height: 0;
   color: #172033;
 }
@@ -10,11 +10,70 @@
   align-items: center;
   justify-content: space-between;
   gap: .75rem;
-  padding: .85rem 1rem;
+  padding: .65rem .8rem;
   border: 1px solid #f2e8e4;
   border-radius: 1rem;
   background: linear-gradient(110deg, #fff8f4, #fff 72%);
 }
+
+.retreat-payment-report__expected {
+  display: grid;
+  gap: .45rem;
+  padding: .5rem .7rem;
+  border: 1px solid #e8edf4;
+  border-radius: .75rem;
+  background: #f8fafc;
+}
+
+.retreat-payment-report__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .5rem;
+}
+
+.retreat-payment-report__metric,
+.retreat-payment-report__metric small,
+.retreat-payment-report__couple-counts,
+.retreat-payment-report__couple-count {
+  display: flex;
+  align-items: center;
+}
+
+.retreat-payment-report__metric {
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .1rem;
+}
+.retreat-payment-report__metric small { gap: .25rem; color: #64748b; font-size: .64rem; white-space: nowrap; }
+.retreat-payment-report__metric small i { font-size: .68rem; }
+.retreat-payment-report__metric strong { color: #172033; font-size: .78rem; opacity: .75; white-space: nowrap; }
+.retreat-payment-report__balance--surplus small,
+.retreat-payment-report__balance--surplus strong { color: #b45309; }
+.retreat-payment-report__percentage strong { color: #15803d; opacity: 1; }
+
+.retreat-payment-report__progress {
+  height: .3rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+.retreat-payment-report__progress span { display: block; height: 100%; border-radius: inherit; background: #22c55e; transition: width .2s ease; }
+
+.retreat-payment-report__couple-counts { flex-wrap: wrap; gap: .3rem; }
+.retreat-payment-report__couple-counts > small { margin-right: .1rem; color: #64748b; font-size: .62rem; }
+.retreat-payment-report__couple-count {
+  gap: .25rem;
+  padding: .22rem .42rem;
+  border-radius: 999px;
+  font-size: .66rem;
+  white-space: nowrap;
+}
+.retreat-payment-report__couple-count--paid { background: #dcfce7; color: #15803d; }
+.retreat-payment-report__couple-count--unpaid { background: #fff5cc; color: #9a6b00; }
+.retreat-payment-report__couple-count--complete { background: #e0f2fe; color: #0369a1; }
+.retreat-payment-report__couple-count--partial { background: #ffedd5; color: #c2410c; }
+.retreat-payment-report__couple-count strong { font-size: .7rem; }
 
 .retreat-payment-report__summary-total {
   display: flex;
@@ -25,9 +84,9 @@
 .retreat-payment-report__summary-icon {
   display: grid;
   place-items: center;
-  width: 2.6rem;
-  height: 2.6rem;
-  flex: 0 0 2.6rem;
+  width: 2.3rem;
+  height: 2.3rem;
+  flex: 0 0 2.3rem;
   border: 1px solid #fee2d5;
   border-radius: .85rem;
   background: #fff;
@@ -251,6 +310,14 @@
 }
 
 @media (max-width: 640px) {
+  .retreat-payment-report__expected { gap: .4rem; padding: .45rem .55rem; }
+  .retreat-payment-report__metrics { gap: .25rem; }
+  .retreat-payment-report__metric small { font-size: .58rem; }
+  .retreat-payment-report__metric strong { font-size: .72rem; }
+  .retreat-payment-report__couple-counts { gap: .25rem; }
+  .retreat-payment-report__couple-counts > small { width: 100%; }
+  .retreat-payment-report__couple-count { padding: .2rem .35rem; font-size: .62rem; }
+
   .retreat-payment-report__toolbar { gap: .4rem; }
   :host ::ng-deep .retreat-payment-report__toolbar > p-button { flex: 0 0 auto; }
   :host ::ng-deep .retreat-payment-report__toolbar > p-button .p-button { padding-inline: .65rem; font-size: .78rem; }
@@ -258,7 +325,7 @@
   .retreat-payment-report__summary {
     align-items: center;
     flex-direction: row;
-    padding: .7rem;
+    padding: .55rem .65rem;
   }
 
   .retreat-payment-report__summary-total strong {

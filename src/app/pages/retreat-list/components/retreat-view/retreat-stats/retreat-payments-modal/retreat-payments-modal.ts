@@ -1,12 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { RequestClass } from '@core/entities/request/request.class';
-import { PreRetreatPaymentI } from '@core/entities/request/request.model';
+import { PreRetreatPaymentI, RequestStatus } from '@core/entities/request/request.model';
 import { RequestService } from '@core/entities/request/request.service';
 import { Ss } from '@core/services/singleton.service';
-import ExcelJS from 'exceljs';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DynamicDialogConfig } from 'primeng/dynamicdialog';
@@ -15,6 +12,9 @@ import { DialogModule } from 'primeng/dialog';
 import { MenuModule } from 'primeng/menu';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
+import { ExcelService } from '@pages/retreat-list/utils/excel.service';
+import { PdfService } from '@pages/retreat-list/utils/pdf.service';
+import { ReportType } from '@pages/retreat-list/utils/export.utils';
 
 type PaymentType = 'Parcial' | 'Completivo' | 'Sin clasificar';
 
@@ -40,11 +40,34 @@ interface RetreatPaymentRow {
 export class RetreatPaymentsModal implements OnInit, OnDestroy {
   private config = inject(DynamicDialogConfig);
   private requestService = inject(RequestService);
+  private excelService = inject(ExcelService);
+  private pdfService = inject(PdfService);
   exportActions: MenuItem[] = [
     { label: 'Exportar a Excel', icon: 'pi pi-file-excel', command: () => this.exportToExcel() },
     { label: 'Exportar a PDF', icon: 'pi pi-file-pdf', command: () => this.exportToPdf() },
   ];
   payments = signal<RetreatPaymentRow[]>([]);
+  paymentSummary = computed(() => {
+    const accepted = ((this.config.data.requests ?? []) as RequestClass[]).filter(request => request.status === RequestStatus.ACCEPTED);
+    const amountPerCouple = Number(this.config.data.amountPerPerson ?? 0) * 2;
+    const paidAmounts = accepted.map(request => (request.pre_retreat_payments ?? []).reduce((sum, payment) => sum + payment.amount, 0));
+    const paid = paidAmounts.filter(amount => amount > 0).length;
+    const expectedTotal = accepted.length * amountPerCouple;
+    const receivedTotal = this.total();
+    const percentage = expectedTotal > 0 ? receivedTotal / expectedTotal * 100 : 0;
+    return {
+      expectedTotal,
+      outstanding: Math.max(expectedTotal - receivedTotal, 0),
+      surplus: expectedTotal > 0 ? Math.max(receivedTotal - expectedTotal, 0) : 0,
+      isOverpaid: expectedTotal > 0 && receivedTotal > expectedTotal,
+      percentage,
+      progressPercentage: Math.min(percentage, 100),
+      paid,
+      unpaid: accepted.length - paid,
+      complete: amountPerCouple > 0 ? paidAmounts.filter(amount => amount >= amountPerCouple).length : 0,
+      partial: amountPerCouple > 0 ? paidAmounts.filter(amount => amount > 0 && amount < amountPerCouple).length : 0,
+    };
+  });
   searchTerm = signal('');
   filteredPayments = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();
@@ -105,65 +128,41 @@ export class RetreatPaymentsModal implements OnInit, OnDestroy {
   }
 
   async exportToExcel(): Promise<void> {
-    const rows = this.filteredPayments();
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Pagos recibidos');
-    worksheet.columns = [
-      { header: 'Descripción', key: 'description', width: 52 },
-      { header: 'Tipo', key: 'type', width: 18 },
-      { header: 'Fecha', key: 'date', width: 16 },
-      { header: 'Ingresos', key: 'amount', width: 20 },
-    ];
-    worksheet.addRows(rows.map(payment => ({
-      description: `- ${payment.brideName}\n- ${payment.groomName}`,
-      type: payment.type,
-      date: payment.paymentDate,
-      amount: payment.amount,
-    })));
-    worksheet.addRow({ description: 'Total recibido', amount: rows.reduce((sum, payment) => sum + payment.amount, 0) });
-    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC10007' } };
-    worksheet.getColumn('date').numFmt = 'dd/mm/yyyy';
-    worksheet.getColumn('amount').numFmt = '"RD$"#,##0.00';
-    worksheet.eachRow(row => row.alignment = { vertical: 'middle', wrapText: true });
-    const buffer = await workbook.xlsx.writeBuffer();
-    this.downloadFile(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), 'xlsx');
+    try {
+      await this.excelService.generateReport(ReportType.PAYMENTS_REPORT, this.getExportData(), Ss.authService.current_user()?.cityData);
+      Ss.toastService.success({ title: 'Excel exportado', message: 'Se descargó el reporte de pagos recibidos.' });
+    } catch (error) {
+      console.error('Error al exportar los pagos a Excel:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
+      Ss.toastService.error({ title: 'Error al exportar', message: 'No se pudo generar el archivo Excel.' });
+    }
   }
 
-  exportToPdf(): void {
-    const rows = this.filteredPayments();
-    const doc = new jsPDF({ orientation: 'landscape' });
-    doc.setFontSize(16);
-    doc.text('Pagos recibidos', 14, 16);
-    doc.setFontSize(10);
-    doc.text(`Total recibido: ${this.formatAmount(rows.reduce((sum, payment) => sum + payment.amount, 0))}`, 14, 23);
-    autoTable(doc, {
-      startY: 29,
-      head: [['Descripción', 'Tipo', 'Fecha', 'Ingresos']],
-      body: rows.map(payment => [
-        `- ${payment.brideName}\n- ${payment.groomName}`,
-        payment.type,
-        this.formatDate(payment.paymentDate),
-        this.formatAmount(payment.amount),
-      ]),
-      styles: { fontSize: 9, cellPadding: 3 },
-      headStyles: { fillColor: [193, 0, 7] },
-      columnStyles: { 0: { cellWidth: 'auto' }, 1: { cellWidth: 32 }, 2: { cellWidth: 32 }, 3: { cellWidth: 40, halign: 'right' } },
-    });
-    this.downloadFile(doc.output('blob'), 'pdf');
+  async exportToPdf(): Promise<void> {
+    try {
+      await this.pdfService.generateReport(ReportType.PAYMENTS_REPORT, this.getExportData(), Ss.authService.current_user()?.cityData);
+      Ss.toastService.success({ title: 'PDF exportado', message: 'Se descargó el reporte de pagos recibidos.' });
+    } catch (error) {
+      console.error('Error al exportar los pagos a PDF:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
+      Ss.toastService.error({ title: 'Error al exportar', message: 'No se pudo generar el archivo PDF.' });
+    }
   }
 
-  private downloadFile(blob: Blob, extension: 'pdf' | 'xlsx'): void {
-    const date = new Date();
-    const datePart = [date.getFullYear(), date.getMonth() + 1, date.getDate()].map(value => String(value).padStart(2, '0')).join('-');
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Pagos_Recibidos_${datePart}.${extension}`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  private getExportData() {
+    const retreat = (this.config.data.requests as RequestClass[] | undefined)?.[0]?.retreatData;
+    return {
+      retreatInfo: {
+        name: retreat?.displayCommunityName ?? 'Retiro',
+        number: String(retreat?.displayNumber ?? ''),
+        modality: retreat?.displayModality ?? '',
+        dateRange: retreat?.displayDateRange ?? '',
+      },
+      payments: this.filteredPayments().map(payment => ({
+        description: `- ${payment.brideName}\n- ${payment.groomName}`,
+        type: payment.type,
+        paymentDate: payment.paymentDate,
+        amount: payment.amount,
+      })),
+    };
   }
 
   private firstThreeNames(name: string): string {
