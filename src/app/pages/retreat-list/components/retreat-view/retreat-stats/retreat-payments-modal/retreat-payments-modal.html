@@ -1,0 +1,37 @@
+<section class="retreat-payment-report" aria-label="Detalle de pagos recibidos">
+  <div class="retreat-payment-report__summary">
+    <div class="retreat-payment-report__summary-total">
+      <span class="retreat-payment-report__summary-icon"><i class="pi pi-wallet" aria-hidden="true"></i></span>
+      <div><small>Total recibido</small><strong>{{ formatAmount(total()) }}</strong></div>
+    </div>
+    <span class="retreat-payment-report__count"><i class="pi pi-receipt" aria-hidden="true"></i>{{ payments().length }} pagos registrados</span>
+  </div>
+
+  <p-table [value]="payments()" [scrollable]="true" scrollHeight="min(58vh, 34rem)" styleClass="retreat-payment-report__table">
+    <ng-template #header>
+      <tr>
+        <th scope="col">Descripción</th>
+        <th scope="col">Tipo</th>
+        <th scope="col">Fecha</th>
+        <th scope="col" class="retreat-payment-report__amount">Ingresos</th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-payment>
+      <tr>
+        <td><span class="retreat-payment-report__description">{{ payment.couple }}</span></td>
+        <td><p-tag [value]="payment.type" [severity]="payment.type === 'Completivo' ? 'success' : payment.type === 'Parcial' ? 'warn' : 'secondary'" [rounded]="true" /></td>
+        <td>{{ payment.paymentDate | date:'dd/MM/yyyy' }}</td>
+        <td class="retreat-payment-report__amount">{{ formatAmount(payment.amount) }}</td>
+      </tr>
+    </ng-template>
+    <ng-template #footer>
+      <tr>
+        <td colspan="3"><strong>Total recibido</strong></td>
+        <td class="retreat-payment-report__amount"><strong>{{ formatAmount(total()) }}</strong></td>
+      </tr>
+    </ng-template>
+    <ng-template #emptymessage>
+      <tr><td colspan="4" class="retreat-payment-report__empty">Todavía no hay pagos registrados.</td></tr>
+    </ng-template>
+  </p-table>
+</section>

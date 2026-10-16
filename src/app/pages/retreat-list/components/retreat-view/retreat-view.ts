@@ -25,10 +25,11 @@ import { PopoverModule } from 'primeng/popover';
 import { ExportType, ReportType } from '@pages/retreat-list/utils/export.utils';
 import { ArchivedRequestsModal } from './archived-requests-modal/archived-requests-modal';
 import { TransferRequestModal } from './requests/request-view/transfer-request-modal/transfer-request-modal';
+import { RetreatStats } from './retreat-stats/retreat-stats';
 
 @Component({
   selector: 'app-retreat-view',
-  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, BadgeModule, RequestCard, SelectModule, FormsModule, InputTextModule, ViewItem, MenuModule, PopoverModule],
+  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, BadgeModule, RequestCard, SelectModule, FormsModule, InputTextModule, ViewItem, MenuModule, PopoverModule, RetreatStats],
   templateUrl: './retreat-view.html',
   styleUrl: './retreat-view.scss',
 })
@@ -37,6 +38,7 @@ export class RetreatView implements OnInit, OnDestroy {
   selectionMode = signal(false);
   selectedRequestIds = signal<string[]>([]);
   selectedRequests = computed(() => this.requests().filter(request => this.selectedRequestIds().includes(request.id)));
+  private requestCreationDates = new Map<string, number>();
   batchLoading = signal(false);
   requestsService = inject(RequestService);
   pdfService = inject(PdfService);
@@ -67,7 +69,7 @@ export class RetreatView implements OnInit, OnDestroy {
         ? this.getPaymentStatus(request) !== 'none'
         : this.getPaymentStatus(request) === payments)) &&
       (informed === 'all' || (informed === 'yes') === !!request.is_informado)
-    );
+    ).sort((left, right) => this.getRequestCreationTime(right) - this.getRequestCreationTime(left));
   });
 
   fetchingRequests = signal(true);
@@ -130,6 +132,8 @@ export class RetreatView implements OnInit, OnDestroy {
     [RequestStatus.PENDING]: { amount: 0, tooltip: 'Pendientes', severity: 'secondary' as const, label: 'Pendiente', labelPlural: 'Pendientes' },
     [RequestStatus.ACCEPTED]: { amount: 0, tooltip: 'Aceptadas', severity: 'success' as const, label: 'Aceptada', labelPlural: 'Aceptadas' },
     [RequestStatus.REJECTED]: { amount: 0, tooltip: 'Rechazadas', severity: 'danger' as const, label: 'Rechazada', labelPlural: 'Rechazadas' },
+    informed: { amount: 0, tooltip: 'Informadas', severity: 'info' as const, label: 'Informada', labelPlural: 'Informadas' },
+    uninformed: { amount: 0, tooltip: 'Sin informar', severity: 'warn' as const, label: 'Sin informar', labelPlural: 'Sin informar' },
   });
 
   RequestStatus = RequestStatus;
@@ -186,7 +190,12 @@ export class RetreatView implements OnInit, OnDestroy {
   async getRequests(): Promise<void> {
     try {
       this.fetchingRequests.set(true);
-      await this.retreat.getRequests();
+      const requests = await this.retreat.getRequests();
+      try {
+        this.requestCreationDates = await this.requestsService.getRequestCreationDates(requests.map(request => request.id));
+      } catch (error) {
+        console.warn('No se pudieron cargar las fechas originales de las solicitudes:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
+      }
 
       this.requestsService.requests$.pipe(takeUntil(this.destroy$)).subscribe(requests => {
         this.requests.set(requests);
@@ -197,6 +206,11 @@ export class RetreatView implements OnInit, OnDestroy {
     } catch (error) {
       Ss.toastService.error({ message: 'Error al obtener las solicitudes', title: 'Error' });
     }
+  }
+
+  private getRequestCreationTime(request: RequestClass): number {
+    const createdAt = request.created_at ? new Date(request.created_at).getTime() : Number.NaN;
+    return Number.isFinite(createdAt) ? createdAt : this.requestCreationDates.get(request.id) ?? 0;
   }
 
   private tryAutoOpenRequest(requests: RequestClass[]): void {
@@ -236,6 +250,8 @@ export class RetreatView implements OnInit, OnDestroy {
       [RequestStatus.PENDING]: { ...prev[RequestStatus.PENDING], amount: stats[RequestStatus.PENDING] || 0 },
       [RequestStatus.ACCEPTED]: { ...prev[RequestStatus.ACCEPTED], amount: stats[RequestStatus.ACCEPTED] || 0 },
       [RequestStatus.REJECTED]: { ...prev[RequestStatus.REJECTED], amount: stats[RequestStatus.REJECTED] || 0 },
+      informed: { ...prev['informed'], amount: requests.filter(request => request.is_informado === true).length },
+      uninformed: { ...prev['uninformed'], amount: requests.filter(request => request.is_informado !== true).length },
     }));
   }
 
