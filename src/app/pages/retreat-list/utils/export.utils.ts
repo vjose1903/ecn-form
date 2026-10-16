@@ -3,6 +3,7 @@ import { TitleCasePipe } from '@angular/common';
 export enum ReportType {
   COUPLES_REPORT = 'couples',
   SINGLE_REQUEST_REPORT = 'single_request',
+  PAYMENTS_REPORT = 'payments',
 }
 
 export enum ExportType {
@@ -37,6 +38,10 @@ export function getFileName(reportType: ReportType, exportType: ExportType, data
         }
       }
       return `Reporte_Solicitud.${extension}`;
+
+    case ReportType.PAYMENTS_REPORT:
+      const paymentRetreatNumber = data?.retreatInfo?.number;
+      return paymentRetreatNumber ? `Pagos_Recibidos_Retiro_${paymentRetreatNumber}.${extension}` : `Pagos_Recibidos.${extension}`;
 
     default:
       return `Reporte.${extension}`;

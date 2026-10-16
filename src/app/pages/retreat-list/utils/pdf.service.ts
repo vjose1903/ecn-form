@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { CouplesReportTemplate, SingleRequestReportTemplate } from './templates';
+import { CouplesReportTemplate, PaymentsReportTemplate, SingleRequestReportTemplate } from './templates';
 import { ExportType, getFileName, ReportType } from './export.utils';
 
 export interface ParticipantInfo {
@@ -52,6 +52,7 @@ export class PdfService {
   private initializeTemplates(): void {
     this.templates.set(ReportType.COUPLES_REPORT, new CouplesReportTemplate());
     this.templates.set(ReportType.SINGLE_REQUEST_REPORT, new SingleRequestReportTemplate());
+    this.templates.set(ReportType.PAYMENTS_REPORT, new PaymentsReportTemplate());
   }
 
   /**

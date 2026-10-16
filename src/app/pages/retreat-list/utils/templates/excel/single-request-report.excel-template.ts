@@ -59,14 +59,9 @@ export class SingleRequestExcelTemplate implements ExcelTemplate {
   private async addHeader(worksheet: ExcelJS.Worksheet, cityInfo?: CityInfo): Promise<void> {
     const cityLabel = cityInfo?.large_label || 'Ciudad'; 
 
-    // Fila 1: Logo y título principal
-    worksheet.mergeCells('A1:A2');
-    const logoCell = worksheet.getRow(1).getCell(1);
-    logoCell.value = 'Logo ECN';
-    logoCell.alignment = { horizontal: 'center', vertical: 'middle' };
-
-    worksheet.mergeCells('B1:F1');
-    const titleCell = worksheet.getRow(1).getCell(2);
+    // Filas 1 y 2: encabezado institucional a todo el ancho
+    worksheet.mergeCells('A1:F1');
+    const titleCell = worksheet.getRow(1).getCell(1);
     titleCell.value = 'Encuentro Católico de Novios';
     titleCell.font = { size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
     titleCell.fill = {
@@ -77,8 +72,8 @@ export class SingleRequestExcelTemplate implements ExcelTemplate {
     titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
 
     // Fila 2: Ciudad
-    worksheet.mergeCells('B2:F2');
-    const cityCell = worksheet.getRow(2).getCell(2);
+    worksheet.mergeCells('A2:F2');
+    const cityCell = worksheet.getRow(2).getCell(1);
     cityCell.value = cityLabel;
     cityCell.font = { size: 8, color: { argb: 'FFEBBBC1' } };
     cityCell.fill = {

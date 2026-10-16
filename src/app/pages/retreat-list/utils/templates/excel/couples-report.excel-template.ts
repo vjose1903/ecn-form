@@ -54,14 +54,9 @@ export class CouplesExcelTemplate implements ExcelTemplate {
     // Agregar logo e información del header
     const cityLabel = cityInfo?.large_label || 'Ciudad';
 
-    // Fila 1: Logo y título principal
-    worksheet.mergeCells('A1:B2');
-    const logoCell = worksheet.getRow(1).getCell(1);
-    logoCell.value = 'Logo ECN';
-    logoCell.alignment = { horizontal: 'center', vertical: 'middle' };
-
-    worksheet.mergeCells('C1:K1');
-    const titleCell = worksheet.getRow(1).getCell(3);
+    // Filas 1 y 2: encabezado institucional a todo el ancho
+    worksheet.mergeCells('A1:K1');
+    const titleCell = worksheet.getRow(1).getCell(1);
     titleCell.value = '  Encuentro Católico de Novios';
     titleCell.font = { size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
     titleCell.fill = {
@@ -72,8 +67,8 @@ export class CouplesExcelTemplate implements ExcelTemplate {
     titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
 
     // Fila 2: Ciudad
-    worksheet.mergeCells('C2:K2');
-    const cityCell = worksheet.getRow(2).getCell(3);
+    worksheet.mergeCells('A2:K2');
+    const cityCell = worksheet.getRow(2).getCell(1);
     cityCell.value = `  ${cityLabel}`;
     cityCell.font = { size: 8, color: { argb: 'FFEBBBC1' } };
     cityCell.fill = {

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import ExcelJS from 'exceljs';
 import { CouplesExcelTemplate } from './templates/excel/couples-report.excel-template';
 import { SingleRequestExcelTemplate } from './templates/excel/single-request-report.excel-template';
+import { PaymentsExcelTemplate } from './templates/excel/payments-report.excel-template';
 import { ParticipantInfo, CoupleInfo, RetreatInfo, CityInfo } from './pdf.service';
 import { TitleCasePipe } from '@angular/common';
 import { ExportType, getFileName, ReportType } from './export.utils';
@@ -27,6 +28,7 @@ export class ExcelService {
   private initializeTemplates(): void {
     this.templates.set(ReportType.COUPLES_REPORT, new CouplesExcelTemplate());
     this.templates.set(ReportType.SINGLE_REQUEST_REPORT, new SingleRequestExcelTemplate());
+    this.templates.set(ReportType.PAYMENTS_REPORT, new PaymentsExcelTemplate());
   }
 
   /**

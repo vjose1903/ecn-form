@@ -11,6 +11,33 @@
     </span>
   </div>
 
+  <div class="retreat-payment-report__expected" aria-label="Resumen de pagos del retiro">
+    <div class="retreat-payment-report__metrics">
+      <div class="retreat-payment-report__metric retreat-payment-report__expected-total">
+        <small><i class="pi pi-chart-bar" aria-hidden="true"></i> Total esperado</small>
+        <strong>{{ formatAmount(paymentSummary().expectedTotal) }}</strong>
+      </div>
+      <div class="retreat-payment-report__metric retreat-payment-report__balance" [class.retreat-payment-report__balance--surplus]="paymentSummary().isOverpaid">
+        <small><i [class]="paymentSummary().isOverpaid ? 'pi pi-arrow-up-right' : 'pi pi-hourglass'" aria-hidden="true"></i> {{ paymentSummary().isOverpaid ? 'Excedente' : 'Pendiente' }}</small>
+        <strong>{{ formatAmount(paymentSummary().isOverpaid ? paymentSummary().surplus : paymentSummary().outstanding) }}</strong>
+      </div>
+      <div class="retreat-payment-report__metric retreat-payment-report__percentage">
+        <small>Recaudado</small>
+        <strong>{{ paymentSummary().percentage | number:'1.0-0' }}%</strong>
+      </div>
+    </div>
+    <div class="retreat-payment-report__progress" role="progressbar" [attr.aria-valuenow]="paymentSummary().progressPercentage" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="'Recaudado: ' + (paymentSummary().percentage | number:'1.0-0') + '%'">
+      <span [style.width.%]="paymentSummary().progressPercentage"></span>
+    </div>
+    <div class="retreat-payment-report__couple-counts" aria-label="Resumen de parejas aceptadas">
+      <small>Parejas aceptadas</small>
+      <span class="retreat-payment-report__couple-count retreat-payment-report__couple-count--paid"><i class="pi pi-wallet" aria-hidden="true"></i> Con pagos <strong>{{ paymentSummary().paid }}</strong></span>
+      <span class="retreat-payment-report__couple-count retreat-payment-report__couple-count--unpaid"><i class="pi pi-credit-card" aria-hidden="true"></i> Sin pagos <strong>{{ paymentSummary().unpaid }}</strong></span>
+      <span class="retreat-payment-report__couple-count retreat-payment-report__couple-count--complete"><i class="pi pi-check-circle" aria-hidden="true"></i> Completas <strong>{{ paymentSummary().complete }}</strong></span>
+      <span class="retreat-payment-report__couple-count retreat-payment-report__couple-count--partial"><i class="pi pi-clock" aria-hidden="true"></i> Parciales <strong>{{ paymentSummary().partial }}</strong></span>
+    </div>
+  </div>
+
   <div class="retreat-payment-report__toolbar">
     <label class="retreat-payment-report__search">
       <i class="pi pi-search" aria-hidden="true"></i>
