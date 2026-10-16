@@ -196,10 +196,3 @@
   gap: .65rem;
   padding-top: .35rem;
 }
-
-@media (max-width: 480px) {
-  .pre-retreat-payment footer {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-}

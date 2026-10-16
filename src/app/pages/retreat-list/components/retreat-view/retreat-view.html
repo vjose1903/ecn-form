@@ -58,7 +58,7 @@
             <p-button icon="pi pi-chart-bar" severity="secondary" [text]="true" pTooltip="Estadísticas del retiro" tooltipPosition="left" aria-label="Estadísticas del retiro" (onClick)="statsPopover.toggle($event)" />
             <p-button icon="pi pi-download" severity="secondary" [text]="true" pTooltip="Exportar contactos de parejas" (click)="menu.toggle($event)" />
             <p-menu #menu [model]="exportActions" [popup]="true" [appendTo]="'body'" [autoZIndex]="true" />
-            <p-popover #statsPopover [appendTo]="'body'">
+            <p-popover #statsPopover [appendTo]="'body'" styleClass="retreat-stats-popover">
               <app-retreat-stats [requests]="requests()" [amountPerPerson]="retreat.amount_per_person" />
             </p-popover>
           </div>
