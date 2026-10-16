@@ -24,7 +24,7 @@ export class TransferRequestModal implements OnInit {
 
   loading = signal(true);
   saving = signal(false);
-  request!: RequestClass;
+  requests: RequestClass[] = [];
   currentRetreat!: RetreatClass;
   isArchivedView = false;
   retreats = signal<RetreatClass[]>([]);
@@ -38,7 +38,7 @@ export class TransferRequestModal implements OnInit {
   );
 
   ngOnInit(): void {
-    this.request = this.config.data.request;
+    this.requests = this.config.data.requests ?? [this.config.data.request];
     this.currentRetreat = this.config.data.retreat;
     this.isArchivedView = Boolean(this.config.data.isArchivedView);
     void this.loadRetreats();
@@ -48,7 +48,7 @@ export class TransferRequestModal implements OnInit {
     try {
       this.loading.set(true);
       const retreats = await this.retreatService.getAll();
-      this.retreats.set(retreats.filter(retreat => retreat.id !== this.request.relatedRetreatId));
+      this.retreats.set(retreats.filter(retreat => retreat.id !== this.currentRetreat.id));
     } catch (error) {
       console.error('Error cargando retiros para transferir:', error);
       Ss.toastService.error({
@@ -73,14 +73,21 @@ export class TransferRequestModal implements OnInit {
 
     try {
       this.saving.set(true);
-      await this.requestService.transferRequest({
-        request: this.request,
-        fromRetreat: this.currentRetreat,
-        toRetreat: selectedRetreat,
-        isArchived: this.isArchivedView,
-      });
-
-      this.ref.close({ transferred: true, retreatId: selectedRetreat.id });
+      const transferredRequestIds: string[] = [];
+      for (const request of this.requests) {
+        try {
+          await this.requestService.transferRequest({
+            request,
+            fromRetreat: this.currentRetreat,
+            toRetreat: selectedRetreat,
+            isArchived: this.isArchivedView,
+          });
+          transferredRequestIds.push(request.id);
+        } catch (error) {
+          console.error(`Error transfiriendo la solicitud ${request.id}:`, error);
+        }
+      }
+      this.ref.close({ transferred: transferredRequestIds.length > 0, transferredRequestIds, retreatId: selectedRetreat.id });
     } catch (error) {
       console.error('Error transfiriendo solicitud:', error);
     } finally {

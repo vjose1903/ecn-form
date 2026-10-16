@@ -1,4 +1,4 @@
-import { Component, input, OnDestroy } from '@angular/core';
+import { Component, input, output, OnDestroy } from '@angular/core';
 import { RequestClass } from '@core/entities/request/request.class';
 import { RequestStatusInfo } from '@core/entities/request/request.model';
 import { CardModule } from 'primeng/card';
@@ -21,13 +21,16 @@ export class RequestCard implements OnDestroy {
   archived = input(false);
   showStatus = input(true);
   showRetreatMeta = input(false);
+  selectionMode = input(false);
+  selected = input(false);
+  selectionChange = output<RequestClass>();
   afterClose = input<(() => void | Promise<void>) | undefined>();
   private holdTimer?: ReturnType<typeof setTimeout>;
   private holdTriggered = false;
   private suppressClick = false;
 
   onPointerDown(event: PointerEvent): void {
-    if (event.button !== 0 || !this.request() || this.skeleton()) return;
+    if (event.button !== 0 || !this.request() || this.skeleton() || this.selectionMode()) return;
     const menuAnchor = event.currentTarget as HTMLElement;
     this.holdTriggered = false;
     this.holdTimer = setTimeout(() => {
@@ -52,6 +55,13 @@ export class RequestCard implements OnDestroy {
     this.holdTriggered = false;
   }
 
+  onCardKeydown(event: KeyboardEvent): void {
+    if (!this.selectionMode() || !['Enter', ' '].includes(event.key)) return;
+    event.preventDefault();
+    const request = this.request();
+    if (request) this.selectionChange.emit(request);
+  }
+
   ngOnDestroy(): void {
     this.clearHoldTimer();
   }
@@ -62,6 +72,12 @@ export class RequestCard implements OnDestroy {
   }
 
   async onCardClick(event?: MouseEvent): Promise<void> {
+    if (this.selectionMode()) {
+      event?.preventDefault();
+      const request = this.request();
+      if (request) this.selectionChange.emit(request);
+      return;
+    }
     if (this.suppressClick) {
       this.suppressClick = false;
       event?.preventDefault();

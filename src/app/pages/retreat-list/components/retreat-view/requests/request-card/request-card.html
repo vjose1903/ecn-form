@@ -4,11 +4,17 @@
   [class.request-card--pending]="status()?.severity === 'secondary'"
   [class.request-card--rejected]="status()?.severity === 'danger'"
   [class.request-card--archived]="status()?.severity === 'warn'"
+  [class.request-card--selected]="selected()"
+  [class.request-card--selection-mode]="selectionMode()"
+  [attr.role]="selectionMode() ? 'checkbox' : null"
+  [attr.aria-checked]="selectionMode() ? selected() : null"
+  [attr.tabindex]="selectionMode() ? 0 : null"
   (pointerdown)="onPointerDown($event)"
   (pointerup)="onPointerUp()"
   (pointercancel)="onPointerCancel()"
   (pointerleave)="onPointerCancel()"
-  (click)="onCardClick($event)">
+  (click)="onCardClick($event)"
+  (keydown)="onCardKeydown($event)">
   @if (!skeleton()) {
     <div class="request-card__content">
       <div class="request-card__topline">
@@ -23,7 +29,13 @@
           <i [class]="request()?.is_informado ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i>
           {{ request()?.is_informado ? 'Informada' : 'Sin informar' }}
         </span>
-        <i class="pi pi-arrow-up-right request-card__arrow" aria-hidden="true"></i>
+        @if (selectionMode()) {
+          <span class="request-card__selection" [attr.aria-label]="selected() ? 'Solicitud seleccionada' : 'Solicitud no seleccionada'">
+            <i [class]="selected() ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i>
+          </span>
+        } @else {
+          <i class="pi pi-arrow-up-right request-card__arrow" aria-hidden="true"></i>
+        }
       </div>
       <div class="request-card__identity">
         <small>Pareja registrada</small>

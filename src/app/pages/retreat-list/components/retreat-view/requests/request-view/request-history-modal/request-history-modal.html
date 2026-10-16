@@ -24,7 +24,7 @@
       <div class="history-card__content">
         <div class="history-card__top">
           <p-tag [value]="getActionLabel(item)" [severity]="getActionSeverity(item)" [rounded]="true" />
-          <span class="history-card__date">{{ formatHappenedAt(item.happened_at) }}</span>
+          <span class="history-card__date">{{ item.message === 'Pago de pre retiro registrado' ? 'Registrado: ' : '' }}{{ formatHappenedAt(item.happened_at) }}</span>
         </div>
 
         @if (item.message) {

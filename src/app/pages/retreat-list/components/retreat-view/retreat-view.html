@@ -31,6 +31,7 @@
             </div>
           </div>
           <div class="retreat-request-actions">
+            <p-button [icon]="selectionMode() ? 'pi pi-times' : 'pi pi-check-square'" severity="secondary" [text]="true" [pTooltip]="selectionMode() ? 'Cancelar selección múltiple' : 'Seleccionar solicitudes'" [attr.aria-label]="selectionMode() ? 'Cancelar selección múltiple' : 'Seleccionar solicitudes'" (click)="toggleSelectionMode()" />
             <p-button icon="pi pi-inbox" severity="secondary" [text]="true" pTooltip="Solicitudes archivadas" (click)="openArchivedRequestsModal()" />
             <p-button icon="pi pi-download" severity="secondary" [text]="true" pTooltip="Exportar contactos de parejas" (click)="menu.toggle($event)" />
             <p-menu #menu [model]="exportActions" [popup]="true" [appendTo]="'body'" [autoZIndex]="true" />
@@ -51,7 +52,7 @@
         @if (fetchingRequests()) { @for (item of [1,2,3,4,5,6]; track item) {
           <request-card [skeleton]="true" />
         } } @else if (requestFiltered().length > 0) { @for (request of requestFiltered(); track request.id) {
-          <request-card [request]="request" [retreat]="retreat" [status]="getRequestStatusInfo(request.status)" [skeleton]="false" />
+          <request-card [request]="request" [retreat]="retreat" [status]="getRequestStatusInfo(request.status)" [skeleton]="false" [selectionMode]="selectionMode()" [selected]="selectedRequestIds().includes(request.id)" (selectionChange)="toggleRequestSelection($event)" />
         } } @else {
           <div class="retreat-empty-state">
             <i class="pi pi-id-card" aria-hidden="true"></i>
@@ -59,6 +60,24 @@
           </div>
         }
       </div>
+      @if (selectionMode()) {
+        <footer class="retreat-bulk-actions" aria-label="Acciones para solicitudes seleccionadas">
+          <div class="retreat-bulk-actions__summary">
+            <strong>{{ selectedRequestIds().length }} seleccionada{{ selectedRequestIds().length === 1 ? '' : 's' }}</strong>
+            <button type="button" class="retreat-bulk-actions__clear" [disabled]="!selectedRequestIds().length || batchLoading()" (click)="selectedRequestIds.set([])">Limpiar</button>
+          </div>
+          <div class="retreat-bulk-actions__buttons">
+            @if (canManagePreRetreatActions) {
+              <p-button label="Informar" icon="pi pi-check-circle" severity="success" size="small" pTooltip="Marcar seleccionadas como informadas" ariaLabel="Marcar seleccionadas como informadas" [disabled]="!selectedRequests().length || batchLoading()" [loading]="batchLoading()" (onClick)="setSelectedInformed(true)" />
+              <p-button label="Sin informar" icon="pi pi-circle" severity="secondary" size="small" pTooltip="Marcar seleccionadas como no informadas" ariaLabel="Marcar seleccionadas como no informadas" [disabled]="!selectedRequests().length || batchLoading()" (onClick)="setSelectedInformed(false)" />
+            }
+            <p-button label="Archivar" icon="pi pi-inbox" severity="secondary" size="small" pTooltip="Archivar seleccionadas" ariaLabel="Archivar solicitudes seleccionadas" [disabled]="!selectedRequests().length || batchLoading()" (onClick)="archiveSelected()" />
+            <p-button label="Transferir" icon="pi pi-send" severity="help" size="small" pTooltip="Transferir seleccionadas" ariaLabel="Transferir solicitudes seleccionadas" [disabled]="!selectedRequests().length || batchLoading()" (onClick)="transferSelected()" />
+            <p-button label="Exportar" icon="pi pi-download" iconPos="right" severity="secondary" [outlined]="true" size="small" pTooltip="Exportar seleccionadas" ariaLabel="Exportar solicitudes seleccionadas" [disabled]="!selectedRequests().length || batchLoading()" (onClick)="bulkExportMenu.toggle($event)" />
+            <p-menu #bulkExportMenu [model]="bulkExportActions" [popup]="true" [appendTo]="'body'" [autoZIndex]="true" />
+          </div>
+        </footer>
+      }
     </section>
 
     @if (!retreat.hasRetreatHome || !retreat.hasDates || !retreat.hasModality) {

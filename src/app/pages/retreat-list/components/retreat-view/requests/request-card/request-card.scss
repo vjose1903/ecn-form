@@ -58,6 +58,33 @@
   box-shadow: inset 4px 0 #e7aa3d, 0 10px 24px rgb(30 41 59 / 8%);
 }
 
+:host ::ng-deep .p-card.request-card--selected {
+  background: #f0fdf4;
+  outline: 2px solid #35c875;
+  outline-offset: -2px;
+}
+
+:host ::ng-deep .p-card.request-card--selection-mode:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 3px;
+}
+
+.request-card__selection {
+  display: grid;
+  place-items: center;
+  flex: 0 0 1.8rem;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  background: #fff;
+  color: #64748b;
+  font-size: .75rem;
+}
+
+:host ::ng-deep .p-card.request-card--selected .request-card__selection {
+  color: #168044;
+}
+
 .request-card__topline {
   display: flex;
   align-items: center;
