@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 import { RequestClass } from '@core/entities/request/request.class';
 import { Ss } from '@core/services/singleton.service';
 import { RetreatPaymentsModal } from './retreat-payments-modal/retreat-payments-modal';
@@ -12,6 +12,7 @@ import { RetreatPaymentsModal } from './retreat-payments-modal/retreat-payments-
 export class RetreatStats {
   requests = input<RequestClass[]>([]);
   amountPerPerson = input<number | null>(null);
+  close = output<void>();
 
   stats = computed(() => {
     const requests = this.requests();

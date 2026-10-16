@@ -1,5 +1,10 @@
 <section class="retreat-stats" aria-label="Estadísticas del retiro">
-  <h3><i class="pi pi-chart-pie" aria-hidden="true"></i> Estadísticas del retiro</h3>
+  <header class="retreat-stats__header">
+    <h3><i class="pi pi-chart-pie" aria-hidden="true"></i> Estadísticas del retiro</h3>
+    <button class="retreat-stats__close" type="button" aria-label="Cerrar estadísticas" (click)="close.emit()">
+      <i class="pi pi-times" aria-hidden="true"></i>
+    </button>
+  </header>
 
   <section class="retreat-stats__section" aria-label="Registro">
     <h4>Registro</h4>

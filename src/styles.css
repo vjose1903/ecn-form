@@ -7,9 +7,12 @@
 
 @media (max-width: 640px) {
   .retreat-stats-popover.p-popover {
-    left: 50% !important;
+    right: .5rem !important;
+    left: auto !important;
     width: min(24rem, calc(100vw - 1rem)) !important;
-    transform: translateX(-50%) !important;
+    max-height: calc(100dvh - max(env(safe-area-inset-top, 0px), .5rem) - 2rem);
+    overflow-y: auto;
+    transform: none !important;
   }
 
   .retreat-stats-popover app-retreat-stats {
