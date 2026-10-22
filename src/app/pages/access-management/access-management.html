@@ -1,0 +1,61 @@
+<main class="access-page">
+  <header>
+    <div><p class="eyebrow">Administración</p><h1>Equipo, roles y auditoría</h1></div>
+    <p-select [options]="cities()" optionLabel="label" optionValue="value" [ngModel]="cityId()" (ngModelChange)="changeCity($event)" placeholder="Seleccionar ciudad" />
+  </header>
+
+  <section class="access-section">
+    <h2>Roles y permisos</h2>
+    <div class="role-layout">
+      <div class="role-list">
+        @for (role of roles(); track role.id) {
+          <button type="button" class="role-item" (click)="editRole(role)">
+            <strong>{{ role.name }}</strong><small>{{ role.id }}</small>
+          </button>
+        }
+      </div>
+      <form class="role-editor" (ngSubmit)="saveRole()">
+        <div class="form-row">
+          <label>Nombre<input pInputText [(ngModel)]="roleName" name="roleName" required maxlength="80"></label>
+          <label>ID (vacío = derivado del nombre)<input pInputText [(ngModel)]="roleId" name="roleId" maxlength="60"></label>
+        </div>
+        <label>Descripción<input pInputText [(ngModel)]="roleDescription" name="roleDescription" maxlength="240"></label>
+        <label>Permisos en JSON
+          <textarea pTextarea [(ngModel)]="permissionsJson" name="permissions" rows="12" spellcheck="false"></textarea>
+        </label>
+        <p class="hint">Acciones disponibles: listar, leer, crear, editar, archivar, transferir, pagos, miembros, casas y auditoría. En requests.fields define permisos por sección como couple_basic, contact, identity, family, relationship, invitation, status y legacy_extra.</p>
+        <p-button type="submit" label="Guardar rol" icon="pi pi-save" [loading]="saving()" />
+      </form>
+    </div>
+  </section>
+
+  <section class="access-section">
+    <h2>Invitar miembro</h2>
+    <form class="member-form" (ngSubmit)="createMember()">
+      <input pInputText [(ngModel)]="memberName" name="memberName" placeholder="Nombre" required>
+      <input pInputText [(ngModel)]="memberEmail" name="memberEmail" type="email" placeholder="Correo" required>
+      <input pInputText [(ngModel)]="memberPhone" name="memberPhone" placeholder="Teléfono">
+      <p-select [options]="roleChoices" [(ngModel)]="memberRoleId" name="memberRole" placeholder="Rol" required />
+      <p-button type="submit" label="Crear cuenta" icon="pi pi-user-plus" [loading]="saving()" />
+    </form>
+  </section>
+
+  <section class="access-section">
+    <h2>Miembros de la ciudad</h2>
+    <div class="table-scroll"><table><thead><tr><th>UID</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody>@for (member of members(); track member.uid) {
+        <tr><td>{{ member.display_name || member.email || member.uid }}<small class="member-email">{{ member.email }}</small></td><td><p-select [options]="roleChoices" [ngModel]="member.role_id" (ngModelChange)="updateMember(member, {roleId: $event})" [name]="'role-' + member.uid" /></td>
+          <td>{{ member.status }}</td><td><p-button [label]="member.status === 'active' ? 'Desactivar' : 'Activar'" [text]="true" (onClick)="updateMember(member, {status: member.status === 'active' ? 'disabled' : 'active'})" /></td></tr>
+      }</tbody>
+    </table></div>
+  </section>
+
+  <section class="access-section">
+    <h2>Últimos cambios</h2>
+    <div class="table-scroll"><table><thead><tr><th>Fecha</th><th>Actor UID</th><th>Acción</th><th>Documento</th><th>Cambios</th></tr></thead>
+      <tbody>@for (event of audit(); track event.resource_path + event.actor_uid + event.action) {
+        <tr><td>{{ formatTime(event.occurred_at) }}</td><td>{{ event.actor_uid || 'Sin identificar' }}</td><td>{{ event.action }}</td><td>{{ event.resource_path }}</td><td><code>{{ event.changes | json }}</code></td></tr>
+      }</tbody>
+    </table></div>
+  </section>
+</main>

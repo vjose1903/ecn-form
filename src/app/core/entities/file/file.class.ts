@@ -9,12 +9,16 @@ export class FileClass {
   url: string = '';
   file?: File;
   loaded?: boolean = false;
+  city_id = '';
+  storage_path = '';
 
   constructor(fileObj: FileI) {
     this.id = fileObj.id || '';
     this.name = fileObj.name || fileObj.file?.name || '';
     this.url = fileObj.url || '';
     this.file = fileObj.file;
+    this.city_id = fileObj.city_id || '';
+    this.storage_path = fileObj.storage_path || '';
   }
 
   asJson() {
@@ -26,7 +30,7 @@ export class FileClass {
   }
 
   get fileStoragePath() {
-    return `retreat_homes/${this.name}`;
+    return this.storage_path || `retreat_homes/${this.name}`;
   }
 
   getFileReference() {

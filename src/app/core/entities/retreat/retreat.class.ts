@@ -13,6 +13,7 @@ import { DynamicDialogRef } from 'primeng/dynamicdialog';
 
 export class RetreatClass {
   id: string = '';
+  city_id: string = '';
   user_id: string = '';
   is_active: boolean = true;
   number: number = 0;
@@ -46,6 +47,7 @@ export class RetreatClass {
    */
   private initializeFromData(retreat: RetreatI & { retreat_home?: any }): void {
     this.id = retreat.id || '';
+    this.city_id = retreat.city_id || '';
     this.user_id = retreat.user_id || '';
     this.number = retreat.number || 0;
     this.community_name = retreat.community_name || '';
@@ -257,7 +259,7 @@ export class RetreatClass {
   }
 
   completeRefString(): string {
-    return `user/${Ss.authService.current_user()?.id}/retreat/${this.id}`;
+    return `city/${this.city_id || Ss.authService.activeCityId() || Ss.authService.current_user()?.city}/retreat/${this.id}`;
   }
 
   /**
@@ -301,6 +303,7 @@ export class RetreatClass {
   asJson() {
     return {
       id: this.id,
+      city_id: this.city_id || Ss.authService.activeCityId() || Ss.authService.current_user()?.city,
       user_id: this.user_id,
       number: this.number,
       start_date: this.start_date,
@@ -434,7 +437,7 @@ export class RetreatClass {
   getRetreatReference() {
     return runInInjectionContext(Ss.injector, () => {
       const retreatService = inject(RetreatService);
-      return retreatService.getDocumentRef({ id: this.id });
+      return retreatService.getRetreatReference(this);
     });
   }
 
@@ -460,6 +463,7 @@ export class RetreatClass {
    */
   updateFrom(other: RetreatClass): void {
     this.id = other.id;
+    this.city_id = other.city_id;
     this.user_id = other.user_id;
     this.number = other.number;
     this.start_date = other.start_date;

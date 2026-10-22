@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "retreat_id", "order": "ASCENDING"},
+        {"fieldPath": "is_archived", "order": "ASCENDING"}
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

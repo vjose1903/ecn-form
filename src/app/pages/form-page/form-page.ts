@@ -210,7 +210,7 @@ export class FormPage implements OnInit {
 
     if (!retreatSelected || !user) return '';
 
-    return `user/${user.id}/retreat/${retreatSelected.id}/request`;
+    return `city/${retreatSelected.city_id || user.city}/requests`;
   });
 
   howToKnow = [{ label: 'Redes Sociales' }, { label: 'Amigos' }, { label: 'Familia' }, { label: 'Otro' }];
@@ -645,7 +645,7 @@ export class FormPage implements OnInit {
   }
 
   getUser() {
-    this.userService.getUserById(this.user_id).then(user => {
+    this.userService.getPublicFormUser(this.user_id).then(user => {
       this.userSelected.set(user);
       this.getRetreats();
     });
@@ -1553,9 +1553,7 @@ export class FormPage implements OnInit {
       if (formData.id) {
         request = await this.requestService.updateRequest(formData, retreat, { previousRequest: this.request ?? undefined, trackAsEdited: true });
       } else {
-        console.log('formData ', formData);
-
-        request = await this.requestService.createRequest({ payload: formData, refString: this.requestRefString() });
+        request = await this.requestService.createRequest({ payload: formData, refString: this.requestRefString(), retreat });
       }
 
       this.confirmationDialogVisible.set(false);

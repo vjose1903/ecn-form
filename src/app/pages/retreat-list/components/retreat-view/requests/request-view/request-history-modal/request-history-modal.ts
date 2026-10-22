@@ -23,6 +23,12 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
 
   private config = inject(DynamicDialogConfig);
   private requestService = inject(RequestService);
+  private get receiptContext() {
+    const request = this.config.data.request as RequestClass;
+    const retreat = this.config.data.retreat as RetreatClass | null;
+    if (!retreat?.city_id) throw new Error('No se encontró la ciudad del retiro');
+    return {cityId: retreat.city_id, requestId: request.id};
+  }
 
   loading = signal(true);
   history = signal<RequestHistoryI[]>([]);
@@ -233,7 +239,7 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
     try {
       let previewUrl = this.receiptPreviewUrls()[item.id];
       if (!previewUrl) {
-        previewUrl = await this.requestService.loadPreRetreatReceiptPreview(item);
+        previewUrl = await this.requestService.loadPreRetreatReceiptPreview({...item, id: item.payment_id || item.id}, this.receiptContext);
         if (this.destroyed) {
           URL.revokeObjectURL(previewUrl);
           return;
@@ -260,7 +266,7 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
     try {
       const previews = await Promise.all(history.filter(item => item.receipt_path || item.receipt_url).map(async item => {
         try {
-          return [item.id, await this.requestService.loadPreRetreatReceiptPreview(item)] as const;
+          return [item.id, await this.requestService.loadPreRetreatReceiptPreview({...item, id: item.payment_id || item.id}, this.receiptContext)] as const;
         } catch (error) {
           console.error('No se pudo cargar la vista previa del recibo:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
           return null;

@@ -2,31 +2,31 @@ import { inject, Injectable } from '@angular/core';
 import { FirebaseRequest } from '@core/typescript/firebase/firebaseRequest';
 import { RetreatI } from './retreat.model';
 import { RetreatClass } from './retreat.class';
-import { UserService } from '../user/user.service';
 import { fun } from '@core/services/functions.service';
 import { AuthService } from '@core/services/auth.service';
 import { Ss } from '@core/services/singleton.service';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { CityClass } from '../city/city.class';
 import { UserC } from '../user/user.class';
+import { UserService } from '../user/user.service';
 import { RequestClass } from '../request/request.class';
-import { RequestI } from '../request/request.model';
 import { RequestService } from '../request/request.service';
-import { doc, getDoc, setDoc } from '@angular/fire/firestore';
+import { collection, deleteDoc, doc, getCountFromServer, getDoc, getDocs, query, setDoc, updateDoc, where } from '@angular/fire/firestore';
 
 @Injectable({
   providedIn: 'root',
 })
 export class RetreatService extends FirebaseRequest<RetreatI> {
   private _collectionName = 'retreat';
-  private userService = inject(UserService);
   private authService = inject(AuthService);
+  private userService = inject(UserService);
   private requestService = inject(RequestService);
 
   private _retreats: BehaviorSubject<RetreatClass[]> = new BehaviorSubject<RetreatClass[]>([]);
   private _requests: BehaviorSubject<RequestClass[]> = new BehaviorSubject<RequestClass[]>([]);
   private _loadingRetreatList: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   private _lastFetch: number = 0;
+  private _cacheCityId = '';
   private readonly CACHE_DURATION = 3 * 60 * 1000; // 3 minutos
 
   // Observables públicos
@@ -63,21 +63,17 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
     return this._collectionName;
   }
 
+  getRetreatReference(retreat: RetreatClass) {
+    const cityId = retreat.city_id || this.authService.activeCityId() || this.authService.current_user()?.city;
+    if (!cityId || !retreat.id) throw new Error('El retiro no tiene ciudad o identificador válido');
+    return doc(Ss.firestore, `city/${cityId}/${this._collectionName}/${retreat.id}`);
+  }
+
   /**
    * Obtiene todos los retiros con caché
    */
   async getRetreatByUser(user: UserC): Promise<RetreatClass[] | null> {
-    const retreats = await this._getAllByMultipleFields(
-      [
-        { field: 'is_active', value: true },
-        { field: 'accept_requests', value: true },
-      ],
-      {
-        refString: `${user.getRefString}/retreat`,
-      }
-    );
-
-    return retreats.map(retreat => new RetreatClass(retreat as RetreatI));
+    return (await this.userService.getPublicRetreats(user.city)).map(retreat => new RetreatClass(retreat));
   }
 
   /**
@@ -85,9 +81,10 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
    */
   async getAll(args: { onlyActive?: boolean } = {}): Promise<RetreatClass[]> {
     const now = Date.now();
+    const cityId = this.authService.activeCityId() || this.authService.current_user()?.city || '';
 
     // Verificar si el caché es válido
-    if (this._retreats.value.length > 0 && now - this._lastFetch < this.CACHE_DURATION) {
+    if (this._retreats.value.length > 0 && this._cacheCityId === cityId && now - this._lastFetch < this.CACHE_DURATION) {
       return this._retreats.value;
     }
 
@@ -107,29 +104,19 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
         throw new Error('Usuario no autenticado');
       }
 
-      let retreats: RetreatI[] = [];
-
-      if (onlyActive) {
-        retreats = await this._getAllByMultipleFields(
-          [
-            { field: 'is_active', value: true },
-            { field: 'accept_requests', value: true },
-          ],
-          {
-            parentCollection: this.userService.collectionName,
-            parentId: currentUser.id,
-          }
+      const cityId = this.authService.activeCityId() || currentUser.city;
+      const retreatList = await this.readCityRetreats(cityId, onlyActive ?? false);
+      await Promise.all(retreatList.map(async retreat => {
+        const requests = query(
+          collection(Ss.firestore, `city/${cityId}/requests`),
+          where('retreat_id', '==', retreat.id),
+          where('is_archived', '==', false)
         );
-      } else {
-        retreats = await this.getAllFromParentCollection({
-          parentCollection: this.userService.collectionName,
-          parentId: currentUser.id,
-        });
-      }
-
-      const retreatList = retreats.map(retreat => new RetreatClass(retreat));
+        retreat.request_count = (await getCountFromServer(requests)).data().count;
+      }));
 
       this._retreats.next(retreatList);
+      this._cacheCityId = cityId;
       this._lastFetch = Date.now();
 
       return retreatList;
@@ -140,6 +127,14 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
     } finally {
       this._loadingRetreatList.next(false);
     }
+  }
+
+  private async readCityRetreats(cityId: string, onlyActive: boolean): Promise<RetreatClass[]> {
+    if (!cityId) throw new Error('El usuario no tiene una ciudad asignada');
+    const retreatsRef = collection(Ss.firestore, `city/${cityId}/retreat`);
+    const constraints = onlyActive ? [where('is_active', '==', true), where('accept_requests', '==', true)] : [];
+    const snapshot = await getDocs(query(retreatsRef, ...constraints));
+    return snapshot.docs.map(item => new RetreatClass({ ...item.data(), id: item.id } as RetreatI));
   }
 
   /**
@@ -156,15 +151,12 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
       return cached;
     }
 
-    // Si no está en caché, buscar en la subcolección del usuario actual
+    // Si no está en caché, buscar en la ciudad activa del usuario.
     const currentUser = this.authService.current_user();
-    if (currentUser?.id) {
-      const retreat = await this.getOneFromParentCollection({
-        parentCollection: this.userService.collectionName,
-        parentId: currentUser.id,
-        documentId: id,
-      });
-      return retreat ? new RetreatClass(retreat) : null;
+    const cityId = this.authService.activeCityId() || currentUser?.city;
+    if (cityId) {
+      const snapshot = await getDoc(doc(Ss.firestore, `city/${cityId}/retreat/${id}`));
+      return snapshot.exists() ? new RetreatClass({ ...snapshot.data(), id: snapshot.id } as RetreatI) : null;
     }
 
     return this.processGetRetreat(id, 'id');
@@ -198,12 +190,14 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
 
     try {
       const retreatId = this.buildRetreatId(newRetreat);
-      const retreatRef = doc(Ss.firestore, `${this.userService.collectionName}/${currentUser!.id}/${this._collectionName}/${retreatId}`);
+      const cityId = this.authService.activeCityId() || currentUser!.city;
+      if (!cityId) throw new Error('El usuario no tiene una ciudad asignada');
+      const retreatRef = doc(Ss.firestore, `city/${cityId}/${this._collectionName}/${retreatId}`);
       if ((await getDoc(retreatRef)).exists()) {
         throw new Error(`Ya existe un retiro con el ID ${retreatId}`);
       }
       const { id: _id, ...data } = newRetreat;
-      await setDoc(retreatRef, data);
+      await setDoc(retreatRef, { ...data, city_id: cityId, user_id: currentUser!.id });
       const snapshot = await getDoc(retreatRef);
       const result = { ...snapshot.data(), id: snapshot.id } as RetreatI;
 
@@ -252,12 +246,10 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
         throw new Error('Usuario no autenticado');
       }
 
-      const result = await this.updateOneInParentCollection({
-        parentCollection: this.userService.collectionName,
-        parentId: currentUser.id,
-        documentId: retreat.id,
-        data: retreat,
-      });
+      const cityId = retreat.city_id || this.authService.activeCityId() || currentUser.city;
+      const { id, ...data } = retreat;
+      await updateDoc(doc(Ss.firestore, `city/${cityId}/${this._collectionName}/${id}`), data);
+      const result = { ...retreat };
 
       // Actualizar observable
       this.updateRetreatInCache(result, 'update');
@@ -282,12 +274,9 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
         throw new Error('Usuario no autenticado');
       }
 
-      const result = await this.updateOneInParentCollection({
-        parentCollection: this.userService.collectionName,
-        parentId: currentUser.id,
-        documentId: retreat.id,
-        data: { is_active: !retreat.is_active },
-      });
+      const cityId = retreat.city_id || this.authService.activeCityId() || currentUser.city;
+      await updateDoc(doc(Ss.firestore, `city/${cityId}/${this._collectionName}/${retreat.id}`), { is_active: !retreat.is_active });
+      const result = { ...retreat, is_active: !retreat.is_active };
 
       // Actualizar observable
       this.updateRetreatInCache(result, 'update');
@@ -304,14 +293,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   }
 
   async getRequests(retreat: RetreatClass): Promise<RequestClass[]> {
-    const refString = `user/${retreat.user_id}/retreat/${retreat.id}/request`;
-
-    return this._getAll<RequestI>({ find_value: retreat.id, refString }).then((res: RetreatI[] | RequestI[]) => {
-      if (res.length > 0 && 'retreat' in res[0]) {
-        return (res as RequestI[]).map((request: RequestI) => new RequestClass(request));
-      }
-      return [];
-    });
+    return this.requestService.getRequestsForRetreat(retreat);
   }
 
   /**
@@ -324,11 +306,9 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
         throw new Error('Usuario no autenticado');
       }
 
-      await this.deleteOneInParentCollection({
-        parentCollection: this.userService.collectionName,
-        parentId: currentUser.id,
-        documentId: id,
-      });
+      const cityId = this._retreats.value.find(item => item.id === id)?.city_id || this.authService.activeCityId() || currentUser.city;
+      if (!cityId) throw new Error('El retiro no tiene ciudad asignada');
+      await deleteDoc(doc(Ss.firestore, `city/${cityId}/${this._collectionName}/${id}`));
 
       // Remover del observable
       this.removeRetreatFromCache(id);
@@ -388,6 +368,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   private invalidateCache(): void {
     this._retreats.next([]);
     this._lastFetch = 0;
+    this._cacheCityId = '';
   }
 
   /**
@@ -405,5 +386,6 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
     this._retreats.next([]);
     this._loadingRetreatList.next(false);
     this._lastFetch = 0;
+    this._cacheCityId = '';
   }
 }

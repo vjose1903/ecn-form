@@ -1,6 +1,7 @@
 import { Component, computed, input, output } from '@angular/core';
 import { RequestClass } from '@core/entities/request/request.class';
 import { Ss } from '@core/services/singleton.service';
+import { RetreatClass } from '@core/entities/retreat/retreat.class';
 import { RetreatPaymentsModal } from './retreat-payments-modal/retreat-payments-modal';
 
 @Component({
@@ -12,6 +13,7 @@ import { RetreatPaymentsModal } from './retreat-payments-modal/retreat-payments-
 export class RetreatStats {
   requests = input<RequestClass[]>([]);
   amountPerPerson = input<number | null>(null);
+  retreat = input.required<RetreatClass>();
   close = output<void>();
 
   stats = computed(() => {
@@ -46,7 +48,7 @@ export class RetreatStats {
       resizable: false,
       closable: true,
       focusOnShow: false,
-      data: { requests: this.requests(), amountPerPerson: this.amountPerPerson() },
+      data: { requests: this.requests(), amountPerPerson: this.amountPerPerson(), retreat: this.retreat() },
       breakpoints: { '640px': '96vw' },
     });
   }

@@ -45,7 +45,7 @@ export class UserC {
 
   get formLink() {
     const baseUrl = window.location.origin;
-    return `${baseUrl}/formulario/${this.id}`;
+    return `${baseUrl}/formulario/${this.city}`;
   }
 
   get cityRef() {

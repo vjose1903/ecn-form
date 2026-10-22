@@ -286,15 +286,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
    * Parsea las referencias de imágenes
    */
   async parseImagesReferences(images: Array<FileClass | string>) {
-    const promises = images.map(async image => {
-      if (image instanceof FileClass) {
-        return await image.getFileReference();
-      } else {
-        return this.fileService.getDocumentRef({ id: image });
-      }
-    });
-
-    return await Promise.all(promises);
+    return images.map(image => image instanceof FileClass ? image.id : image);
   }
 
   /**
@@ -375,11 +367,6 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
     const uploadResult = await this.uploadFilesWithProgress(filesToUpload);
     const { successful: uploadedFiles, failed: failedFiles } = uploadResult;
 
-    // Eliminar archivos marcados para eliminar
-    if (filesToDelete.length > 0) {
-      await this.deleteFiles(filesToDelete);
-    }
-
     // Preparar referencias de archivos
     const filesReferences = await this.parseImagesReferences([...filesSaved, ...uploadedFiles]);
     formData.images = filesReferences;
@@ -390,6 +377,11 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
       retreatHome = await this.retreatHomeService.updateRetreatHome(formData);
     } else {
       retreatHome = await this.retreatHomeService.createRetreatHome(formData);
+    }
+
+    // Elimina archivos después de guardar la ficha para no dejar referencias rotas.
+    if (filesToDelete.length > 0) {
+      await this.deleteFiles(filesToDelete);
     }
 
     // Mostrar advertencia si algunos archivos fallaron

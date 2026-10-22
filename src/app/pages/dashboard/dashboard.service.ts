@@ -32,7 +32,7 @@ export class DashboardService {
     }
 
     const retreats = await this.retreatService.getAll();
-    const cityRetreats = retreats.filter(retreat => retreat.is_active && this.isRetreatInUserCity(retreat, currentUser.city));
+    const cityRetreats = retreats.filter(retreat => retreat.is_active && this.isRetreatInUserCity(retreat, Ss.authService.activeCityId() || currentUser.city));
     const scopedRetreats = this.filterRetreatsByPeriod(cityRetreats, filter, customRange);
     const requestGroups = await Promise.all(scopedRetreats.map(retreat => this.retreatService.getRequests(retreat).then(requests => ({ retreat, requests }))));
     const entries = requestGroups.flatMap(group => group.requests.map(request => ({ retreat: group.retreat, request })));
