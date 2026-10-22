@@ -171,7 +171,7 @@ export class UsersManagement implements OnInit {
       const result = await resend({cityId: this.cityId(), uid: member.uid, email: this.resendEmail.trim()});
       this.invitationMember.set(null);
       this.resendEmail = '';
-      Ss.toastService.success({title: 'Correo reenviado', message: `Se envió el enlace para crear la contraseña a ${result.data.email}.`});
+      Ss.toastService.success({title: 'Correo en proceso', message: `Se está preparando el enlace para ${result.data.email}.`});
       void this.loadCityData();
     } catch (error) {
       console.error('No se pudo reenviar la invitación:', JSON.stringify(error));
