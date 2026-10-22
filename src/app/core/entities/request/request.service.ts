@@ -10,6 +10,7 @@ import { Timestamp, Firestore, collection, doc, getDoc, getDocs, onSnapshot, que
 import { fun } from '@core/services/functions.service';
 import { createRequestDocumentId } from './request-document-id';
 import { Functions, httpsCallable } from '@angular/fire/functions';
+import { mergeRequestDetail } from './request-details';
 
 interface UpdateRequestOptions {
   previousRequest?: RequestI | RequestClass;
@@ -88,16 +89,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
       const reconstructed: Record<string, any> = { id: requestDoc.id, retreat: retreatId };
       for (const detail of sectionResults) {
         if (!detail?.exists()) continue;
-        const value = detail.data()!;
-        if (['couple_basic', 'contact', 'identity', 'family'].includes(detail.id)) {
-          for (const person of ['she', 'he']) {
-            if (value[person]) reconstructed[person] = { ...(reconstructed[person] ?? {}), ...value[person] };
-          }
-        } else if (detail.id !== 'payments_summary' && detail.id !== 'legacy_extra') {
-          Object.assign(reconstructed, value);
-        } else if (detail.id === 'legacy_extra') {
-          Object.assign(reconstructed, value);
-        }
+        mergeRequestDetail(reconstructed, detail.id, detail.data()!);
       }
       reconstructed['retreat'] = retreatId;
       if (root['is_archived']) {

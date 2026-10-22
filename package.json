@@ -10,7 +10,7 @@
     "release": "node scripts/release-version.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "test:audit-emulator": "npm --prefix functions run build && npx --yes firebase-tools@13.35.1 emulators:exec --config firebase.v2-emulator.json --only auth,firestore,functions --project demo-ecn-platform-v2 \"node functions/test/audit-emulator.test.cjs && node functions/test/public-form-emulator.test.cjs && node functions/test/request-permissions-emulator.test.cjs\"",
+    "test:audit-emulator": "npm --prefix functions run build && npx --yes firebase-tools@13.35.1 emulators:exec --config firebase.v2-emulator.json --only auth,firestore,functions,storage --project demo-ecn-platform-v2 \"node functions/test/audit-emulator.test.cjs && node functions/test/public-form-emulator.test.cjs && node functions/test/request-permissions-emulator.test.cjs && node functions/test/request-location-emulator.test.cjs && node functions/test/access-management-emulator.test.cjs && node functions/test/payment-emulator.test.cjs\"",
     "test:firestore-v2-rules": "node scripts/run-firestore-v2-rules.mjs"
   },
   "private": true,

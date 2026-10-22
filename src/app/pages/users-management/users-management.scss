@@ -1,0 +1,61 @@
+.users-page { display: grid; gap: 1rem; padding: 1rem; color: #1e293b; }
+.users-page > header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+h1, h2, p { margin: 0; }
+h1 { font-size: 1.5rem; }
+h2 { margin-bottom: .8rem; font-size: 1.05rem; }
+.eyebrow { color: #64748b; font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.users-section { border: 1px solid #e2e8f0; border-radius: .8rem; background: white; padding: 1rem; }
+.section-hint { margin: -.35rem 0 .8rem; color: #64748b; font-size: .82rem; }
+.member-form { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; gap: .7rem; }
+.modal-form { grid-template-columns: 1fr 1fr; margin-top: 1rem; }
+.modal-field-full { grid-column: 1 / -1; }
+.modal-form label { display: grid; gap: .4rem; color: #475569; font-size: .82rem; font-weight: 600; }
+.modal-form input, .modal-form p-select { width: 100%; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: .65rem; grid-column: 1 / -1; margin-top: .5rem; }
+.table-scroll { overflow: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+th, td { padding: .6rem; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: middle; }
+th { color: #64748b; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }
+.actions-cell { display: flex; justify-content: center; align-items: center; gap: .2rem; white-space: nowrap; }
+.actions-heading { text-align: center; }
+.status-tag { display: inline-flex; align-self: flex-start; align-items: center; border-radius: 999px; padding: .2rem .55rem; font-size: .72rem; font-weight: 700; line-height: 1.2; white-space: nowrap; }
+.status-tag--active { background: #dcfce7; color: #166534; }
+.status-tag--disabled { background: #fef3c7; color: #92400e; }
+.status-tag--deleted { background: #fee2e2; color: #b91c1c; }
+.superadmin-badge { display: inline-flex; margin-left: .45rem; border-radius: 999px; padding: .12rem .45rem; background: #fef3c7; color: #92400e; font-size: .68rem; font-weight: 700; vertical-align: middle; }
+.superadmin-option { display: flex !important; grid-template-columns: auto 1fr; align-items: flex-start; gap: .65rem !important; border: 1px solid #e2e8f0; border-radius: .65rem; padding: .75rem; }
+.superadmin-option input { width: 1rem; height: 1rem; margin-top: .15rem; accent-color: #991b1b; }
+.superadmin-option span { display: grid; gap: .2rem; }
+.superadmin-option small { color: #64748b; font-size: .76rem; font-weight: 400; line-height: 1.4; }
+.empty-state { padding: 1.5rem; color: #64748b; text-align: center; }
+.delete-confirmation { display: flex; align-items: flex-start; gap: 1rem; color: #334155; line-height: 1.5; }
+.delete-confirmation > i { flex: 0 0 auto; margin-top: .15rem; font-size: 1.6rem; }
+.delete-confirmation__copy { display: grid; gap: .55rem; }
+.delete-confirmation__emphasis { color: #b4232f; }
+.delete-confirmation__error { border-radius: .45rem; padding: .55rem .7rem; background: #fef2f2; color: #b4232f; font-size: .85rem; overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .users-page > header { align-items: center; }
+  .modal-form { grid-template-columns: 1fr; }
+  .users-page { padding: .75rem; }
+  .users-section { min-width: 0; padding: .85rem; }
+  .table-scroll { overflow: visible; }
+  table, tbody { display: block; width: 100%; }
+  thead { display: none; }
+  tbody { display: grid; gap: .7rem; }
+  tbody tr:not(:has(.empty-state)) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .75rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: .7rem;
+    padding: .8rem;
+  }
+  td { display: flex; min-width: 0; flex-direction: column; gap: .25rem; padding: 0; border: 0; overflow-wrap: anywhere; }
+  td::before { content: attr(data-label); color: #64748b; font-size: .64rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+  td:nth-child(1), td:nth-child(2) { grid-column: 1 / -1; }
+  td:nth-child(5) { grid-column: 1 / -1; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: .25rem; padding-top: .55rem; border-top: 1px solid #e2e8f0; }
+  td:nth-child(5)::before { margin-right: auto; }
+  .superadmin-badge { align-self: flex-start; margin-left: 0; }
+  .empty-state { display: block; padding: .9rem; }
+  .empty-state::before { content: none; }
+}

@@ -15,10 +15,12 @@ const getResendApiKey = () => {
     return apiKey;
 };
 exports.getResendApiKey = getResendApiKey;
-const sendResendEmail = async ({ apiKey, to, subject, html, from = emailHelpers_1.EMAIL_CONSTANTS.FROM_EMAIL, logLabel, suppressError = false, }) => {
+const sendResendEmail = async ({ apiKey, to, subject, html, from = emailHelpers_1.EMAIL_CONSTANTS.FROM_EMAIL, logLabel, suppressError = false, idempotencyKey, }) => {
     const resend = new resend_1.Resend(apiKey);
     try {
-        await resend.emails.send({ from, to, subject, html });
+        const result = await resend.emails.send({ from, to, subject, html }, idempotencyKey ? { idempotencyKey } : undefined);
+        if (result.error)
+            throw result.error;
         if (logLabel) {
             console.log(`Correo de ${logLabel} enviado exitosamente`);
         }
