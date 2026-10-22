@@ -686,7 +686,17 @@ export class RequestService extends FirebaseRequest<RequestI> {
 
       console.log('requestPayload ', requestPayload);
 
-      const result = await this._createOne({ refString, data: requestPayload });
+      if (!refString.endsWith(`/${this._collectionName}`)) {
+        throw new Error('La ruta de la solicitud no pertenece a una colección de retiros');
+      }
+      const retreatPath = refString.slice(0, -(`/${this._collectionName}`).length);
+      const requestRef = doc(collection(this.firestore, refString));
+      const batch = writeBatch(this.firestore);
+      batch.set(requestRef, requestPayload);
+      batch.update(doc(this.firestore, retreatPath), { request_count: increment(1) });
+      await batch.commit();
+      const result = await this._getOne({ refString: requestRef.path });
+      if (!result) throw new Error('No se pudo recuperar la solicitud recién creada');
       const userId = this.parseUserIdFromRefString(refString);
 
       // Actualizar observable
