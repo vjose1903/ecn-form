@@ -1,6 +1,6 @@
 import {createHash, randomBytes} from "node:crypto";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
-import {onDocumentCreated} from "firebase-functions/v2/firestore";
+import {onDocumentWritten} from "firebase-functions/v2/firestore";
 import type {UserRecord} from "firebase-admin/auth";
 import {admin, v2Db} from "../../core/firebase-admin";
 import {
@@ -268,13 +268,16 @@ const sendMemberInvitationEmail = async ({
   });
 };
 
-export const sendCityMemberInvitation = onDocumentCreated(
+export const sendCityMemberInvitation = onDocumentWritten(
   {database: "ecn-platform-v2", document: "city/{cityId}/members/{uid}", secrets: [resendApiKey], retry: true},
   async event => {
-    const member = event.data?.data();
+    const snapshot = event.data?.after;
+    const member = snapshot?.data();
     if (!member || member.invitation_status !== "pending") return;
-    const latestMember = await event.data?.ref.get();
-    if (latestMember?.get("invitation_status") !== "pending") return;
+    const invitationRequestId = String(member.invitation_request_id ?? "");
+    const latestMember = await snapshot.ref.get();
+    if (latestMember?.get("invitation_status") !== "pending" ||
+        String(latestMember?.get("invitation_request_id") ?? "") !== invitationRequestId) return;
 
     const {cityId, uid} = event.params;
     const profile = await v2Db.doc(`user/${uid}`).get();
@@ -285,9 +288,18 @@ export const sendCityMemberInvitation = onDocumentCreated(
       cityId,
       email,
       displayName,
-      idempotencyKey: `city-member-invitation-${uid}`,
+      idempotencyKey: `city-member-invitation-${uid}-${invitationRequestId || "initial"}`,
     });
-    await event.data?.ref.update({invitation_status: "sent", invitation_sent_at: FieldValue.serverTimestamp()});
+    await v2Db.runTransaction(async transaction => {
+      const current = await transaction.get(snapshot.ref);
+      if (current.get("invitation_status") === "pending" &&
+          String(current.get("invitation_request_id") ?? "") === invitationRequestId) {
+        transaction.update(snapshot.ref, {
+          invitation_status: "sent",
+          invitation_sent_at: FieldValue.serverTimestamp(),
+        });
+      }
+    });
   },
 );
 
@@ -327,7 +339,7 @@ export const resendCityMemberInvitation = onCall({secrets: [resendApiKey], invok
     : actorUid;
   let authEmailUpdated = false;
   let profileEmailUpdated = false;
-  let emailSent = false;
+  let invitationQueued = false;
   try {
     if (emailChanged) {
       await admin.auth().updateUser(uid, {email, emailVerified: false});
@@ -337,19 +349,15 @@ export const resendCityMemberInvitation = onCall({secrets: [resendApiKey], invok
       await profileRef.set({email, updated_by: actorCanUpdate, updated_at: FieldValue.serverTimestamp()}, {merge: true});
       profileEmailUpdated = true;
     }
-    await sendMemberInvitationEmail({
-      cityId,
-      email,
-      displayName: String(profile.get("display_name") ?? authUser.displayName ?? ""),
-      idempotencyKey: `city-member-invitation-${uid}-${randomBytes(8).toString("hex")}`,
+    await memberRef.update({
+      invitation_status: "pending",
+      invitation_request_id: randomBytes(8).toString("hex"),
+      invitation_requested_at: FieldValue.serverTimestamp(),
     });
-    emailSent = true;
-    await memberRef.update({invitation_status: "sent", invitation_sent_at: FieldValue.serverTimestamp()}).catch(error => {
-      console.error("No se pudo actualizar el estado de invitación:", JSON.stringify({cityId, uid, error}));
-    });
+    invitationQueued = true;
     return {uid, email};
   } catch (error) {
-    if (!emailSent) {
+    if (!invitationQueued) {
       if (profileEmailUpdated) await profileRef.set({email: profileEmail}, {merge: true}).catch(() => undefined);
       if (authEmailUpdated) await admin.auth().updateUser(uid, {email: originalEmail, emailVerified: authUser.emailVerified}).catch(() => undefined);
     }

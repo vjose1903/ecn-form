@@ -6,6 +6,12 @@ export const loginGuard: CanActivateFn = async (route, state) => {
   const router = inject(Router);
   const authService = inject(AuthService);
 
+  // Compatibility: invitation links issued with the old /auth/login URL must
+  // still open the password setup screen, even when an admin session exists.
+  if (route.queryParamMap.get('mode') === 'resetPassword' && route.queryParamMap.has('oobCode')) {
+    return router.createUrlTree(['/auth/crear-contrasena'], { queryParams: route.queryParams });
+  }
+
   // Esperar a que el AuthService termine de inicializar
   while (authService.isLoading()) {
     await new Promise(resolve => setTimeout(resolve, 100));
