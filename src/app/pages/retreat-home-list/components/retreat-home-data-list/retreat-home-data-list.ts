@@ -25,6 +25,7 @@ export class RetreatHomeDataList implements OnInit, OnDestroy {
   @Input() item!: RetreatHomeClass;
   @Input() showActions: boolean = true;
   @Input() enableSelection: boolean = false;
+  @Input() onAssignmentRequest?: (homeId: string) => void;
 
   loading = signal(false);
   imageLoaded = signal(false);
@@ -84,6 +85,7 @@ export class RetreatHomeDataList implements OnInit, OnDestroy {
       focusOnShow: false,
       data: {
         retreatHome: this.item,
+        onAssignmentRequest: this.onAssignmentRequest,
       },
       breakpoints: { '960px': '75vw', '640px': '90vw' },
     });

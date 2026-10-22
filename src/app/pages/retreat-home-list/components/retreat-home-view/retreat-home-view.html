@@ -82,6 +82,9 @@
     <div class="flex justify-end gap-3 w-full pt-4 border-t border-gray-200">
       <p-button type="button" [label]="getStatusButtonText()" [severity]="getStatusButtonSeverity()" [disabled]="loading()" [icon]="getStatusButtonIcon()" class="w-auto" (onClick)="confirmToggleStatus()" size="small" />
       @if (retreatHome.is_active) {
+        @if (isSuperAdmin && onAssignmentRequest) {
+          <p-button type="button" label="Asignar a ciudades" severity="secondary" [outlined]="true" [disabled]="loading()" icon="pi pi-map-marker" class="w-auto" (onClick)="openAssignmentDialog()" size="small" />
+        }
         <p-button type="button" label="Editar" severity="secondary" [disabled]="loading()" icon="pi pi-pencil" class="w-auto" (onClick)="openEditForm()" size="small" />
       }
     </div>

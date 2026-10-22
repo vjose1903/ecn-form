@@ -91,9 +91,15 @@ service cloud.firestore {
       match /retreat_homes/{homeId} {
         allow get: if hasPermission(cityId, 'retreat_homes', 'read');
         allow list: if hasPermission(cityId, 'retreat_homes', 'list');
-          allow create: if hasPermission(cityId, 'retreat_homes', 'assign');
-          allow update: if hasPermission(cityId, 'retreat_homes', 'update');
-          allow delete: if hasPermission(cityId, 'retreat_homes', 'unassign');
+        allow create: if hasPermission(cityId, 'retreat_homes', 'assign')
+          && exists(/databases/$(database)/documents/retreat_home/$(homeId))
+          && request.resource.data.keys().hasOnly(['home_id', 'is_active', 'created_by', 'created_at'])
+          && request.resource.data.home_id == homeId
+          && request.resource.data.is_active == true
+          && request.resource.data.created_by == request.auth.uid
+          && request.resource.data.created_at == request.time;
+        allow update: if hasPermission(cityId, 'retreat_homes', 'update');
+        allow delete: if hasPermission(cityId, 'retreat_homes', 'unassign');
       }
 
       match /retreat/{retreatId} {

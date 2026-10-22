@@ -12,6 +12,7 @@ import { GalleryComponent } from '@core/components/gallery/gallery.component';
 import { ToastService } from '@core/services/toast.service';
 import { Subject } from 'rxjs';
 import { ViewItem } from '@core/components/view-item/view-item';
+import { Ss } from '@core/services/singleton.service';
 
 @Component({
   selector: 'app-retreat-home-view',
@@ -31,11 +32,14 @@ export class RetreatHomeView implements OnInit, OnDestroy {
   activeIndex = 0;
   loading = signal(false);
   imagesLoaded = signal(0);
+  isSuperAdmin = Ss.authService.isSuperAdmin();
+  onAssignmentRequest?: (homeId: string) => void;
 
   constructor() {}
 
   ngOnInit(): void {
     this.retreatHome = this.config.data.retreatHome;
+    this.onAssignmentRequest = this.config.data.onAssignmentRequest;
     this.preloadImages();
   }
 
@@ -117,6 +121,12 @@ export class RetreatHomeView implements OnInit, OnDestroy {
     this.retreatHome.openForm().catch(error => {
       console.error('Error al abrir formulario:', error);
     });
+  }
+
+  openAssignmentDialog(): void {
+    if (!this.isSuperAdmin || this.loading() || !this.onAssignmentRequest) return;
+    this.ref.close();
+    this.onAssignmentRequest(this.retreatHome.id);
   }
 
   /**

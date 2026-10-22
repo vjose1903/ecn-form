@@ -41,6 +41,9 @@ const seed = async () => {
       setDoc(doc(db, `city/${cityId}/roles/list-only`), role({
         requests: { list: true },
       })),
+      setDoc(doc(db, `city/${cityId}/roles/home-assigner`), role({
+        retreat_homes: { assign: true },
+      })),
       setDoc(doc(db, `city/${cityId}/members/reader-uid`), {
         role_id: 'reader',
         status: 'active',
@@ -51,6 +54,11 @@ const seed = async () => {
         role_id: 'list-only',
         status: 'active',
       }),
+      setDoc(doc(db, `city/${cityId}/members/home-assigner-uid`), {
+        role_id: 'home-assigner',
+        status: 'active',
+      }),
+      setDoc(doc(db, 'retreat_home/casa_compartida'), {name: 'Casa Compartida'}),
       setDoc(doc(db, `city/${cityId}/retreat/${retreatId}`), { number: 84 }),
       setDoc(doc(db, requestPath), {
         retreat_id: retreatId,
@@ -91,6 +99,31 @@ testCase('el permiso de listar no filtra datos personales desde el documento res
   assert.equal(rows.size, 1);
   assert.deepEqual(Object.keys(rows.docs[0].data()).sort(), ['retreat_id']);
   await assertFails(getDoc(doc(db, `${requestPath}/details/couple_basic`)));
+});
+
+testCase('permite asignar una casa existente solo con el permiso correspondiente', async () => {
+  await seed();
+  const assignerDb = testEnv.authenticatedContext('home-assigner-uid').firestore();
+  await assertSucceeds(setDoc(doc(assignerDb, `city/${cityId}/retreat_homes/casa_compartida`), {
+    home_id: 'casa_compartida',
+    is_active: true,
+    created_by: 'home-assigner-uid',
+    created_at: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(assignerDb, `city/${cityId}/retreat_homes/casa_inexistente`), {
+    home_id: 'casa_inexistente',
+    is_active: true,
+    created_by: 'home-assigner-uid',
+    created_at: serverTimestamp(),
+  }));
+
+  const readerDb = testEnv.authenticatedContext('reader-uid').firestore();
+  await assertFails(setDoc(doc(readerDb, `city/${cityId}/retreat_homes/casa_inexistente`), {
+    home_id: 'casa_inexistente',
+    is_active: true,
+    created_by: 'reader-uid',
+    created_at: serverTimestamp(),
+  }));
 });
 
 testCase('deniega acceso cruzado entre ciudades y escrituras fuera del rol', async () => {

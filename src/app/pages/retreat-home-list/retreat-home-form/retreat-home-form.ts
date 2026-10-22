@@ -2,6 +2,7 @@
 import { Component, inject, signal, ChangeDetectorRef, effect, OnInit, OnDestroy, NgZone, ChangeDetectionStrategy } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { FormControlName, FormFieldId } from './retreat-home-form.model';
 import { FormErrorMsgComponent } from '@core/components/form-error-msg/form-error-msg.component';
@@ -17,7 +18,7 @@ import { FileService } from '@core/entities/file/file.service';
 import { fun } from '@core/services/functions.service';
 import { UrlValidator } from '@core/typescript/validators/validate-url';
 import { PhoneValidator } from '@core/typescript/validators/validate-phone';
-import { RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
+import { RetreatHomeService, SimilarRetreatHome } from '@core/entities/retreat-home/retreat-home.service';
 import { Ss } from '@core/services/singleton.service';
 import { AuthService } from '@core/services/auth.service';
 import { GalleryComponent } from '@core/components/gallery/gallery.component';
@@ -27,7 +28,7 @@ import { Subject, debounceTime, distinctUntilChanged, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-retreat-home-form',
-  imports: [FormsModule, ReactiveFormsModule, InputNumberModule, ButtonModule, FormErrorMsgComponent, InputTextModule, InputMaskModule, TextareaModule, SkeletonModule, DividerLine, GalleryComponent],
+  imports: [FormsModule, ReactiveFormsModule, InputNumberModule, ButtonModule, DialogModule, FormErrorMsgComponent, InputTextModule, InputMaskModule, TextareaModule, SkeletonModule, DividerLine, GalleryComponent],
   templateUrl: './retreat-home-form.html',
   styleUrl: './retreat-home-form.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -53,6 +54,10 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
   uploadProgress = signal<number>(0);
   isFormValid = signal<boolean>(false);
   hasImages = signal<boolean>(false);
+  similarHomes = signal<SimilarRetreatHome[]>([]);
+  similarHomesDialogVisible = signal(false);
+  selectedSimilarHomeId = signal('');
+  targetCityLabel = signal('');
 
   private destroy$ = new Subject<void>();
   private readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -132,7 +137,7 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
           [FormControlName.id]: [retreatHome?.id ?? null, []],
           [FormControlName.name]: [retreatHome?.name ?? null, [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
           [FormControlName.phone]: [retreatHome?.phone ?? null, [Validators.pattern(/^\(\d{3}\) \d{3}-\d{4}$/), PhoneValidator.validate]],
-          [FormControlName.address]: [retreatHome?.address ?? null, [Validators.required, Validators.minLength(10), Validators.maxLength(500)]],
+          [FormControlName.address]: [retreatHome?.address ?? null, [Validators.required, Validators.minLength(10), Validators.maxLength(240)]],
           [FormControlName.location]: [retreatHome?.location ?? null, [Validators.required, UrlValidator.validate]],
           [FormControlName.city]: [cityRef, []],
           [FormControlName.is_active]: [retreatHome?.is_active ?? true, []],
@@ -293,6 +298,10 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
    * Envía el formulario
    */
   async onSubmit() {
+    await this.submitForm(false);
+  }
+
+  private async submitForm(skipSimilarityCheck: boolean): Promise<void> {
     const form = this.formGroup();
     if (!form || !form.valid) {
       Ss.toastService.error({ message: 'Por favor, completa todos los campos requeridos', title: 'Formulario inválido' });
@@ -311,6 +320,18 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
         return;
       }
 
+      if (!formData.id && !skipSimilarityCheck) {
+        const similarityCheck = await this.retreatHomeService.findSimilarRetreatHomes(formData.name, formData.address);
+        if (similarityCheck.candidates.length) {
+          this.similarHomes.set(similarityCheck.candidates);
+          this.selectedSimilarHomeId.set(similarityCheck.candidates[0].id);
+          this.targetCityLabel.set(similarityCheck.cityLabel);
+          this.similarHomesDialogVisible.set(true);
+          void this.loadSimilarHomeImages(similarityCheck.candidates);
+          return;
+        }
+      }
+
       const result = await this.processFormSubmission(formData);
 
       // Cerrar el dialog y devolver los datos
@@ -322,6 +343,42 @@ export class RetreatHomeForm implements OnInit, OnDestroy {
       this.loading.set(false);
       this.uploadProgress.set(0);
     }
+  }
+
+  async useSimilarHome(): Promise<void> {
+    const candidate = this.similarHomes().find(home => home.id === this.selectedSimilarHomeId());
+    const form = this.formGroup();
+    if (!candidate || !form || this.loading()) return;
+
+    try {
+      this.loading.set(true);
+      const formData = form.getRawValue();
+      const result = await this.retreatHomeService.assignExistingRetreatHome(candidate.id, formData.name, formData.address);
+      this.similarHomesDialogVisible.set(false);
+      this.ref.close(result);
+    } catch (error) {
+      console.error('Error al reutilizar casa de retiro:', error);
+      this.handleSubmissionError(error);
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async createSeparateHome(): Promise<void> {
+    if (this.loading()) return;
+    this.similarHomesDialogVisible.set(false);
+    await this.submitForm(true);
+  }
+
+  private async loadSimilarHomeImages(candidates: SimilarRetreatHome[]): Promise<void> {
+    const homesWithImages = await Promise.all(candidates.map(async home => ({
+      id: home.id,
+      imageUrls: await this.retreatHomeService.getSimilarRetreatHomeImageUrls(home.imageIds),
+    })));
+    this.similarHomes.update(homes => homes.map(home => ({
+      ...home,
+      imageUrls: homesWithImages.find(result => result.id === home.id)?.imageUrls ?? home.imageUrls,
+    })));
   }
 
   /**

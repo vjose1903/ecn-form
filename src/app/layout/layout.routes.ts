@@ -33,14 +33,28 @@ export const layoutRoutes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'administracion-acceso',
+    path: 'roles-y-permisos',
     loadComponent: () => import('../pages/access-management/access-management').then(m => m.AccessManagement),
     canActivate: [authGuard],
+  },
+  {
+    path: 'usuarios',
+    loadComponent: () => import('../pages/users-management/users-management').then(m => m.UsersManagement),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'administracion-acceso',
+    redirectTo: 'roles-y-permisos',
+    pathMatch: 'full',
   },
   {
     path: 'auth/login',
     loadComponent: () => import('../pages/login/login').then(m => m.Login),
     canActivate: [loginGuard],
+  },
+  {
+    path: 'auth/crear-contrasena',
+    loadComponent: () => import('../pages/create-password/create-password').then(m => m.CreatePassword),
   },
 
   // Aquí puedes agregar más rutas hijas del layout

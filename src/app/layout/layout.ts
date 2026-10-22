@@ -1,5 +1,4 @@
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { ChangeDetectorRef, Component, computed, effect, inject, Injector, OnInit, runInInjectionContext, signal } from '@angular/core';
 import { NavigationCancel, NavigationEnd, NavigationError, Router, RouterOutlet } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
@@ -18,13 +17,12 @@ import { RetreatService } from '@core/entities/retreat/retreat.service';
 import { CityClass } from '@core/entities/city/city.class';
 import { UserService } from '@core/entities/user/user.service';
 import { SkeletonModule } from 'primeng/skeleton';
-import { SelectModule } from 'primeng/select';
 import { Firestore, collection, getDocs, doc, getDoc } from '@angular/fire/firestore';
 import { buildVersion } from '../../environments/build-version';
 
 @Component({
   selector: 'app-layout',
-  imports: [CommonModule, FormsModule, RouterOutlet, ButtonModule, MenuModule, Menu, SkeletonModule, SelectModule],
+  imports: [CommonModule, RouterOutlet, ButtonModule, MenuModule, Menu, SkeletonModule],
   templateUrl: './layout.html',
   styleUrl: './layout.scss',
 })
@@ -52,7 +50,7 @@ export class Layout implements OnInit {
   ];
 
   // Rutas donde no mostrar el botón de logout
-  private readonly excludePaths = ['/auth/login', '/auth/register', '/formulario/'];
+  private readonly excludePaths = ['/auth/login', '/auth/register', '/auth/crear-contrasena', '/formulario/'];
 
   // Computed para determinar si mostrar el botón de logout
   isAdminRoute = computed(() => {
