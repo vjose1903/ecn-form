@@ -50,7 +50,7 @@
     <p-menu #exportMenu [model]="exportActions" [popup]="true" [appendTo]="'body'" />
   </div>
 
-  <p-table [value]="filteredPayments()" [scrollable]="true" scrollHeight="min(58vh, 34rem)" [tableStyle]="{ 'min-width': '52rem' }" styleClass="retreat-payment-report__table">
+  <p-table [value]="filteredPayments()" [scrollable]="true" scrollHeight="flex" [tableStyle]="{ 'min-width': '52rem' }" styleClass="retreat-payment-report__table">
     <ng-template #header>
       <tr>
         <th scope="col">Descripción</th>

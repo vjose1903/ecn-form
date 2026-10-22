@@ -1,8 +1,28 @@
+:host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
 .retreat-payment-report {
   display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  flex: 1;
+  min-width: 0;
   gap: .65rem;
   min-height: 0;
   color: #172033;
+}
+
+.retreat-payment-report > p-table {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+:host ::ng-deep .retreat-payment-report__table {
+  flex: 1;
+  min-width: 0;
 }
 
 .retreat-payment-report__summary {
@@ -210,9 +230,6 @@
 }
 
 .retreat-payment-report__total-footer {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;

@@ -12,6 +12,7 @@ import { UserC } from '../user/user.class';
 import { RequestClass } from '../request/request.class';
 import { RequestI } from '../request/request.model';
 import { RequestService } from '../request/request.service';
+import { doc, getDoc, setDoc } from '@angular/fire/firestore';
 
 @Injectable({
   providedIn: 'root',
@@ -190,16 +191,21 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
    * Crea un nuevo retiro
    */
   async createRetreat(newRetreat: RetreatI): Promise<RetreatI> {
-    if (fun.isEmpty(this.authService.current_user())) {
+    const currentUser = this.authService.current_user();
+    if (fun.isEmpty(currentUser)) {
       throw new Error('Usuario no autenticado');
     }
 
     try {
-      const result = await this.createOneInParentCollection({
-        parentCollection: this.userService.collectionName,
-        parentId: this.authService.current_user()!.id,
-        data: newRetreat,
-      });
+      const retreatId = this.buildRetreatId(newRetreat);
+      const retreatRef = doc(Ss.firestore, `${this.userService.collectionName}/${currentUser!.id}/${this._collectionName}/${retreatId}`);
+      if ((await getDoc(retreatRef)).exists()) {
+        throw new Error(`Ya existe un retiro con el ID ${retreatId}`);
+      }
+      const { id: _id, ...data } = newRetreat;
+      await setDoc(retreatRef, data);
+      const snapshot = await getDoc(retreatRef);
+      const result = { ...snapshot.data(), id: snapshot.id } as RetreatI;
 
       // Actualizar observable
       this.updateRetreatInCache(result, 'create');
@@ -212,6 +218,24 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
       Ss.toastService.error({ message: 'Error al crear el retiro', title: 'Error' });
       throw error;
     }
+  }
+
+  private buildRetreatId(retreat: RetreatI): string {
+    const formatDate = (value: string | Date): string => {
+      if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+      const date = value instanceof Date ? value : new Date(value);
+      if (Number.isNaN(date.getTime())) throw new Error('Fechas inválidas para generar el ID del retiro');
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    if (!retreat.number || !retreat.start_date || !retreat.end_date) {
+      throw new Error('El número y las fechas del retiro son requeridos para generar su ID');
+    }
+
+    return `${retreat.number}_${formatDate(retreat.start_date)}_${formatDate(retreat.end_date)}`;
   }
 
   /**
