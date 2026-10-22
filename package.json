@@ -9,7 +9,9 @@
     "build": "node scripts/write-build-version.mjs && ng build --configuration production",
     "release": "node scripts/release-version.mjs",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "test:audit-emulator": "npm --prefix functions run build && npx --yes firebase-tools@13.35.1 emulators:exec --config firebase.v2-emulator.json --only auth,firestore,functions --project demo-ecn-platform-v2 \"node functions/test/audit-emulator.test.cjs && node functions/test/public-form-emulator.test.cjs && node functions/test/request-permissions-emulator.test.cjs\"",
+    "test:firestore-v2-rules": "node scripts/run-firestore-v2-rules.mjs"
   },
   "private": true,
   "dependencies": {
@@ -42,6 +44,7 @@
     "@angular/build": "^20.2.0",
     "@angular/cli": "^20.2.0",
     "@angular/compiler-cli": "^20.2.0",
+    "@firebase/rules-unit-testing": "^4.0.1",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/jasmine": "~5.1.0",
     "@types/node": "^24.0.12",

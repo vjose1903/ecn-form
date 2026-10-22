@@ -38,6 +38,8 @@ export class AuthService implements OnDestroy {
   isAuthenticated = signal<boolean | null>(null);
   isLoading = signal<boolean>(true);
   firebaseUser = signal<FirebaseUser | null>(null);
+  isSuperAdmin = signal(false);
+  activeCityId = signal('');
 
   // Subject para limpiar suscripciones
   private destroy$ = new Subject<void>();
@@ -72,13 +74,15 @@ export class AuthService implements OnDestroy {
         try {
           // Verificar si el token es válido
           const tokenResult = await getIdTokenResult(firebaseUser);
+          this.isSuperAdmin.set(tokenResult.claims['super_admin'] === true);
 
           if (tokenResult.claims && !tokenResult.claims['disabled']) {
             // Obtener datos del usuario desde Firestore
-            const user = await this.userService.getUserByEmail(firebaseUser.email!);
+            const user = await this.userService.getUserByUid(firebaseUser.uid);
 
             if (user) {
               this.current_user.set(user);
+              if (!this.activeCityId()) this.activeCityId.set(user.city);
               this.isAuthenticated.set(true);
 
               // Guardar en localStorage
@@ -171,6 +175,8 @@ export class AuthService implements OnDestroy {
     this.current_user.set(null);
     this.isAuthenticated.set(false);
     this.firebaseUser.set(null);
+    this.isSuperAdmin.set(false);
+    this.activeCityId.set('');
 
     // Limpiar localStorage
     localStorage.removeItem(environment.X_TOKEN);

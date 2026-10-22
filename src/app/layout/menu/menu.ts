@@ -25,6 +25,7 @@ export class Menu implements OnInit, OnDestroy {
     { label: 'Retiros', icon: 'pi pi-calendar-plus', link: '/retiros', severity: 'contrast' },
     { label: 'Solicitudes archivadas', icon: 'pi pi-inbox', link: '/solicitudes-archivadas', severity: 'contrast' },
     { label: 'Casas de Retiro', icon: 'pi pi-home', link: '/casas-de-retiro', severity: 'contrast' },
+    { label: 'Equipo y permisos', icon: 'pi pi-shield', link: '/administracion-acceso', severity: 'contrast' },
     { label: 'Cuenta', icon: 'pi pi-user', command: () => this.openAccountModal(), severity: 'contrast', liClass: 'mt-auto' },
     { label: 'Cerrar sesión', icon: 'pi pi-sign-out', command: () => this.authService.logout(), severity: 'danger' },
   ];

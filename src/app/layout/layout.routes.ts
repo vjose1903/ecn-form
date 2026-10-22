@@ -33,6 +33,11 @@ export const layoutRoutes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'administracion-acceso',
+    loadComponent: () => import('../pages/access-management/access-management').then(m => m.AccessManagement),
+    canActivate: [authGuard],
+  },
+  {
     path: 'auth/login',
     loadComponent: () => import('../pages/login/login').then(m => m.Login),
     canActivate: [loginGuard],

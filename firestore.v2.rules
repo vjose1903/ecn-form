@@ -1,0 +1,192 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function superAdmin() {
+      return signedIn() && request.auth.token.super_admin == true;
+    }
+
+    function membershipPath(cityId) {
+      return /databases/$(database)/documents/city/$(cityId)/members/$(request.auth.uid);
+    }
+
+    function rolePath(cityId, roleId) {
+      return /databases/$(database)/documents/city/$(cityId)/roles/$(roleId);
+    }
+
+    function requestPath(cityId, requestId) {
+      return /databases/$(database)/documents/city/$(cityId)/requests/$(requestId);
+    }
+
+    function hasPermission(cityId, resourceName, action) {
+      let memberExists = signedIn() && exists(membershipPath(cityId));
+      let member = memberExists ? get(membershipPath(cityId)).data : {};
+      let roleExists = memberExists
+        && member.get('status', 'disabled') == 'active'
+        && member.get('role_id', '') != ''
+        && exists(rolePath(cityId, member.role_id));
+      let role = roleExists ? get(rolePath(cityId, member.role_id)).data : {};
+
+      return superAdmin() || (
+        roleExists
+        && role.get('is_active', false) == true
+        && role.get('permissions', {}).get(resourceName, {}).get(action, false) == true
+      );
+    }
+
+    function hasFieldPermission(cityId, resourceName, fieldGroup, action) {
+      let memberExists = signedIn() && exists(membershipPath(cityId));
+      let member = memberExists ? get(membershipPath(cityId)).data : {};
+      let roleExists = memberExists
+        && member.get('status', 'disabled') == 'active'
+        && member.get('role_id', '') != ''
+        && exists(rolePath(cityId, member.role_id));
+      let role = roleExists ? get(rolePath(cityId, member.role_id)).data : {};
+
+      return superAdmin() || (
+        roleExists
+        && role.get('is_active', false) == true
+        && role.get('permissions', {}).get(resourceName, {}).get('fields', {}).get(fieldGroup, {}).get(action, false) == true
+      );
+    }
+
+    // UID is the document ID. Client-side profile fields never grant privileges.
+    match /user/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || superAdmin());
+      allow list, create, update, delete: if false;
+
+      match /push_tokens/{tokenId} {
+        allow get, list, create, update, delete: if signedIn() && request.auth.uid == uid;
+      }
+
+      match /files/{fileId} {
+        allow get, list: if signedIn() && (request.auth.uid == uid || superAdmin());
+        allow create, update, delete: if false;
+      }
+    }
+
+    match /city/{cityId} {
+      allow get: if hasPermission(cityId, 'city', 'read');
+      allow list: if superAdmin();
+      allow create, update, delete: if hasPermission(cityId, 'city', 'manage');
+
+      match /members/{uid} {
+        allow get: if (signedIn() && request.auth.uid == uid)
+          || hasPermission(cityId, 'members', 'read');
+        allow list: if hasPermission(cityId, 'members', 'list');
+        // Role and membership changes go through trusted backend functions.
+        allow create, update, delete: if false;
+      }
+
+      match /roles/{roleId} {
+        allow get: if hasPermission(cityId, 'roles', 'read');
+        allow list: if hasPermission(cityId, 'roles', 'list');
+        // Prevent clients from granting permissions or escalating roles.
+        allow create, update, delete: if false;
+      }
+
+      match /retreat_homes/{homeId} {
+        allow get: if hasPermission(cityId, 'retreat_homes', 'read');
+        allow list: if hasPermission(cityId, 'retreat_homes', 'list');
+          allow create: if hasPermission(cityId, 'retreat_homes', 'assign');
+          allow update: if hasPermission(cityId, 'retreat_homes', 'update');
+          allow delete: if hasPermission(cityId, 'retreat_homes', 'unassign');
+      }
+
+      match /retreat/{retreatId} {
+        allow get: if hasPermission(cityId, 'retreats', 'read');
+        allow list: if hasPermission(cityId, 'retreats', 'list');
+        allow create: if hasPermission(cityId, 'retreats', 'create');
+        allow update: if hasPermission(cityId, 'retreats', 'update');
+        allow delete: if hasPermission(cityId, 'retreats', 'delete');
+
+      }
+
+      match /requests/{requestId} {
+        allow get: if hasPermission(cityId, 'requests', 'read');
+        allow list: if hasPermission(cityId, 'requests', 'list');
+        allow create: if hasPermission(cityId, 'requests', 'create')
+          && request.resource.data.keys().hasOnly(['retreat_id', 'is_archived', 'created_at'])
+          && request.resource.data.retreat_id is string
+          && request.resource.data.is_archived is bool;
+        allow update: if hasPermission(cityId, 'requests', 'update')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['retreat_id', 'is_archived']);
+        allow delete: if hasPermission(cityId, 'requests', 'delete');
+
+        match /details/{sectionId} {
+          allow get: if exists(requestPath(cityId, requestId))
+            && (sectionId == 'payments_summary'
+              ? hasPermission(cityId, 'payments', 'read')
+              : hasPermission(cityId, 'requests', 'read')
+                && hasFieldPermission(cityId, 'requests', sectionId, 'read'));
+          allow list: if false;
+          allow create: if exists(requestPath(cityId, requestId))
+            && hasPermission(cityId, 'requests', 'create')
+            && hasFieldPermission(cityId, 'requests', sectionId, 'create');
+          allow update: if exists(requestPath(cityId, requestId))
+            && hasPermission(cityId, 'requests', 'update')
+            && hasFieldPermission(cityId, 'requests', sectionId, 'update');
+          allow delete: if false;
+        }
+
+        match /payments/{paymentId} {
+          allow get: if exists(requestPath(cityId, requestId)) && hasPermission(cityId, 'payments', 'read');
+          allow list: if exists(requestPath(cityId, requestId)) && hasPermission(cityId, 'payments', 'list');
+          allow create: if exists(requestPath(cityId, requestId))
+            && hasPermission(cityId, 'payments', 'create')
+            && request.resource.data.keys().hasAll(['payment_date', 'amount', 'created_at', 'created_by'])
+            && request.resource.data.keys().hasOnly(['payment_date', 'amount', 'receipt_path', 'receipt_name', 'created_at', 'created_by'])
+            && request.resource.data.amount is number
+            && request.resource.data.amount > 0
+            && request.resource.data.payment_date is timestamp
+            && request.resource.data.created_at == request.time
+            && request.resource.data.created_by == request.auth.uid
+            && (!('receipt_path' in request.resource.data) || request.resource.data.receipt_path is string)
+            && (!('receipt_name' in request.resource.data) || request.resource.data.receipt_name is string);
+          allow update: if exists(requestPath(cityId, requestId)) && hasPermission(cityId, 'payments', 'update');
+          allow delete: if exists(requestPath(cityId, requestId)) && hasPermission(cityId, 'payments', 'delete');
+        }
+
+        match /history/{eventId} {
+          allow get: if exists(requestPath(cityId, requestId)) && hasPermission(cityId, 'requests', 'history_read');
+          allow list: if exists(requestPath(cityId, requestId)) && hasPermission(cityId, 'requests', 'history_list');
+          allow create, update, delete: if false;
+        }
+      }
+
+      match /audit_logs/{eventId} {
+        allow get: if hasPermission(cityId, 'audit', 'read');
+        allow list: if hasPermission(cityId, 'audit', 'list');
+        allow create, update, delete: if false;
+      }
+    }
+
+    match /retreat_home/{homeId} {
+      allow get, list: if signedIn();
+      allow create, update, delete: if superAdmin();
+    }
+
+    match /files/{fileId} {
+      allow get, list: if signedIn() && (
+        superAdmin()
+        || resource.data.get('is_global', false) == true
+        || hasPermission(resource.data.get('city_id', ''), 'files', 'read')
+      );
+      allow create: if signedIn() && hasPermission(request.resource.data.get('city_id', ''), 'files', 'create');
+      allow update: if signedIn() && hasPermission(resource.data.get('city_id', ''), 'files', 'update');
+      allow delete: if signedIn() && hasPermission(resource.data.get('city_id', ''), 'files', 'delete');
+    }
+
+    match /global_audit_logs/{eventId} {
+      allow get, list: if superAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

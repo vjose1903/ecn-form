@@ -173,11 +173,14 @@ export class RetreatPaymentsModal implements OnInit, OnDestroy {
     this.searchTerm.set((event.target as HTMLInputElement).value);
   }
 
-  async showReceipt(payment: PreRetreatPaymentI): Promise<void> {
+  async showReceipt(row: RetreatPaymentRow): Promise<void> {
+    const payment = row.receipt;
     this.receiptPreview.set(payment);
     this.loadingReceipt.set(true);
     try {
-      const url = await this.requestService.loadPreRetreatReceiptPreview(payment);
+      const retreat = this.config.data.retreat;
+      if (!retreat?.city_id) throw new Error('No se encontró la ciudad del retiro');
+      const url = await this.requestService.loadPreRetreatReceiptPreview(payment, {cityId: retreat.city_id, requestId: row.requestId});
       if (this.destroyed || this.receiptPreview()?.id !== payment.id) {
         URL.revokeObjectURL(url);
         return;

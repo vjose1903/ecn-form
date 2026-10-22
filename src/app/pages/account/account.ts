@@ -8,7 +8,6 @@ import { DynamicDialogRef, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { Ss } from '@core/services/singleton.service';
 import { FormErrorMsgComponent } from '@core/components/form-error-msg/form-error-msg.component';
 import { UserService } from '@core/entities/user/user.service';
-import { CityService } from '@core/entities/city/city.service';
 import { CityClass } from '@core/entities/city/city.class';
 import { FormControlName, FormFieldId } from './account.model';
 import { InputMaskModule } from 'primeng/inputmask';
@@ -22,7 +21,6 @@ import { PhoneValidator } from '@core/typescript/validators/validate-phone';
 })
 export class Account implements OnInit {
   private userService = inject(UserService);
-  private cityService = inject(CityService);
   private config = inject(DynamicDialogConfig);
   private fb = inject(FormBuilder);
   private ref = inject(DynamicDialogRef);
@@ -41,8 +39,8 @@ export class Account implements OnInit {
 
   private async loadCities() {
     try {
-      const cities = await this.cityService._getAll();
-      this.cities.set(cities.map((city: any) => new CityClass(city)));
+      const city = Ss.authService.current_user()?.cityData;
+      this.cities.set(city ? [city] : []);
     } catch (error) {
       console.error('Error cargando ciudades:', error);
       Ss.toastService.error({ message: 'Error al cargar las ciudades', title: 'Error' });
@@ -55,7 +53,7 @@ export class Account implements OnInit {
     this.formGroup = this.fb.group({
       [FormControlName.id]: [currentUser?.id],
       [FormControlName.email]: [{ value: currentUser?.email || '', disabled: true }, [Validators.required, Validators.email]],
-      [FormControlName.city]: [currentUser?.city || '', [Validators.required]],
+      [FormControlName.city]: [{ value: currentUser?.city || '', disabled: true }, [Validators.required]],
       [FormControlName.phone]: [currentUser?.phone || '', [Validators.required, PhoneValidator.validate]],
     });
   }
@@ -69,19 +67,8 @@ export class Account implements OnInit {
       const currentUser = Ss.authService.current_user();
       if (!currentUser) throw new Error('Usuario no encontrado');
 
-      const formData = this.formGroup.value;
-
-      // Actualizar solo los campos editables
-      const updateData = {
-        id: currentUser.id,
-        city: formData.city,
-        phone: formData.phone,
-      };
-
-      const selectedCity = this.cities().find(city => city.id === formData.city);
-      updateData.city = await selectedCity?.getCityRef();
-
-      await this.userService._updateOne({ find_by: 'id', find_value: updateData.id, data: updateData });
+      const formData = this.formGroup.getRawValue();
+      await this.userService.updateOwnProfile(formData.phone);
 
       // Actualizar el usuario en el AuthService
       const updatedUser = await this.userService.getUserById(currentUser.id);

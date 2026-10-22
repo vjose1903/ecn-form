@@ -218,7 +218,7 @@ export class MessagingService {
       await this.deleteTokenDocument(user.id, previousToken);
     }
 
-    const tokenCollection = collection(this.firestore, `user/${user.id}/push_token`);
+    const tokenCollection = collection(this.firestore, `user/${user.id}/push_tokens`);
     const snapshot = await getDocs(query(tokenCollection, where('token', '==', token)));
 
     const payload = {
@@ -273,7 +273,7 @@ export class MessagingService {
   }
 
   private async deleteTokenDocument(userId: string, token: string): Promise<void> {
-    const tokenCollection = collection(this.firestore, `user/${userId}/push_token`);
+    const tokenCollection = collection(this.firestore, `user/${userId}/push_tokens`);
     const snapshot = await getDocs(query(tokenCollection, where('token', '==', token)));
 
     await Promise.all(snapshot.docs.map(docSnapshot => deleteDoc(docSnapshot.ref)));

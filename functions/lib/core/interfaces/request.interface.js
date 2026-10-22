@@ -1,0 +1,50 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.fieldsLabelE = exports.coupleFieldsE = exports.RequestStatus = void 0;
+var RequestStatus;
+(function (RequestStatus) {
+    RequestStatus["ALL"] = "all";
+    RequestStatus["PENDING"] = "pending";
+    RequestStatus["ACCEPTED"] = "accepted";
+    RequestStatus["REJECTED"] = "rejected";
+})(RequestStatus || (exports.RequestStatus = RequestStatus = {}));
+var coupleFieldsE;
+(function (coupleFieldsE) {
+    coupleFieldsE["she"] = "she";
+    coupleFieldsE["he"] = "he";
+    coupleFieldsE["both"] = "both";
+})(coupleFieldsE || (exports.coupleFieldsE = coupleFieldsE = {}));
+var fieldsLabelE;
+(function (fieldsLabelE) {
+    fieldsLabelE["how_find_us"] = "Como se enteraron del Retiro";
+    fieldsLabelE["have_wedding_date"] = "Tiene Fecha de Boda";
+    fieldsLabelE["who_invited_you"] = "Quien los invit\u00F3";
+    fieldsLabelE["who_invited_you_phone"] = "Tel\u00E9fono de quien los invit\u00F3";
+    fieldsLabelE["wedding_date"] = "Fecha de Boda";
+    fieldsLabelE["dating_period_year"] = "A\u00F1os de noviazgo";
+    fieldsLabelE["dating_period_month"] = "Meses de noviazgo";
+    fieldsLabelE["full_name"] = "Nombre completo";
+    fieldsLabelE["age"] = "Edad";
+    fieldsLabelE["city_of_residence"] = "Ciudad de residencia";
+    fieldsLabelE["are_you_married"] = "Has estado casado";
+    fieldsLabelE["religion"] = "Religi\u00F3n";
+    fieldsLabelE["emergency_full_name"] = "Contacto de emergencia";
+    fieldsLabelE["have_children"] = "Tienes hijos";
+    fieldsLabelE["identity_type"] = "Tipo de identificaci\u00F3n";
+    fieldsLabelE["birth_date"] = "Fecha de nacimiento";
+    fieldsLabelE["church_name"] = "Parroquia";
+    fieldsLabelE["home_phone"] = "Tel\u00E9fono de casa";
+    fieldsLabelE["email"] = "Email";
+    fieldsLabelE["nickname"] = "Apodo";
+    fieldsLabelE["address"] = "Direcci\u00F3n";
+    fieldsLabelE["emergency_relationship"] = "Relaci\u00F3n con contacto de emergencia";
+    fieldsLabelE["cell_phone"] = "Tel\u00E9fono celular";
+    fieldsLabelE["identity_number"] = "N\u00FAmero de identificaci\u00F3n";
+    fieldsLabelE["work_phone"] = "Tel\u00E9fono de trabajo";
+    fieldsLabelE["family_information"] = "Informaci\u00F3n de familiares";
+    fieldsLabelE["familiar_full_name"] = "Nombre completo del familiar";
+    fieldsLabelE["familiar_relationship"] = "Relaci\u00F3n con el familiar";
+    fieldsLabelE["familiar_phone"] = "Tel\u00E9fono del familiar";
+    fieldsLabelE["emergency_phone"] = "Tel\u00E9fono de contacto de emergencia";
+})(fieldsLabelE || (exports.fieldsLabelE = fieldsLabelE = {}));
+//# sourceMappingURL=request.interface.js.map

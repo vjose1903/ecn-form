@@ -8,6 +8,11 @@ import { AuthService } from '@core/services/auth.service';
 import { Ss } from '@core/services/singleton.service';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { RetreatI } from '../retreat/retreat.model';
+import { collection, doc, getDoc, getDocs, updateDoc, deleteDoc } from '@angular/fire/firestore';
+import { Functions, httpsCallable } from '@angular/fire/functions';
+import { FileService } from '../file/file.service';
+import { FileClass } from '../file/file.class';
+import { FileI } from '../file/file.model';
 
 @Injectable({
   providedIn: 'root',
@@ -16,10 +21,13 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   private _collectionName = 'retreat_home';
   private userService = inject(UserService);
   private authService = inject(AuthService);
+  private functions = inject(Functions);
+  private fileService = inject(FileService);
 
   private _retreatHomes: BehaviorSubject<RetreatHomeClass[]> = new BehaviorSubject<RetreatHomeClass[]>([]);
   private _loadingRetreatHomeList: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   private _lastFetch: number = 0;
+  private _cacheCityId = '';
   private readonly CACHE_DURATION = 3 * 60 * 1000; // 3 minutos
 
   // Observables públicos
@@ -53,9 +61,10 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
    */
   async getAll(): Promise<RetreatHomeClass[]> {
     const now = Date.now();
+    const cityId = this.authService.activeCityId() || this.authService.current_user()?.city || '';
 
     // Verificar si el caché es válido
-    if (this._retreatHomes.value.length > 0 && now - this._lastFetch < this.CACHE_DURATION) {
+    if (this._retreatHomes.value.length > 0 && this._cacheCityId === cityId && now - this._lastFetch < this.CACHE_DURATION) {
       return this._retreatHomes.value;
     }
 
@@ -69,16 +78,19 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
     try {
       this._loadingRetreatHomeList.next(true);
       const currentUser = this.authService.current_user();
-      const cityRef = await currentUser?.cityRef;
-
-      if (!cityRef) {
+      const cityId = this.authService.activeCityId() || currentUser?.city;
+      if (!cityId) {
         throw new Error('No se pudo obtener la referencia de la ciudad del usuario');
       }
-
-      const retreats = await this._getAll({ find_by: 'city', find_value: cityRef });
-      const retreatHomes = retreats.map((retreat: RetreatHomeI) => new RetreatHomeClass(retreat));
+      const assignments = await getDocs(collection(Ss.firestore, `city/${cityId}/retreat_homes`));
+      const homes = await Promise.all(assignments.docs.map(async assignment => {
+        const home = await getDoc(doc(Ss.firestore, `${this._collectionName}/${assignment.id}`));
+        return home.exists() ? this.hydrateHome({ ...home.data(), id: home.id, city: cityId, is_active: assignment.get('is_active') }) : null;
+      }));
+      const retreatHomes = homes.filter((home): home is RetreatHomeClass => home !== null);
 
       this._retreatHomes.next(retreatHomes);
+      this._cacheCityId = cityId;
       this._lastFetch = Date.now();
 
       return retreatHomes;
@@ -105,7 +117,13 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
       return cached;
     }
 
-    return this.processGetRetreatHome(id, 'id');
+    const currentUser = this.authService.current_user();
+    const cityId = this.authService.activeCityId() || currentUser?.city;
+    if (!cityId) return null;
+    const assignment = await getDoc(doc(Ss.firestore, `city/${cityId}/retreat_homes/${id}`));
+    if (!assignment.exists()) return null;
+    const snapshot = await getDoc(doc(Ss.firestore, `${this._collectionName}/${id}`));
+    return snapshot.exists() ? this.hydrateHome({ ...snapshot.data(), id, city: cityId, is_active: assignment.get('is_active') }) : null;
   }
 
   /**
@@ -134,7 +152,22 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
     }
 
     try {
-      const result = await this._createOne({ data: newRetreatHome });
+      const currentUser = this.authService.current_user();
+      const cityId = currentUser?.city;
+      if (!cityId) throw new Error('El usuario no tiene una ciudad asignada');
+      const create = httpsCallable(this.functions, 'createCityRetreatHome');
+      const response = await create({
+        cityId,
+        name: newRetreatHome.name,
+        phone: newRetreatHome.phone,
+        address: newRetreatHome.address,
+        location: newRetreatHome.location,
+        images: this.imageIds(newRetreatHome.images),
+      });
+      const id = (response.data as {homeId: string}).homeId;
+      const home = await getDoc(doc(Ss.firestore, `${this._collectionName}/${id}`));
+      if (!home.exists()) throw new Error('La casa se guardó pero no se pudo recuperar');
+      const result = { ...home.data(), id, city: cityId } as RetreatHomeI;
 
       // Actualizar observable
       this.updateRetreatHomeInCache(result, 'create');
@@ -158,11 +191,19 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
     }
 
     try {
-      const result = await this._updateOne({
-        find_by: 'id',
-        find_value: retreatHome.id,
-        data: retreatHome,
+      const cityId = this.authService.activeCityId() || this.authService.current_user()?.city;
+      if (!cityId) throw new Error('El usuario no tiene una ciudad asignada');
+      const update = httpsCallable(this.functions, 'updateCityRetreatHome');
+      await update({
+        cityId,
+        homeId: retreatHome.id,
+        name: retreatHome.name,
+        phone: retreatHome.phone,
+        address: retreatHome.address,
+        location: retreatHome.location,
+        images: this.imageIds(retreatHome.images),
       });
+      const result = retreatHome;
 
       // Actualizar observable
       this.updateRetreatHomeInCache(result, 'update');
@@ -182,14 +223,10 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
    */
   async toggleRetreatHomeStatus(retreatHome: RetreatHomeClass): Promise<RetreatHomeI> {
     try {
-      const result = await this._updateOne({
-        find_by: 'id',
-        find_value: retreatHome.id,
-        data: {
-          id: retreatHome.id,
-          is_active: !retreatHome.is_active,
-        },
-      });
+      const cityId = this.authService.activeCityId() || this.authService.current_user()?.city;
+      if (!cityId) throw new Error('El usuario no tiene una ciudad asignada');
+      await updateDoc(doc(Ss.firestore, `city/${cityId}/retreat_homes/${retreatHome.id}`), { is_active: !retreatHome.is_active });
+      const result = { ...retreatHome, is_active: !retreatHome.is_active } as unknown as RetreatHomeI;
 
       // Actualizar observable
       this.updateRetreatHomeInCache(result, 'update');
@@ -214,7 +251,9 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
     }
 
     try {
-      await this._deleteOne({ find_by: 'id', find_value: id });
+      const cityId = this.authService.activeCityId() || this.authService.current_user()?.city;
+      if (!cityId) throw new Error('El usuario no tiene una ciudad asignada');
+      await deleteDoc(doc(Ss.firestore, `city/${cityId}/retreat_homes/${id}`));
 
       // Remover del observable
       this.removeRetreatHomeFromCache(id);
@@ -225,6 +264,22 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
       Ss.toastService.error({ message: 'Error al eliminar la casa de retiro', title: 'Error' });
       throw error;
     }
+  }
+
+  private imageIds(images: Array<FileClass | string | FileI>): string[] {
+    return images.map(image => typeof image === 'string' ? image : image.id).filter((id): id is string => Boolean(id));
+  }
+
+  private async hydrateHome(data: Partial<RetreatHomeI> & {id: string; city: string; is_active?: boolean}): Promise<RetreatHomeClass> {
+    const images = await Promise.all(this.imageIds(data.images ?? []).map(id => this.fileService.getFileById(id)));
+    return new RetreatHomeClass({
+      ...data,
+      name: data.name ?? '',
+      phone: data.phone ?? '',
+      address: data.address ?? '',
+      location: data.location ?? '',
+      images: images.filter((file): file is FileClass => file !== null),
+    });
   }
 
   /**
@@ -270,6 +325,7 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   private invalidateCache(): void {
     this._retreatHomes.next([]);
     this._lastFetch = 0;
+    this._cacheCityId = '';
   }
 
   /**
@@ -278,5 +334,6 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   override clearCache(): void {
     this._retreatHomes.next([]);
     this._lastFetch = 0;
+    this._cacheCityId = '';
   }
 }

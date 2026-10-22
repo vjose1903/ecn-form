@@ -162,7 +162,7 @@ export class PreRetreatPaymentModal implements OnInit, OnDestroy {
     try {
       let previewUrl = this.paymentReceiptPreviews()[payment.id];
       if (!previewUrl) {
-        previewUrl = await this.requestService.loadPreRetreatReceiptPreview(payment);
+        previewUrl = await this.requestService.loadPreRetreatReceiptPreview(payment, {cityId: this.retreat.city_id, requestId: this.request.id});
         if (this.destroyed) {
           URL.revokeObjectURL(previewUrl);
           return;
@@ -189,7 +189,7 @@ export class PreRetreatPaymentModal implements OnInit, OnDestroy {
     try {
       const previews = await Promise.all(this.payments.map(async payment => {
         try {
-          return [payment.id, await this.requestService.loadPreRetreatReceiptPreview(payment)] as const;
+          return [payment.id, await this.requestService.loadPreRetreatReceiptPreview(payment, {cityId: this.retreat.city_id, requestId: this.request.id})] as const;
         } catch (error) {
           console.error('No se pudo cargar la vista previa del recibo:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
           return null;

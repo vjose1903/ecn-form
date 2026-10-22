@@ -8,6 +8,9 @@
       </div>
       <div class="">
         <span class="block text-md md:text-2xl font-semibold">Encuentro Católico de Novios</span>
+        @if (authService.isSuperAdmin() && accessibleCities().length > 1 && isAdminRoute()) {
+          <p-select [options]="accessibleCities()" optionLabel="label" optionValue="id" [ngModel]="authService.activeCityId()" (ngModelChange)="selectCity($event)" aria-label="Ciudad activa" />
+        }
         @if(!isAuthRoute()){ 
           @if(city()){
             <small class="block text-white/70">{{ city()?.large_label }}</small>
