@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateCityRetreatHome = exports.createCityRetreatHome = exports.assignExistingCityRetreatHome = exports.findSimilarCityRetreatHomes = exports.updateOwnProfile = exports.listCityMembers = exports.deleteCityMember = exports.updateCityMember = exports.sendCityMemberInvitation = exports.createCityMember = exports.saveCityRole = void 0;
+exports.updateCityRetreatHome = exports.createCityRetreatHome = exports.assignExistingCityRetreatHome = exports.findSimilarCityRetreatHomes = exports.updateOwnProfile = exports.listCityMembers = exports.deleteCityMember = exports.updateCityMember = exports.resendCityMemberInvitation = exports.sendCityMemberInvitation = exports.createCityMember = exports.saveCityRole = void 0;
 const node_crypto_1 = require("node:crypto");
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-functions/v2/firestore");
@@ -105,12 +105,31 @@ exports.createCityMember = (0, https_1.onCall)(async (request) => {
     if (!role.exists || role.get("is_active") !== true)
         throw new https_1.HttpsError("failed-precondition", "El rol seleccionado no existe o está inactivo.");
     await (0, authorization_1.requirePermissionsWithinActorRole)(request, cityId, (role.get("permissions") ?? {}));
-    const existingAccount = await firebase_admin_1.admin.auth().getUserByEmail(email).catch(error => {
+    let existingAccount = null;
+    let createdUid = "";
+    try {
+        const account = await firebase_admin_1.admin.auth().createUser({
+            email,
+            displayName,
+            password: (0, node_crypto_1.randomBytes)(32).toString("base64url"),
+            emailVerified: false,
+            disabled: false,
+        });
+        createdUid = account.uid;
+    }
+    catch (error) {
         const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
-        if (code.includes("user-not-found"))
-            return null;
-        throw error;
-    });
+        if (!code.includes("email-already-exists")) {
+            console.error("No se pudo crear la cuenta de Auth:", JSON.stringify({ cityId, error }));
+            throw new https_1.HttpsError("internal", "No se pudo crear la cuenta del equipo.");
+        }
+        existingAccount = await firebase_admin_1.admin.auth().getUserByEmail(email).catch(lookupError => {
+            const lookupCode = lookupError && typeof lookupError === "object" && "code" in lookupError ? String(lookupError.code) : "";
+            if (lookupCode.includes("user-not-found"))
+                return null;
+            throw lookupError;
+        });
+    }
     if (existingAccount) {
         if (existingAccount.customClaims?.super_admin === true && !(0, authorization_1.isSuperAdmin)(request)) {
             throw new https_1.HttpsError("permission-denied", "Solo un superadministrador puede reactivar esta cuenta.");
@@ -154,16 +173,9 @@ exports.createCityMember = (0, https_1.onCall)(async (request) => {
         }
         return { uid: existingAccount.uid, email, reactivated: true };
     }
-    let createdUid = "";
+    if (!createdUid)
+        throw new https_1.HttpsError("already-exists", "Ya existe una cuenta con ese correo.");
     try {
-        const account = await firebase_admin_1.admin.auth().createUser({
-            email,
-            displayName,
-            password: (0, node_crypto_1.randomBytes)(32).toString("base64url"),
-            emailVerified: false,
-            disabled: false,
-        });
-        createdUid = account.uid;
         const timestamp = firestore_2.FieldValue.serverTimestamp();
         const batch = firebase_admin_1.v2Db.batch();
         batch.set(firebase_admin_1.v2Db.doc(`user/${createdUid}`), {
@@ -202,20 +214,9 @@ exports.createCityMember = (0, https_1.onCall)(async (request) => {
         throw new https_1.HttpsError("internal", "No se pudo crear la cuenta del equipo.");
     }
 });
-exports.sendCityMemberInvitation = (0, firestore_1.onDocumentCreated)({ database: "ecn-platform-v2", document: "city/{cityId}/members/{uid}", secrets: [resend_1.resendApiKey], retry: true }, async (event) => {
-    const member = event.data?.data();
-    if (!member || member.invitation_status !== "pending")
-        return;
-    const latestMember = await event.data?.ref.get();
-    if (latestMember?.get("invitation_status") !== "pending")
-        return;
-    const { cityId, uid } = event.params;
-    const [profile, apiKey] = await Promise.all([
-        firebase_admin_1.v2Db.doc(`user/${uid}`).get(),
-        Promise.resolve((0, resend_1.getResendApiKey)()),
-    ]);
-    const email = String(profile.get("email") ?? "");
-    if (!email || !apiKey)
+const sendMemberInvitationEmail = async ({ cityId, email, displayName, idempotencyKey, }) => {
+    const apiKey = (0, resend_1.getResendApiKey)();
+    if (!apiKey)
         throw new Error("No se pudo preparar el correo de invitación del usuario.");
     const firebaseLink = await firebase_admin_1.admin.auth().generatePasswordResetLink(email);
     const firebaseUrl = new URL(firebaseLink);
@@ -228,7 +229,6 @@ exports.sendCityMemberInvitation = (0, firestore_1.onDocumentCreated)({ database
     if (setupUrl.searchParams.get("mode") !== "resetPassword" || !setupUrl.searchParams.has("oobCode")) {
         throw new Error("Firebase no generó un enlace válido para crear la contraseña.");
     }
-    const displayName = String(profile.get("display_name") ?? "");
     const safeName = displayName.replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[char] ?? char));
     const safeUrl = setupUrl.toString().replace(/&/g, "&amp;");
     await (0, resend_1.sendResendEmail)({
@@ -236,24 +236,118 @@ exports.sendCityMemberInvitation = (0, firestore_1.onDocumentCreated)({ database
         to: email,
         subject: "Activa tu cuenta de Encuentro Católico para Novios",
         html: `
-        <div style="max-width:600px;margin:24px auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;font-family:Arial,sans-serif;color:#344054">
-          <div style="background:${emailHelpers_1.EMAIL_CONSTANTS.BRAND_COLOR};padding:24px;text-align:center;color:#fff">
-            <img src="${emailHelpers_1.EMAIL_CONSTANTS.ECN_LOGO_URL}" alt="Encuentro Católico para Novios" width="56" height="56" style="display:block;margin:0 auto 12px">
-            <strong style="font-size:20px">Encuentro Católico para Novios</strong>
-          </div>
-          <div style="padding:28px 24px">
-            <h1 style="font-size:22px;margin:0 0 16px">Crea tu contraseña</h1>
-            <p>Hola ${safeName},</p>
-            <p>Se creó una cuenta para ti en la plataforma de Encuentro Católico para Novios. Usa el siguiente botón para crear tu contraseña y activar el acceso.</p>
-            <p style="text-align:center;margin:28px 0"><a href="${safeUrl}" style="background:${emailHelpers_1.EMAIL_CONSTANTS.BRAND_COLOR};color:#fff;text-decoration:none;padding:13px 22px;border-radius:7px;display:inline-block;font-weight:bold">Crear contraseña</a></p>
-            <p style="font-size:13px;color:#667085">Si no esperabas esta invitación, puedes ignorar este correo.</p>
-          </div>
+      <div style="max-width:600px;margin:24px auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;font-family:Arial,sans-serif;color:#344054">
+        <div style="background:${emailHelpers_1.EMAIL_CONSTANTS.BRAND_COLOR};padding:24px;text-align:center;color:#fff">
+          <img src="${emailHelpers_1.EMAIL_CONSTANTS.ECN_LOGO_URL}" alt="Encuentro Católico para Novios" width="56" height="56" style="display:block;margin:0 auto 12px">
+          <strong style="font-size:20px">Encuentro Católico para Novios</strong>
         </div>
-      `,
+        <div style="padding:28px 24px">
+          <h1 style="font-size:22px;margin:0 0 16px">Crea tu contraseña</h1>
+          <p>Hola ${safeName},</p>
+          <p>Se creó una cuenta para ti en la plataforma de Encuentro Católico para Novios. Usa el siguiente botón para crear tu contraseña y activar el acceso.</p>
+          <p style="text-align:center;margin:28px 0"><a href="${safeUrl}" style="background:${emailHelpers_1.EMAIL_CONSTANTS.BRAND_COLOR};color:#fff;text-decoration:none;padding:13px 22px;border-radius:7px;display:inline-block;font-weight:bold">Crear contraseña</a></p>
+          <p style="font-size:13px;color:#667085">Si no esperabas esta invitación, puedes ignorar este correo.</p>
+        </div>
+      </div>
+    `,
         logLabel: `invitación de nuevo usuario en ${cityId}`,
+        idempotencyKey,
+    });
+};
+exports.sendCityMemberInvitation = (0, firestore_1.onDocumentCreated)({ database: "ecn-platform-v2", document: "city/{cityId}/members/{uid}", secrets: [resend_1.resendApiKey], retry: true }, async (event) => {
+    const member = event.data?.data();
+    if (!member || member.invitation_status !== "pending")
+        return;
+    const latestMember = await event.data?.ref.get();
+    if (latestMember?.get("invitation_status") !== "pending")
+        return;
+    const { cityId, uid } = event.params;
+    const profile = await firebase_admin_1.v2Db.doc(`user/${uid}`).get();
+    const email = String(profile.get("email") ?? "");
+    if (!email)
+        throw new Error("No se pudo preparar el correo de invitación del usuario.");
+    const displayName = String(profile.get("display_name") ?? "");
+    await sendMemberInvitationEmail({
+        cityId,
+        email,
+        displayName,
         idempotencyKey: `city-member-invitation-${uid}`,
     });
     await event.data?.ref.update({ invitation_status: "sent", invitation_sent_at: firestore_2.FieldValue.serverTimestamp() });
+});
+exports.resendCityMemberInvitation = (0, https_1.onCall)({ secrets: [resend_1.resendApiKey], invoker: "public" }, async (request) => {
+    const data = request.data;
+    const cityId = requireText(data.cityId, "La ciudad", 100);
+    const uid = requireText(data.uid, "El usuario", 128);
+    const email = requireText(data.email, "El correo", 254).toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+        throw new https_1.HttpsError("invalid-argument", "El correo no es válido.");
+    const actorUid = await (0, authorization_1.requireCityPermission)(request, cityId, "members", "create");
+    const memberRef = firebase_admin_1.v2Db.doc(`city/${cityId}/members/${uid}`);
+    const profileRef = firebase_admin_1.v2Db.doc(`user/${uid}`);
+    const [member, profile, authUser] = await Promise.all([
+        memberRef.get(),
+        profileRef.get(),
+        firebase_admin_1.admin.auth().getUser(uid).catch(error => {
+            const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
+            if (code.includes("user-not-found"))
+                return null;
+            throw error;
+        }),
+    ]);
+    if (!member.exists || member.get("status") === "deleted" || !authUser) {
+        throw new https_1.HttpsError("not-found", "No se encontró un usuario activo en esta ciudad.");
+    }
+    if (authUser.disabled)
+        throw new https_1.HttpsError("failed-precondition", "Activa la cuenta antes de reenviar la invitación.");
+    if (authUser.metadata.lastSignInTime) {
+        throw new https_1.HttpsError("failed-precondition", "Este usuario ya inició sesión y no necesita una invitación para crear su contraseña.");
+    }
+    if (member.get("status") !== "active")
+        throw new https_1.HttpsError("failed-precondition", "Activa la cuenta antes de reenviar la invitación.");
+    const originalEmail = authUser.email ?? "";
+    const profileEmail = String(profile.get("email") ?? "");
+    const emailChanged = email !== originalEmail;
+    const profileEmailChanged = email !== profileEmail;
+    const actorCanUpdate = emailChanged || profileEmailChanged
+        ? await (0, authorization_1.requireCityPermission)(request, cityId, "members", "update")
+        : actorUid;
+    let authEmailUpdated = false;
+    let profileEmailUpdated = false;
+    let emailSent = false;
+    try {
+        if (emailChanged) {
+            await firebase_admin_1.admin.auth().updateUser(uid, { email, emailVerified: false });
+            authEmailUpdated = true;
+        }
+        if (profileEmailChanged) {
+            await profileRef.set({ email, updated_by: actorCanUpdate, updated_at: firestore_2.FieldValue.serverTimestamp() }, { merge: true });
+            profileEmailUpdated = true;
+        }
+        await sendMemberInvitationEmail({
+            cityId,
+            email,
+            displayName: String(profile.get("display_name") ?? authUser.displayName ?? ""),
+            idempotencyKey: `city-member-invitation-${uid}-${(0, node_crypto_1.randomBytes)(8).toString("hex")}`,
+        });
+        emailSent = true;
+        await memberRef.update({ invitation_status: "sent", invitation_sent_at: firestore_2.FieldValue.serverTimestamp() }).catch(error => {
+            console.error("No se pudo actualizar el estado de invitación:", JSON.stringify({ cityId, uid, error }));
+        });
+        return { uid, email };
+    }
+    catch (error) {
+        if (!emailSent) {
+            if (profileEmailUpdated)
+                await profileRef.set({ email: profileEmail }, { merge: true }).catch(() => undefined);
+            if (authEmailUpdated)
+                await firebase_admin_1.admin.auth().updateUser(uid, { email: originalEmail, emailVerified: authUser.emailVerified }).catch(() => undefined);
+        }
+        console.error("No se pudo reenviar la invitación del miembro:", JSON.stringify({ cityId, uid, error }));
+        if (error instanceof https_1.HttpsError)
+            throw error;
+        throw new https_1.HttpsError("internal", "No se pudo reenviar el correo para crear la contraseña.");
+    }
 });
 exports.updateCityMember = (0, https_1.onCall)(async (request) => {
     const data = request.data;
@@ -502,7 +596,7 @@ exports.listCityMembers = (0, https_1.onCall)(async (request) => {
                     throw error;
                 }),
             ]);
-            return { uid: member.id, ...member.data(), email: profile.get("email") ?? "", display_name: profile.get("display_name") ?? "", phone: profile.get("phone") ?? "", super_admin: account?.customClaims?.super_admin === true };
+            return { uid: member.id, ...member.data(), email: profile.get("email") ?? "", display_name: profile.get("display_name") ?? "", phone: profile.get("phone") ?? "", super_admin: account?.customClaims?.super_admin === true, has_signed_in: account ? Boolean(account.metadata.lastSignInTime) : true };
         })),
     };
 });

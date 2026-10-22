@@ -18,6 +18,9 @@
             <td data-label="Estado"><span class="status-tag" [ngClass]="{'status-tag--active': member.status === 'active', 'status-tag--deleted': member.status === 'deleted', 'status-tag--disabled': member.status !== 'active' && member.status !== 'deleted'}">{{ member.status === 'active' ? 'Activo' : member.status === 'deleted' ? 'Eliminado' : 'Desactivado' }}</span></td>
             <td class="actions-cell" data-label="Acciones">
               <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="secondary" [attr.aria-label]="'Editar ' + (member.display_name || member.email || 'usuario')" title="Editar usuario" (onClick)="openEdit(member)" />
+              @if (member.has_signed_in === false) {
+                <p-button icon="pi pi-envelope" [text]="true" [rounded]="true" severity="info" [disabled]="resendingInvitation()" [attr.aria-label]="'Reenviar correo para ' + (member.display_name || member.email || 'crear contraseña')" title="Reenviar correo para crear contraseña" (onClick)="openResendInvitation(member)" />
+              }
               <p-button [icon]="member.status === 'active' ? 'pi pi-user-minus' : 'pi pi-user-plus'" [text]="true" [rounded]="true" [severity]="member.status === 'active' ? 'danger' : 'success'" [attr.aria-label]="member.status === 'active' ? 'Desactivar usuario' : 'Activar usuario'" [title]="member.status === 'active' ? 'Desactivar usuario' : 'Activar usuario'" (onClick)="confirmMemberStatusChange(member)" />
               @if (canDeleteMembers) {
                 <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" [disabled]="isProtectedFromDeletion(member) || saving()" [attr.aria-label]="'Eliminar ' + (member.display_name || member.email || 'usuario')" [title]="isProtectedFromDeletion(member) ? 'No se puede eliminar esta cuenta' : 'Eliminar usuario'" (onClick)="confirmMemberDeletion(member)" />
@@ -58,6 +61,25 @@
       <div class="dialog-actions"><p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" (onClick)="closeEditor()" /><p-button type="submit" label="Crear cuenta" icon="pi pi-user-plus" [loading]="saving()" [disabled]="!cityId() || !roleChoices.length" /></div>
     </form>
   }
+</p-dialog>
+
+<p-dialog
+  header="Reenviar acceso"
+  [visible]="invitationMember() !== null"
+  (visibleChange)="onResendDialogVisibleChange($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!resendingInvitation()"
+  [closeOnEscape]="!resendingInvitation()"
+  [dismissableMask]="false"
+  [style]="{width: 'min(32rem, calc(100vw - 2rem))'}">
+  <p class="section-hint">Enviaremos un nuevo enlace para crear la contraseña. Si el correo estaba incorrecto, cámbialo aquí.</p>
+  <form #resendForm="ngForm" class="member-form modal-form" (ngSubmit)="resendInvitation()">
+    <label class="modal-field-full">Correo<input pInputText [(ngModel)]="resendEmail" name="resendEmail" type="email" autocomplete="email" required></label>
+    @if (invitationError()) { <p class="delete-confirmation__error modal-field-full" role="alert">{{ invitationError() }}</p> }
+    <div class="dialog-actions"><p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" [disabled]="resendingInvitation()" (onClick)="closeResendInvitation()" /><p-button type="submit" label="Reenviar correo" icon="pi pi-envelope" [loading]="resendingInvitation()" [disabled]="!resendForm.valid || resendingInvitation()" /></div>
+  </form>
 </p-dialog>
 
 <p-dialog

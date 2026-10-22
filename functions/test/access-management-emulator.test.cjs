@@ -69,7 +69,12 @@ async function call(name, token, data) {
   const listed = await call('listCityMembers', token, {});
   assert.equal(listed.status, 200, JSON.stringify(listed.body));
   const members = (listed.body.result ?? listed.body.data).members;
-  assert.ok(members.some(item => item.uid === member.uid && item.display_name === 'Operador de prueba'));
+  assert.ok(members.some(item => item.uid === member.uid && item.display_name === 'Operador de prueba' && item.has_signed_in === false));
+  assert.ok(members.some(item => item.uid === uid && item.has_signed_in === true));
+
+  const resendAfterLogin = await call('resendCityMemberInvitation', token, {uid, email: 'city.admin@example.test'});
+  assert.notEqual(resendAfterLogin.status, 200);
+  assert.equal(resendAfterLogin.body.error?.status, 'FAILED_PRECONDITION');
 
   const disabled = await call('updateCityMember', token, {uid: member.uid, status: 'disabled'});
   assert.equal(disabled.status, 200, JSON.stringify(disabled.body));
