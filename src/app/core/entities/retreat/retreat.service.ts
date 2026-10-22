@@ -11,6 +11,7 @@ import { UserC } from '../user/user.class';
 import { UserService } from '../user/user.service';
 import { RequestClass } from '../request/request.class';
 import { RequestService } from '../request/request.service';
+import { RetreatHomeService } from '../retreat-home/retreat-home.service';
 import { collection, deleteDoc, doc, getCountFromServer, getDoc, getDocs, query, setDoc, updateDoc, where } from '@angular/fire/firestore';
 
 @Injectable({
@@ -21,6 +22,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   private authService = inject(AuthService);
   private userService = inject(UserService);
   private requestService = inject(RequestService);
+  private retreatHomeService = inject(RetreatHomeService);
 
   private _retreats: BehaviorSubject<RetreatClass[]> = new BehaviorSubject<RetreatClass[]>([]);
   private _requests: BehaviorSubject<RequestClass[]> = new BehaviorSubject<RequestClass[]>([]);
@@ -106,6 +108,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
 
       const cityId = this.authService.activeCityId() || currentUser.city;
       const retreatList = await this.readCityRetreats(cityId, onlyActive ?? false);
+      await this.attachRetreatHomeData(retreatList);
       await Promise.all(retreatList.map(async retreat => {
         const requests = query(
           collection(Ss.firestore, `city/${cityId}/requests`),
@@ -138,6 +141,28 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   }
 
   /**
+   * En Firestore, retreat_home se guarda como referencia. Esa referencia solo
+   * contiene el ID, así que hay que resolverla con la casa asignada a la ciudad.
+   */
+  private async attachRetreatHomeData(retreats: RetreatClass[]): Promise<void> {
+    if (!retreats.some(retreat => retreat.retreat_home && !retreat.retreatHomeData?.name)) return;
+
+    try {
+      const homeIds = [...new Set(retreats.filter(retreat => retreat.retreat_home && !retreat.retreatHomeData?.name).map(retreat => retreat.retreat_home))];
+      const homes = await Promise.all(homeIds.map(id => this.retreatHomeService.getRetreatHomeById(id)));
+      const homesById = new Map(homes.filter(home => home !== null).map(home => [home.id, home]));
+      retreats.forEach(retreat => {
+        const home = homesById.get(retreat.retreat_home);
+        if (home) retreat.retreatHomeData = home;
+      });
+    } catch (error) {
+      // La lista de retiros debe seguir disponible aunque no se puedan resolver
+      // los nombres de las casas en esta carga.
+      console.error('Error al resolver casas de retiro asignadas:', error);
+    }
+  }
+
+  /**
    * Obtiene un retiro por ID
    */
   async getRetreatById(id: string): Promise<RetreatClass | null> {
@@ -156,7 +181,10 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
     const cityId = this.authService.activeCityId() || currentUser?.city;
     if (cityId) {
       const snapshot = await getDoc(doc(Ss.firestore, `city/${cityId}/retreat/${id}`));
-      return snapshot.exists() ? new RetreatClass({ ...snapshot.data(), id: snapshot.id } as RetreatI) : null;
+      if (!snapshot.exists()) return null;
+      const retreat = new RetreatClass({ ...snapshot.data(), id: snapshot.id } as RetreatI);
+      await this.attachRetreatHomeData([retreat]);
+      return retreat;
     }
 
     return this.processGetRetreat(id, 'id');
@@ -168,8 +196,9 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   private processGetRetreat(value: string, by: string): Promise<RetreatClass | null> {
     return new Promise<RetreatClass | null>((resolve, reject) => {
       this._getOne({ find_by: by, find_value: value })
-        .then(retreat => {
+        .then(async retreat => {
           const retreatObj = retreat ? new RetreatClass(retreat) : null;
+          if (retreatObj) await this.attachRetreatHomeData([retreatObj]);
           resolve(retreatObj);
         })
         .catch(error => {
