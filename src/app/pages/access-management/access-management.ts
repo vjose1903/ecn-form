@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Auth, sendPasswordResetEmail } from '@angular/fire/auth';
+import { Auth } from '@angular/fire/auth';
 import { Firestore, collection, getDocs, limit, orderBy, query } from '@angular/fire/firestore';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { ButtonModule } from 'primeng/button';
@@ -12,7 +12,6 @@ import { Ss } from '@core/services/singleton.service';
 
 interface Choice {label: string; value: string}
 interface RoleRecord {id: string; name: string; description?: string; is_active: boolean; permissions: Record<string, unknown>}
-interface MemberRecord {uid: string; role_id: string; status: string; email?: string; display_name?: string; phone?: string}
 interface AuditRecord {actor_uid: string; action: string; resource_path: string; occurred_at: any; changes: Record<string, unknown>}
 
 @Component({
@@ -29,7 +28,6 @@ export class AccessManagement implements OnInit {
   readonly cities = signal<Choice[]>([]);
   readonly cityId = signal('');
   readonly roles = signal<RoleRecord[]>([]);
-  readonly members = signal<MemberRecord[]>([]);
   readonly audit = signal<AuditRecord[]>([]);
   readonly loading = signal(false);
   readonly saving = signal(false);
@@ -40,10 +38,6 @@ export class AccessManagement implements OnInit {
     requests: {read: true, list: true, fields: {couple_basic: {read: true}, contact: {read: false}, identity: {read: false}}},
     payments: {read: false, list: false, create: false},
   }, null, 2);
-  memberEmail = '';
-  memberName = '';
-  memberPhone = '';
-  memberRoleId = '';
   get roleChoices(): Choice[] {
     return this.roles().map(role => ({label: role.name, value: role.id}));
   }
@@ -73,13 +67,11 @@ export class AccessManagement implements OnInit {
     if (!cityId) return;
     this.loading.set(true);
     try {
-      const [roleSnapshot, membersResult, auditSnapshot] = await Promise.all([
+      const [roleSnapshot, auditSnapshot] = await Promise.all([
         getDocs(collection(this.db, `city/${cityId}/roles`)),
-        httpsCallable<{cityId: string}, {members: MemberRecord[]}>(this.functions, 'listCityMembers')({cityId}),
         getDocs(query(collection(this.db, `city/${cityId}/audit_logs`), orderBy('occurred_at', 'desc'), limit(50))),
       ]);
       this.roles.set(roleSnapshot.docs.map(item => ({id: item.id, ...item.data()} as RoleRecord)));
-      this.members.set(membersResult.data.members);
       const cityLogs = auditSnapshot.docs.map(item => item.data() as AuditRecord);
       if (Ss.authService.isSuperAdmin()) {
         const globalLogs = await getDocs(query(collection(this.db, 'global_audit_logs'), orderBy('occurred_at', 'desc'), limit(50)));
@@ -121,34 +113,6 @@ export class AccessManagement implements OnInit {
       Ss.toastService.error({title: 'No se pudo guardar', message: error instanceof SyntaxError ? 'Revisa el formato JSON de los permisos.' : 'Verifica tus permisos y los datos del rol.'});
     } finally {
       this.saving.set(false);
-    }
-  }
-
-  async createMember(): Promise<void> {
-    try {
-      this.saving.set(true);
-      const create = httpsCallable(this.functions, 'createCityMember');
-      await create({cityId: this.cityId(), email: this.memberEmail, displayName: this.memberName, phone: this.memberPhone, roleId: this.memberRoleId});
-      await sendPasswordResetEmail(this.auth, this.memberEmail);
-      this.memberEmail = this.memberName = this.memberPhone = this.memberRoleId = '';
-      await this.loadCityData();
-      Ss.toastService.success({title: 'Invitación enviada', message: 'El usuario recibirá un correo para definir su contraseña.'});
-    } catch (error) {
-      console.error('No se pudo crear el miembro:', JSON.stringify(error));
-      Ss.toastService.error({title: 'No se pudo crear', message: 'Verifica el correo, el rol y los permisos de administración de miembros.'});
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  async updateMember(member: MemberRecord, patch: {roleId?: string; status?: string}): Promise<void> {
-    try {
-      const update = httpsCallable(this.functions, 'updateCityMember');
-      await update({cityId: this.cityId(), uid: member.uid, ...patch});
-      await this.loadCityData();
-    } catch (error) {
-      console.error('No se pudo actualizar el miembro:', JSON.stringify(error));
-      Ss.toastService.error({title: 'No se pudo actualizar', message: 'Tu rol no permite realizar este cambio.'});
     }
   }
 

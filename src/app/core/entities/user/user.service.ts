@@ -28,8 +28,9 @@ export class UserService {
     try {
       const snapshot = await getDoc(doc(this.firestore, `user/${uid}`));
       if (!snapshot.exists()) return null;
-      const profile = snapshot.data() as UserI;
-      const cityId = typeof profile.city === 'string' ? profile.city : profile.city?.id;
+      const profile = snapshot.data() as UserI & {primary_city_id?: string; city_id?: string};
+      const profileCity = profile.city ?? profile.primary_city_id ?? profile.city_id ?? '';
+      const cityId = typeof profileCity === 'string' ? profileCity : profileCity.id;
       let citySnapshot = null;
       if (cityId) {
         try {
@@ -38,7 +39,7 @@ export class UserService {
           if ((cityError as {code?: string})?.code !== 'permission-denied') throw cityError;
         }
       }
-      const city = citySnapshot?.exists() ? { ...citySnapshot.data(), id: cityId } : profile.city;
+      const city = citySnapshot?.exists() ? { ...citySnapshot.data(), id: cityId } : profileCity;
       return new UserC({ ...profile, city, id: snapshot.id } as UserI & {city?: any});
     } catch (error) {
       console.error('Error al obtener el perfil del usuario:', error);

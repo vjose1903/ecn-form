@@ -8,11 +8,31 @@ import { AuthService } from '@core/services/auth.service';
 import { Ss } from '@core/services/singleton.service';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { RetreatI } from '../retreat/retreat.model';
-import { collection, doc, getDoc, getDocs, updateDoc, deleteDoc } from '@angular/fire/firestore';
+import { collection, doc, getDoc, getDocs, updateDoc, deleteDoc, serverTimestamp, runTransaction } from '@angular/fire/firestore';
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { FileService } from '../file/file.service';
 import { FileClass } from '../file/file.class';
 import { FileI } from '../file/file.model';
+
+export interface RetreatHomeAssignmentOverview {
+  homes: Array<{id: string; name: string; address: string; imageUrl: string}>;
+  cities: Array<{id: string; label: string}>;
+  assignments: string[];
+}
+
+export interface SimilarRetreatHome {
+  id: string;
+  name: string;
+  address: string;
+  alreadyAssigned: boolean;
+  imageIds: string[];
+  imageUrls: string[];
+}
+
+export interface RetreatHomeSimilarityCheck {
+  cityLabel: string;
+  candidates: SimilarRetreatHome[];
+}
 
 @Injectable({
   providedIn: 'root',
@@ -103,6 +123,65 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
     }
   }
 
+  async getRetreatHomeAssignmentOptions(): Promise<Omit<RetreatHomeAssignmentOverview, 'assignments'>> {
+    if (!this.authService.isSuperAdmin()) throw new Error('Solo superadmin puede administrar asignaciones entre ciudades');
+    const [homesSnapshot, citiesSnapshot] = await Promise.all([
+      getDocs(collection(Ss.firestore, this._collectionName)),
+      getDocs(collection(Ss.firestore, 'city')),
+    ]);
+    const cities = citiesSnapshot.docs.map(city => ({id: city.id, label: String(city.get('label') || city.id)}));
+    return {
+      homes: await Promise.all(homesSnapshot.docs.map(async home => {
+        const imageIds = this.imageIds((home.get('images') || []) as Array<FileClass | string | FileI>);
+        const images = await Promise.all(imageIds.map(id => this.fileService.getFileById(id)));
+        return {
+          id: home.id,
+          name: String(home.get('name') || home.id),
+          address: String(home.get('address') || ''),
+          imageUrl: images.find(image => image?.url)?.url || '',
+        };
+      })),
+      cities,
+    };
+  }
+
+  async getRetreatHomeAssignments(cityIds: string[]): Promise<string[]> {
+    if (!this.authService.isSuperAdmin()) throw new Error('Solo superadmin puede administrar asignaciones entre ciudades');
+    const assignmentsByCity = await Promise.all(cityIds.map(cityId =>
+      getDocs(collection(Ss.firestore, `city/${cityId}/retreat_homes`)),
+    ));
+    return assignmentsByCity.flatMap((assignments, index) => assignments.docs.map(assignment => `${cityIds[index]}/${assignment.id}`));
+  }
+
+  async updateRetreatHomeAssignments(homeIds: string[], cityIds: string[], associate: boolean): Promise<number> {
+    if (!this.authService.isSuperAdmin()) throw new Error('Solo superadmin puede administrar asignaciones entre ciudades');
+    if (!homeIds.length || !cityIds.length) return 0;
+    if (homeIds.length * cityIds.length > 500) throw new Error('Selecciona hasta 500 relaciones por operación.');
+    const uid = this.authService.current_user()?.uid;
+    if (!uid) throw new Error('Usuario no autenticado');
+
+    const relations = cityIds.flatMap(cityId => homeIds.map(homeId => ({
+      cityId,
+      homeId,
+      ref: doc(Ss.firestore, `city/${cityId}/retreat_homes/${homeId}`),
+    })));
+    return runTransaction(Ss.firestore, async transaction => {
+      const assignments = await Promise.all(relations.map(relation => transaction.get(relation.ref)));
+      let changed = 0;
+      assignments.forEach((assignment, index) => {
+        if (associate && !assignment.exists()) {
+          const {cityId, homeId, ref} = relations[index];
+          transaction.set(ref, {home_id: homeId, is_active: true, created_by: uid, created_at: serverTimestamp()});
+          changed += 1;
+        } else if (!associate && assignment.exists()) {
+          transaction.delete(relations[index].ref);
+          changed += 1;
+        }
+      });
+      return changed;
+    });
+  }
+
   /**
    * Obtiene una casa de retiro por ID
    */
@@ -153,7 +232,7 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
 
     try {
       const currentUser = this.authService.current_user();
-      const cityId = currentUser?.city;
+      const cityId = this.authService.activeCityId() || currentUser?.city;
       if (!cityId) throw new Error('El usuario no tiene una ciudad asignada');
       const create = httpsCallable(this.functions, 'createCityRetreatHome');
       const response = await create({
@@ -164,10 +243,8 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
         location: newRetreatHome.location,
         images: this.imageIds(newRetreatHome.images),
       });
-      const id = (response.data as {homeId: string}).homeId;
-      const home = await getDoc(doc(Ss.firestore, `${this._collectionName}/${id}`));
-      if (!home.exists()) throw new Error('La casa se guardó pero no se pudo recuperar');
-      const result = { ...home.data(), id, city: cityId } as RetreatHomeI;
+      const data = response.data as {homeId: string; home: Partial<RetreatHomeI>};
+      const result = await this.hydrateHome({...data.home, id: data.homeId, city: cityId, is_active: true});
 
       // Actualizar observable
       this.updateRetreatHomeInCache(result, 'create');
@@ -180,6 +257,37 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
       Ss.toastService.error({ message: 'Error al crear la casa de retiro', title: 'Error' });
       throw error;
     }
+  }
+
+  async findSimilarRetreatHomes(name: string, address: string): Promise<RetreatHomeSimilarityCheck> {
+    const cityId = this.authService.activeCityId() || this.authService.current_user()?.city;
+    if (!cityId) throw new Error('No se pudo determinar la ciudad seleccionada.');
+    const findSimilar = httpsCallable(this.functions, 'findSimilarCityRetreatHomes');
+    const response = await findSimilar({cityId, name, address});
+    const result = response.data as Omit<RetreatHomeSimilarityCheck, 'candidates'> & {
+      candidates: Array<Omit<SimilarRetreatHome, 'imageUrls'>>;
+    };
+    return {...result, candidates: result.candidates.map(candidate => ({...candidate, imageUrls: []}))};
+  }
+
+  async getSimilarRetreatHomeImageUrls(imageIds: string[]): Promise<string[]> {
+    const files = await Promise.all(imageIds.slice(0, 3).map(id => this.fileService.getFileById(id)));
+    return files.flatMap(file => file?.url ? [file.url] : []);
+  }
+
+  async assignExistingRetreatHome(homeId: string, name: string, address: string): Promise<RetreatHomeI> {
+    const cityId = this.authService.activeCityId() || this.authService.current_user()?.city;
+    if (!cityId) throw new Error('No se pudo determinar la ciudad seleccionada.');
+    const assign = httpsCallable(this.functions, 'assignExistingCityRetreatHome');
+    const response = await assign({cityId, homeId, name, address});
+    const data = response.data as {homeId: string; alreadyAssigned: boolean; home: Partial<RetreatHomeI>};
+    const result = await this.hydrateHome({...data.home, id: data.homeId, city: cityId, is_active: true});
+    this.updateRetreatHomeInCache(result, 'create');
+    Ss.toastService.success({
+      title: data.alreadyAssigned ? 'Casa ya asignada' : 'Casa asignada',
+      message: data.alreadyAssigned ? 'Esta casa ya estaba asociada a la ciudad.' : 'Se reutilizó la casa existente y se asoció a la ciudad.',
+    });
+    return result;
   }
 
   /**
@@ -290,8 +398,12 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
     const currentRetreatHomes = this._retreatHomes.value;
 
     if (action === 'create') {
-      // Agregar al final del array
-      this._retreatHomes.next([...currentRetreatHomes, retreatHomeInstance]);
+      const existingIndex = currentRetreatHomes.findIndex(rh => rh.id === retreatHomeData.id);
+      if (existingIndex === -1) {
+        this._retreatHomes.next([...currentRetreatHomes, retreatHomeInstance]);
+      } else {
+        this._retreatHomes.next(currentRetreatHomes.map((home, index) => index === existingIndex ? retreatHomeInstance : home));
+      }
     } else {
       // Buscar y actualizar
       const index = currentRetreatHomes.findIndex(rh => rh.id === retreatHomeData.id);

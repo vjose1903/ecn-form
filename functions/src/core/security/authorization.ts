@@ -5,7 +5,7 @@ type PermissionMap = Record<string, unknown>;
 
 const resources: Record<string, string[]> = {
   city: ["read", "manage"],
-  members: ["read", "list", "create", "update", "disable", "assign_role"],
+  members: ["read", "list", "create", "update", "disable", "delete", "assign_role"],
   roles: ["read", "list", "create", "update", "delete"],
   retreat_homes: ["read", "list", "create", "assign", "update", "unassign"],
   retreats: ["read", "list", "create", "update", "delete"],

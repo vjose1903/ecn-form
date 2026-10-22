@@ -12,11 +12,35 @@
 <ng-template #menuContent>
   <ul class="flex flex-col gap-2 h-full">
     @for(item of items; track item.label){
+    @if (item.label === 'Cerrar sesión' && authService.isSuperAdmin() && availableCities().length > 1) {
+      <li>
+        <button type="button" class="group flex w-full cursor-pointer items-center gap-3 rounded p-2 text-left text-black transition-colors hover:bg-gray-100" (click)="cityPopover.toggle($event)">
+          <i class="pi pi-map-marker opacity-40 transition-opacity group-hover:opacity-100" style="font-size: 1.2rem" aria-hidden="true"></i>
+          <span>Seleccionar ciudad</span>
+        </button>
+      </li>
+    }
     <li [ngClass]="item.liClass">
       <ng-container *ngTemplateOutlet="menuItem; context: { label: item.label, command: item.command, icon: item.icon, severity: item.severity, item: item }"></ng-container>
     </li>
     }
   </ul>
+  <p-popover #cityPopover [appendTo]="'body'" [style]="{ width: 'min(22rem, calc(100vw - 2rem))' }">
+    <div class="flex flex-col gap-3">
+      <h3 class="font-semibold text-slate-800">Seleccionar ciudad</h3>
+      <input type="search" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15" placeholder="Buscar ciudad..." aria-label="Filtrar ciudades" [value]="citySearch()" (input)="citySearch.set($any($event.target).value)" />
+      <div class="max-h-64 overflow-y-auto">
+        @for (city of filteredCities(); track city.id) {
+          <button type="button" class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors" [ngClass]="activeCityId() === city.id ? 'bg-brand-primary/10 text-brand-primary hover:bg-brand-primary/15' : 'text-slate-700 hover:bg-slate-100'" [class.font-semibold]="activeCityId() === city.id" (click)="selectCity(city); cityPopover.hide()">
+            <span>{{ city.label }}</span>
+            @if (activeCityId() === city.id) { <i class="pi pi-check ml-auto text-brand-primary" aria-label="Ciudad seleccionada"></i> }
+          </button>
+        } @empty {
+          <p class="px-3 py-2 text-sm text-slate-500">No se encontraron ciudades.</p>
+        }
+      </div>
+    </div>
+  </p-popover>
 </ng-template>
 
 <ng-template #menuItem let-label="label" let-command="command" let-icon="icon" let-severity="severity" let-item="item">

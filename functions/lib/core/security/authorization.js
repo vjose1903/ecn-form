@@ -5,7 +5,7 @@ const https_1 = require("firebase-functions/v2/https");
 const firebase_admin_1 = require("../firebase-admin");
 const resources = {
     city: ["read", "manage"],
-    members: ["read", "list", "create", "update", "disable", "assign_role"],
+    members: ["read", "list", "create", "update", "disable", "delete", "assign_role"],
     roles: ["read", "list", "create", "update", "delete"],
     retreat_homes: ["read", "list", "create", "assign", "update", "unassign"],
     retreats: ["read", "list", "create", "update", "delete"],

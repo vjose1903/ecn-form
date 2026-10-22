@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.closeRetreatRequestsDailyV2 = exports.onRequestUpdatedNotificationV2 = exports.onRequestStatusUpdateV2 = exports.deleteCityFile = exports.recordCityFileUpload = exports.createCityFileUploadUrl = exports.onCreateRetreatRequestV2 = exports.touchPushTokenV2 = exports.deleteRequestHistoryEvent = exports.changeRequestLocation = exports.updateRequestDetails = exports.getPaymentReceiptUrl = exports.recordPayment = exports.createPaymentUploadUrl = exports.createPublicRequest = exports.getPublicFormData = exports.listCityMembers = exports.updateCityRetreatHome = exports.createCityRetreatHome = exports.updateOwnProfile = exports.updateCityMember = exports.createCityMember = exports.saveCityRole = exports.auditFileChanges = exports.auditUserNestedChangesV2 = exports.auditUserProfileChanges = exports.auditRetreatHomeChanges = exports.auditCityRootChanges = exports.auditCityDocumentChanges = void 0;
+exports.closeRetreatRequestsDailyV2 = exports.onRequestUpdatedNotificationV2 = exports.onRequestStatusUpdateV2 = exports.deleteCityFile = exports.recordCityFileUpload = exports.createCityFileUploadUrl = exports.onCreateRetreatRequestV2 = exports.touchPushTokenV2 = exports.deleteRequestHistoryEvent = exports.changeRequestLocation = exports.updateRequestDetails = exports.getPaymentReceiptUrl = exports.recordPayment = exports.createPaymentUploadUrl = exports.createPublicRequest = exports.getPublicFormData = exports.listCityMembers = exports.updateCityRetreatHome = exports.assignExistingCityRetreatHome = exports.findSimilarCityRetreatHomes = exports.createCityRetreatHome = exports.updateOwnProfile = exports.deleteCityMember = exports.updateCityMember = exports.sendCityMemberInvitation = exports.createCityMember = exports.saveCityRole = exports.auditFileChanges = exports.auditUserNestedChangesV2 = exports.auditUserProfileChanges = exports.auditRetreatHomeChanges = exports.auditCityRootChanges = exports.auditCityDocumentChanges = void 0;
 const auditChanges_1 = require("./functions/audit/auditChanges");
 Object.defineProperty(exports, "auditCityDocumentChanges", { enumerable: true, get: function () { return auditChanges_1.auditCityDocumentChanges; } });
 Object.defineProperty(exports, "auditCityRootChanges", { enumerable: true, get: function () { return auditChanges_1.auditCityRootChanges; } });
@@ -11,9 +11,13 @@ Object.defineProperty(exports, "auditFileChanges", { enumerable: true, get: func
 const accessManagement_1 = require("./functions/access-management/accessManagement");
 Object.defineProperty(exports, "saveCityRole", { enumerable: true, get: function () { return accessManagement_1.saveCityRole; } });
 Object.defineProperty(exports, "createCityMember", { enumerable: true, get: function () { return accessManagement_1.createCityMember; } });
+Object.defineProperty(exports, "sendCityMemberInvitation", { enumerable: true, get: function () { return accessManagement_1.sendCityMemberInvitation; } });
 Object.defineProperty(exports, "updateCityMember", { enumerable: true, get: function () { return accessManagement_1.updateCityMember; } });
+Object.defineProperty(exports, "deleteCityMember", { enumerable: true, get: function () { return accessManagement_1.deleteCityMember; } });
 Object.defineProperty(exports, "updateOwnProfile", { enumerable: true, get: function () { return accessManagement_1.updateOwnProfile; } });
 Object.defineProperty(exports, "createCityRetreatHome", { enumerable: true, get: function () { return accessManagement_1.createCityRetreatHome; } });
+Object.defineProperty(exports, "findSimilarCityRetreatHomes", { enumerable: true, get: function () { return accessManagement_1.findSimilarCityRetreatHomes; } });
+Object.defineProperty(exports, "assignExistingCityRetreatHome", { enumerable: true, get: function () { return accessManagement_1.assignExistingCityRetreatHome; } });
 Object.defineProperty(exports, "updateCityRetreatHome", { enumerable: true, get: function () { return accessManagement_1.updateCityRetreatHome; } });
 Object.defineProperty(exports, "listCityMembers", { enumerable: true, get: function () { return accessManagement_1.listCityMembers; } });
 const publicForm_1 = require("./functions/public-form/publicForm");

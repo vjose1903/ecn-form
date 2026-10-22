@@ -13,6 +13,7 @@ interface SendResendEmailArgs {
   from?: string;
   logLabel?: string;
   suppressError?: boolean;
+  idempotencyKey?: string;
 }
 
 export const getResendApiKey = (): string | null => {
@@ -34,11 +35,13 @@ export const sendResendEmail = async ({
   from = EMAIL_CONSTANTS.FROM_EMAIL,
   logLabel,
   suppressError = false,
+  idempotencyKey,
 }: SendResendEmailArgs): Promise<void> => {
   const resend = new Resend(apiKey);
 
   try {
-    await resend.emails.send({from, to, subject, html});
+    const result = await resend.emails.send({from, to, subject, html}, idempotencyKey ? {idempotencyKey} : undefined);
+    if (result.error) throw result.error;
 
     if (logLabel) {
       console.log(`Correo de ${logLabel} enviado exitosamente`);
