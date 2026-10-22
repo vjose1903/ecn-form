@@ -222,6 +222,52 @@ export const createCityMember = onCall(async (request) => {
   }
 });
 
+const sendMemberInvitationEmail = async ({
+  cityId,
+  email,
+  displayName,
+  idempotencyKey,
+}: {cityId: string; email: string; displayName: string; idempotencyKey: string}): Promise<void> => {
+  const apiKey = getResendApiKey();
+  if (!apiKey) throw new Error("No se pudo preparar el correo de invitación del usuario.");
+
+  const firebaseLink = await admin.auth().generatePasswordResetLink(email);
+  const firebaseUrl = new URL(firebaseLink);
+  const setupUrl = new URL("https://ecn-platform.netlify.app/auth/crear-contrasena");
+  for (const key of ["mode", "oobCode", "apiKey", "lang"]) {
+    const value = firebaseUrl.searchParams.get(key);
+    if (value) setupUrl.searchParams.set(key, value);
+  }
+  if (setupUrl.searchParams.get("mode") !== "resetPassword" || !setupUrl.searchParams.has("oobCode")) {
+    throw new Error("Firebase no generó un enlace válido para crear la contraseña.");
+  }
+
+  const safeName = displayName.replace(/[&<>"']/g, char => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"} as Record<string, string>)[char] ?? char);
+  const safeUrl = setupUrl.toString().replace(/&/g, "&amp;");
+  await sendResendEmail({
+    apiKey,
+    to: email,
+    subject: "Activa tu cuenta de Encuentro Católico para Novios",
+    html: `
+      <div style="max-width:600px;margin:24px auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;font-family:Arial,sans-serif;color:#344054">
+        <div style="background:${EMAIL_CONSTANTS.BRAND_COLOR};padding:24px;text-align:center;color:#fff">
+          <img src="${EMAIL_CONSTANTS.ECN_LOGO_URL}" alt="Encuentro Católico para Novios" width="56" height="56" style="display:block;margin:0 auto 12px">
+          <strong style="font-size:20px">Encuentro Católico para Novios</strong>
+        </div>
+        <div style="padding:28px 24px">
+          <h1 style="font-size:22px;margin:0 0 16px">Crea tu contraseña</h1>
+          <p>Hola ${safeName},</p>
+          <p>Se creó una cuenta para ti en la plataforma de Encuentro Católico para Novios. Usa el siguiente botón para crear tu contraseña y activar el acceso.</p>
+          <p style="text-align:center;margin:28px 0"><a href="${safeUrl}" style="background:${EMAIL_CONSTANTS.BRAND_COLOR};color:#fff;text-decoration:none;padding:13px 22px;border-radius:7px;display:inline-block;font-weight:bold">Crear contraseña</a></p>
+          <p style="font-size:13px;color:#667085">Si no esperabas esta invitación, puedes ignorar este correo.</p>
+        </div>
+      </div>
+    `,
+    logLabel: `invitación de nuevo usuario en ${cityId}`,
+    idempotencyKey,
+  });
+};
+
 export const sendCityMemberInvitation = onDocumentCreated(
   {database: "ecn-platform-v2", document: "city/{cityId}/members/{uid}", secrets: [resendApiKey], retry: true},
   async event => {
@@ -231,52 +277,87 @@ export const sendCityMemberInvitation = onDocumentCreated(
     if (latestMember?.get("invitation_status") !== "pending") return;
 
     const {cityId, uid} = event.params;
-    const [profile, apiKey] = await Promise.all([
-      v2Db.doc(`user/${uid}`).get(),
-      Promise.resolve(getResendApiKey()),
-    ]);
+    const profile = await v2Db.doc(`user/${uid}`).get();
     const email = String(profile.get("email") ?? "");
-    if (!email || !apiKey) throw new Error("No se pudo preparar el correo de invitación del usuario.");
-
-    const firebaseLink = await admin.auth().generatePasswordResetLink(email);
-    const firebaseUrl = new URL(firebaseLink);
-    const setupUrl = new URL("https://ecn-platform.netlify.app/auth/crear-contrasena");
-    for (const key of ["mode", "oobCode", "apiKey", "lang"]) {
-      const value = firebaseUrl.searchParams.get(key);
-      if (value) setupUrl.searchParams.set(key, value);
-    }
-    if (setupUrl.searchParams.get("mode") !== "resetPassword" || !setupUrl.searchParams.has("oobCode")) {
-      throw new Error("Firebase no generó un enlace válido para crear la contraseña.");
-    }
-
+    if (!email) throw new Error("No se pudo preparar el correo de invitación del usuario.");
     const displayName = String(profile.get("display_name") ?? "");
-    const safeName = displayName.replace(/[&<>"']/g, char => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"} as Record<string, string>)[char] ?? char);
-    const safeUrl = setupUrl.toString().replace(/&/g, "&amp;");
-    await sendResendEmail({
-      apiKey,
-      to: email,
-      subject: "Activa tu cuenta de Encuentro Católico para Novios",
-      html: `
-        <div style="max-width:600px;margin:24px auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;font-family:Arial,sans-serif;color:#344054">
-          <div style="background:${EMAIL_CONSTANTS.BRAND_COLOR};padding:24px;text-align:center;color:#fff">
-            <img src="${EMAIL_CONSTANTS.ECN_LOGO_URL}" alt="Encuentro Católico para Novios" width="56" height="56" style="display:block;margin:0 auto 12px">
-            <strong style="font-size:20px">Encuentro Católico para Novios</strong>
-          </div>
-          <div style="padding:28px 24px">
-            <h1 style="font-size:22px;margin:0 0 16px">Crea tu contraseña</h1>
-            <p>Hola ${safeName},</p>
-            <p>Se creó una cuenta para ti en la plataforma de Encuentro Católico para Novios. Usa el siguiente botón para crear tu contraseña y activar el acceso.</p>
-            <p style="text-align:center;margin:28px 0"><a href="${safeUrl}" style="background:${EMAIL_CONSTANTS.BRAND_COLOR};color:#fff;text-decoration:none;padding:13px 22px;border-radius:7px;display:inline-block;font-weight:bold">Crear contraseña</a></p>
-            <p style="font-size:13px;color:#667085">Si no esperabas esta invitación, puedes ignorar este correo.</p>
-          </div>
-        </div>
-      `,
-      logLabel: `invitación de nuevo usuario en ${cityId}`,
+    await sendMemberInvitationEmail({
+      cityId,
+      email,
+      displayName,
       idempotencyKey: `city-member-invitation-${uid}`,
     });
     await event.data?.ref.update({invitation_status: "sent", invitation_sent_at: FieldValue.serverTimestamp()});
   },
 );
+
+export const resendCityMemberInvitation = onCall({secrets: [resendApiKey], invoker: "public"}, async (request) => {
+  const data = request.data as Record<string, unknown>;
+  const cityId = requireText(data.cityId, "La ciudad", 100);
+  const uid = requireText(data.uid, "El usuario", 128);
+  const email = requireText(data.email, "El correo", 254).toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpsError("invalid-argument", "El correo no es válido.");
+  const actorUid = await requireCityPermission(request, cityId, "members", "create");
+  const memberRef = v2Db.doc(`city/${cityId}/members/${uid}`);
+  const profileRef = v2Db.doc(`user/${uid}`);
+  const [member, profile, authUser] = await Promise.all([
+    memberRef.get(),
+    profileRef.get(),
+    admin.auth().getUser(uid).catch(error => {
+      const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
+      if (code.includes("user-not-found")) return null;
+      throw error;
+    }),
+  ]);
+  if (!member.exists || member.get("status") === "deleted" || !authUser) {
+    throw new HttpsError("not-found", "No se encontró un usuario activo en esta ciudad.");
+  }
+  if (authUser.disabled) throw new HttpsError("failed-precondition", "Activa la cuenta antes de reenviar la invitación.");
+  if (authUser.metadata.lastSignInTime) {
+    throw new HttpsError("failed-precondition", "Este usuario ya inició sesión y no necesita una invitación para crear su contraseña.");
+  }
+  if (member.get("status") !== "active") throw new HttpsError("failed-precondition", "Activa la cuenta antes de reenviar la invitación.");
+
+  const originalEmail = authUser.email ?? "";
+  const profileEmail = String(profile.get("email") ?? "");
+  const emailChanged = email !== originalEmail;
+  const profileEmailChanged = email !== profileEmail;
+  const actorCanUpdate = emailChanged || profileEmailChanged
+    ? await requireCityPermission(request, cityId, "members", "update")
+    : actorUid;
+  let authEmailUpdated = false;
+  let profileEmailUpdated = false;
+  let emailSent = false;
+  try {
+    if (emailChanged) {
+      await admin.auth().updateUser(uid, {email, emailVerified: false});
+      authEmailUpdated = true;
+    }
+    if (profileEmailChanged) {
+      await profileRef.set({email, updated_by: actorCanUpdate, updated_at: FieldValue.serverTimestamp()}, {merge: true});
+      profileEmailUpdated = true;
+    }
+    await sendMemberInvitationEmail({
+      cityId,
+      email,
+      displayName: String(profile.get("display_name") ?? authUser.displayName ?? ""),
+      idempotencyKey: `city-member-invitation-${uid}-${randomBytes(8).toString("hex")}`,
+    });
+    emailSent = true;
+    await memberRef.update({invitation_status: "sent", invitation_sent_at: FieldValue.serverTimestamp()}).catch(error => {
+      console.error("No se pudo actualizar el estado de invitación:", JSON.stringify({cityId, uid, error}));
+    });
+    return {uid, email};
+  } catch (error) {
+    if (!emailSent) {
+      if (profileEmailUpdated) await profileRef.set({email: profileEmail}, {merge: true}).catch(() => undefined);
+      if (authEmailUpdated) await admin.auth().updateUser(uid, {email: originalEmail, emailVerified: authUser.emailVerified}).catch(() => undefined);
+    }
+    console.error("No se pudo reenviar la invitación del miembro:", JSON.stringify({cityId, uid, error}));
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError("internal", "No se pudo reenviar el correo para crear la contraseña.");
+  }
+});
 
 export const updateCityMember = onCall(async (request) => {
   const data = request.data as Record<string, unknown>;
@@ -513,7 +594,7 @@ export const listCityMembers = onCall(async (request) => {
           throw error;
         }),
       ]);
-      return {uid: member.id, ...member.data(), email: profile.get("email") ?? "", display_name: profile.get("display_name") ?? "", phone: profile.get("phone") ?? "", super_admin: account?.customClaims?.super_admin === true};
+      return {uid: member.id, ...member.data(), email: profile.get("email") ?? "", display_name: profile.get("display_name") ?? "", phone: profile.get("phone") ?? "", super_admin: account?.customClaims?.super_admin === true, has_signed_in: account ? Boolean(account.metadata.lastSignInTime) : true};
     })),
   };
 });

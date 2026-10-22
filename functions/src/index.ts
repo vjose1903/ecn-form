@@ -6,7 +6,7 @@ import {
   auditUserNestedChangesV2,
   auditFileChanges,
 } from "./functions/audit/auditChanges";
-import {saveCityRole, createCityMember, sendCityMemberInvitation, updateCityMember, deleteCityMember, updateOwnProfile, createCityRetreatHome, findSimilarCityRetreatHomes, assignExistingCityRetreatHome, updateCityRetreatHome, listCityMembers} from "./functions/access-management/accessManagement";
+import {saveCityRole, createCityMember, sendCityMemberInvitation, resendCityMemberInvitation, updateCityMember, deleteCityMember, updateOwnProfile, createCityRetreatHome, findSimilarCityRetreatHomes, assignExistingCityRetreatHome, updateCityRetreatHome, listCityMembers} from "./functions/access-management/accessManagement";
 import {getPublicFormData, createPublicRequest} from "./functions/public-form/publicForm";
 import {createPaymentUploadUrl, recordPayment, getPaymentReceiptUrl} from "./functions/payments/payments";
 import {updateRequestDetails} from "./functions/requests/updateRequestDetails";
@@ -27,6 +27,7 @@ export {
   saveCityRole,
   createCityMember,
   sendCityMemberInvitation,
+  resendCityMemberInvitation,
   updateCityMember,
   deleteCityMember,
   updateOwnProfile,

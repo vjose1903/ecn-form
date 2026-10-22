@@ -12,7 +12,7 @@ import { Ss } from '@core/services/singleton.service';
 
 interface Choice {label: string; value: string}
 interface RoleRecord {id: string; name: string; permissions?: {members?: {delete?: boolean}}}
-interface MemberRecord {uid: string; role_id: string; status: string; email?: string; display_name?: string; phone?: string; super_admin?: boolean}
+interface MemberRecord {uid: string; role_id: string; status: string; email?: string; display_name?: string; phone?: string; super_admin?: boolean; has_signed_in?: boolean}
 
 @Component({
   selector: 'app-users-management',
@@ -37,6 +37,9 @@ export class UsersManagement implements OnInit {
   readonly editingMember = signal<MemberRecord | null>(null);
   readonly deletingMember = signal<MemberRecord | null>(null);
   readonly deletionError = signal('');
+  readonly invitationMember = signal<MemberRecord | null>(null);
+  readonly invitationError = signal('');
+  readonly resendingInvitation = signal(false);
   memberEmail = '';
   memberName = '';
   memberPhone = '';
@@ -46,6 +49,7 @@ export class UsersManagement implements OnInit {
   editPhone = '';
   editRoleId = '';
   editSuperAdmin = false;
+  resendEmail = '';
 
   get canManageSuperAdmins(): boolean {
     return Ss.authService.isSuperAdmin();
@@ -133,6 +137,49 @@ export class UsersManagement implements OnInit {
       return false;
     } finally {
       this.saving.set(false);
+    }
+  }
+
+  openResendInvitation(member: MemberRecord): void {
+    this.invitationError.set('');
+    this.resendEmail = member.email ?? '';
+    this.invitationMember.set(member);
+  }
+
+  closeResendInvitation(): void {
+    if (this.resendingInvitation()) return;
+    this.invitationMember.set(null);
+    this.invitationError.set('');
+    this.resendEmail = '';
+  }
+
+  onResendDialogVisibleChange(visible: boolean): void {
+    if (visible) return;
+    this.closeResendInvitation();
+  }
+
+  async resendInvitation(): Promise<void> {
+    const member = this.invitationMember();
+    if (!member || this.resendingInvitation()) return;
+    this.invitationError.set('');
+    this.resendingInvitation.set(true);
+    try {
+      const resend = httpsCallable<
+        {cityId: string; uid: string; email: string},
+        {uid: string; email: string}
+      >(this.functions, 'resendCityMemberInvitation');
+      const result = await resend({cityId: this.cityId(), uid: member.uid, email: this.resendEmail.trim()});
+      this.invitationMember.set(null);
+      this.resendEmail = '';
+      Ss.toastService.success({title: 'Correo reenviado', message: `Se envió el enlace para crear la contraseña a ${result.data.email}.`});
+      void this.loadCityData();
+    } catch (error) {
+      console.error('No se pudo reenviar la invitación:', JSON.stringify(error));
+      const message = error instanceof Error ? error.message : 'Verifica el correo y los permisos para administrar usuarios.';
+      this.invitationError.set(message);
+      Ss.toastService.error({title: 'No se pudo reenviar', message});
+    } finally {
+      this.resendingInvitation.set(false);
     }
   }
 
