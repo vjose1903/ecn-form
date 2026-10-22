@@ -1,17 +1,19 @@
 
 import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { DynamicDataviewComponent, DynamicDataviewConfig, FilterConfig } from '@core/components/dynamic-dataview';
 import { RetreatHomeDataList } from './components/retreat-home-data-list/retreat-home-data-list';
 import { RetreatHomeDataGrid } from './components/retreat-home-data-grid/retreat-home-data-grid';
-import { RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
+import { RetreatHomeAssignmentOverview, RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
 import { RetreatHomeClass } from '@core/entities/retreat-home/retreat-home.class';
 import { Subject, takeUntil } from 'rxjs';
+import { Ss } from '@core/services/singleton.service';
 
 @Component({
   selector: 'app-retreat-home-list',
-  imports: [ButtonModule, DynamicDataviewComponent],
+  imports: [ButtonModule, DialogModule, DynamicDataviewComponent],
   templateUrl: './retreat-home-list.html',
   styleUrl: './retreat-home-list.scss',
 })
@@ -21,6 +23,39 @@ export class RetreatHomeList implements OnInit, OnDestroy {
 
   ref: DynamicDialogRef | undefined;
   loading = signal(false);
+  assignmentDialogVisible = signal(false);
+  assignmentLoading = signal(false);
+  assignmentLinksLoading = signal(false);
+  assignmentSaving = signal(false);
+  assignmentError = signal('');
+  assignmentMode = signal<'associate' | 'unassociate'>('associate');
+  assignmentOverview = signal<RetreatHomeAssignmentOverview>({homes: [], cities: [], assignments: []});
+  selectedHomeIds = signal<string[]>([]);
+  selectedCityIds = signal<string[]>([]);
+  homeSearch = signal('');
+  citySearch = signal('');
+
+  get isSuperAdmin(): boolean {
+    return Ss.authService.isSuperAdmin();
+  }
+
+  get filteredAssignmentHomes(): RetreatHomeAssignmentOverview['homes'] {
+    const search = this.homeSearch().trim().toLocaleLowerCase();
+    return this.assignmentOverview().homes.filter(home => !search || `${home.name} ${home.address}`.toLocaleLowerCase().includes(search));
+  }
+
+  get filteredAssignmentCities(): RetreatHomeAssignmentOverview['cities'] {
+    const search = this.citySearch().trim().toLocaleLowerCase();
+    return this.assignmentOverview().cities.filter(city => !search || city.label.toLocaleLowerCase().includes(search));
+  }
+
+  get selectedRelationCount(): number {
+    const existing = new Set(this.assignmentOverview().assignments);
+    return this.selectedCityIds().reduce((count, cityId) => count + this.selectedHomeIds().filter(homeId => {
+      const isAssigned = existing.has(`${cityId}/${homeId}`);
+      return this.assignmentMode() === 'associate' ? !isAssigned : isAssigned;
+    }).length, 0);
+  }
 
   // Opciones para filtros
   statusOptions = [
@@ -68,7 +103,11 @@ export class RetreatHomeList implements OnInit, OnDestroy {
     gridComponent: RetreatHomeDataGrid,
     layout: 'list',
     layoutStorageKey: 'retreat_homes',
-    componentProps: { showActions: true, enableSelection: false },
+    componentProps: {
+      showActions: true,
+      enableSelection: false,
+      onAssignmentRequest: (homeId: string) => this.showAssignmentDialog(homeId),
+    },
     filters: {
       enabled: true,
       configs: this.filterConfigs,
@@ -243,5 +282,87 @@ export class RetreatHomeList implements OnInit, OnDestroy {
     if (this.loading()) return;
 
     new RetreatHomeClass().openForm();
+  }
+
+  async showAssignmentDialog(homeId?: string): Promise<void> {
+    if (!this.isSuperAdmin) return;
+    this.assignmentDialogVisible.set(true);
+    this.assignmentLoading.set(true);
+    this.assignmentLinksLoading.set(false);
+    this.assignmentError.set('');
+    try {
+      const options = await this.retreatHomeService.getRetreatHomeAssignmentOptions();
+      this.assignmentOverview.set({...options, assignments: []});
+      this.assignmentMode.set('associate');
+      this.selectedHomeIds.set(homeId && options.homes.some(home => home.id === homeId) ? [homeId] : []);
+      this.selectedCityIds.set([]);
+      this.homeSearch.set('');
+      this.citySearch.set('');
+      void this.loadAssignmentLinks(options.cities.map(city => city.id));
+    } catch (error) {
+      console.error('Error al cargar asignaciones de casas:', JSON.stringify(error));
+      Ss.toastService.error({title: 'Error', message: 'No se pudieron cargar las casas y ciudades.'});
+      this.assignmentDialogVisible.set(false);
+    } finally {
+      this.assignmentLoading.set(false);
+    }
+  }
+
+  private async loadAssignmentLinks(cityIds: string[]): Promise<void> {
+    this.assignmentLinksLoading.set(true);
+    this.assignmentError.set('');
+    try {
+      const assignments = await this.retreatHomeService.getRetreatHomeAssignments(cityIds);
+      this.assignmentOverview.update(overview => ({...overview, assignments}));
+    } catch (error) {
+      console.error('Error al cargar las relaciones de casas:', JSON.stringify(error));
+      this.assignmentError.set('No se pudieron cargar las relaciones actuales. Reintenta antes de guardar cambios.');
+    } finally {
+      this.assignmentLinksLoading.set(false);
+    }
+  }
+
+  retryAssignmentLinks(): void {
+    void this.loadAssignmentLinks(this.assignmentOverview().cities.map(city => city.id));
+  }
+
+  toggleHome(homeId: string, checked: boolean): void {
+    this.selectedHomeIds.update(ids => checked ? [...ids, homeId] : ids.filter(id => id !== homeId));
+  }
+
+  toggleCity(cityId: string, checked: boolean): void {
+    this.selectedCityIds.update(ids => checked ? [...ids, cityId] : ids.filter(id => id !== cityId));
+  }
+
+  selectVisibleHomes(): void {
+    this.selectedHomeIds.update(ids => [...new Set([...ids, ...this.filteredAssignmentHomes.map(home => home.id)])]);
+  }
+
+  selectVisibleCities(): void {
+    this.selectedCityIds.update(ids => [...new Set([...ids, ...this.filteredAssignmentCities.map(city => city.id)])]);
+  }
+
+  async saveAssignments(): Promise<void> {
+    if (!this.selectedRelationCount || this.assignmentSaving()) return;
+    try {
+      this.assignmentSaving.set(true);
+      const changed = await this.retreatHomeService.updateRetreatHomeAssignments(
+        this.selectedHomeIds(),
+        this.selectedCityIds(),
+        this.assignmentMode() === 'associate',
+      );
+      this.assignmentDialogVisible.set(false);
+      Ss.toastService.success({
+        title: this.assignmentMode() === 'associate' ? 'Asociaciones creadas' : 'Asociaciones eliminadas',
+        message: `${changed} relación${changed === 1 ? '' : 'es'} actualizada${changed === 1 ? '' : 's'}.`,
+      });
+      const activeCityId = Ss.authService.activeCityId() || Ss.authService.current_user()?.city;
+      if (activeCityId && this.selectedCityIds().includes(activeCityId)) await this.refreshData();
+    } catch (error) {
+      console.error('Error al actualizar asociaciones de casas:', JSON.stringify(error));
+      Ss.toastService.error({title: 'No se pudo completar', message: error instanceof Error ? error.message : 'No se actualizaron las asociaciones.'});
+    } finally {
+      this.assignmentSaving.set(false);
+    }
   }
 }

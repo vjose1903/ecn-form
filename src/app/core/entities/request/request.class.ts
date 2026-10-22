@@ -206,32 +206,33 @@ export class RequestClass {
     }));
   }
 
-  private initializeCouple(couple: CoupleI): CoupleI {
-    const birthDate = new Date(fun.convertFirebaseTimestamp(couple.birth_date) as string);
+  private initializeCouple(couple?: CoupleI | null): CoupleI {
+    const source = couple ?? this.getDefaultCouple();
+    const birthDate = new Date(fun.convertFirebaseTimestamp(source.birth_date) as string);
 
     return {
-      full_name: couple.full_name || '',
-      age: fun.calculateAge(couple.birth_date) || 0,
-      city_of_residence: couple.city_of_residence || '',
-      are_you_married: couple.are_you_married || false,
-      religion: couple.religion || '',
-      religion_other: couple.religion_other || '',
-      emergency_full_name: couple.emergency_full_name || '',
-      have_children: couple.have_children || false,
-      identity_type: couple.identity_type || '',
+      full_name: source.full_name || '',
+      age: fun.calculateAge(source.birth_date) || 0,
+      city_of_residence: source.city_of_residence || '',
+      are_you_married: source.are_you_married || false,
+      religion: source.religion || '',
+      religion_other: source.religion_other || '',
+      emergency_full_name: source.emergency_full_name || '',
+      have_children: source.have_children || false,
+      identity_type: source.identity_type || '',
       birth_date: birthDate || new Date(),
       birth_date_display: birthDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) || '',
-      church_name: couple.church_name || '',
-      home_phone: couple.home_phone || '',
-      email: couple.email || '',
-      nickname: couple.nickname || '',
-      address: couple.address || '',
-      emergency_relationship: couple.emergency_relationship || '',
-      cell_phone: couple.cell_phone || '',
-      identity_number: couple.identity_number || '',
-      work_phone: couple.work_phone || '',
-      emergency_phone: couple.emergency_phone || '',
-      family_information: couple.family_information || [],
+      church_name: source.church_name || '',
+      home_phone: source.home_phone || '',
+      email: source.email || '',
+      nickname: source.nickname || '',
+      address: source.address || '',
+      emergency_relationship: source.emergency_relationship || '',
+      cell_phone: source.cell_phone || '',
+      identity_number: source.identity_number || '',
+      work_phone: source.work_phone || '',
+      emergency_phone: source.emergency_phone || '',
+      family_information: source.family_information || [],
     };
   }
 

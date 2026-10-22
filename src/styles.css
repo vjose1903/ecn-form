@@ -80,6 +80,11 @@
   flex: 1;
 }
 
+.app-confirmation-message__content .user-delete-emphasis {
+  color: #b4232f;
+  font-weight: 700;
+}
+
 .payment-overage-confirmation {
   display: grid;
   gap: 0.75rem;

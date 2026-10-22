@@ -1,0 +1,121 @@
+<main class="users-page">
+  <header>
+    <div><p class="eyebrow">Administración</p><h1>Usuarios</h1></div>
+    <p-button label="Crear usuario" icon="pi pi-user-plus" (onClick)="openCreate()" [disabled]="!cityId() || !roleChoices.length" />
+  </header>
+
+  <section class="users-section">
+    <h2>Usuarios de la ciudad</h2>
+    @if (loading()) {
+      <p class="section-hint">Cargando usuarios...</p>
+    } @else {
+      <div class="table-scroll"><table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th class="actions-heading">Acciones</th></tr></thead>
+        <tbody>@for (member of members(); track member.uid) {
+          <tr>
+            <td data-label="Nombre">{{ member.display_name || member.email || member.uid }}</td>
+            <td data-label="Correo">{{ member.email || '—' }}</td>
+            <td data-label="Rol"><span>{{ roleName(member.role_id) }}</span>@if (member.super_admin) { <span class="superadmin-badge">Superadmin</span> }</td>
+            <td data-label="Estado"><span class="status-tag" [ngClass]="{'status-tag--active': member.status === 'active', 'status-tag--deleted': member.status === 'deleted', 'status-tag--disabled': member.status !== 'active' && member.status !== 'deleted'}">{{ member.status === 'active' ? 'Activo' : member.status === 'deleted' ? 'Eliminado' : 'Desactivado' }}</span></td>
+            <td class="actions-cell" data-label="Acciones">
+              <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="secondary" [attr.aria-label]="'Editar ' + (member.display_name || member.email || 'usuario')" title="Editar usuario" (onClick)="openEdit(member)" />
+              <p-button [icon]="member.status === 'active' ? 'pi pi-user-minus' : 'pi pi-user-plus'" [text]="true" [rounded]="true" [severity]="member.status === 'active' ? 'danger' : 'success'" [attr.aria-label]="member.status === 'active' ? 'Desactivar usuario' : 'Activar usuario'" [title]="member.status === 'active' ? 'Desactivar usuario' : 'Activar usuario'" (onClick)="confirmMemberStatusChange(member)" />
+              @if (canDeleteMembers) {
+                <p-button icon="pi pi-trash" [text]="true" [rounded]="true" severity="danger" [disabled]="isProtectedFromDeletion(member) || saving()" [attr.aria-label]="'Eliminar ' + (member.display_name || member.email || 'usuario')" [title]="isProtectedFromDeletion(member) ? 'No se puede eliminar esta cuenta' : 'Eliminar usuario'" (onClick)="confirmMemberDeletion(member)" />
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="5" class="empty-state">No hay usuarios registrados para esta ciudad.</td></tr>
+        }</tbody>
+      </table></div>
+    }
+  </section>
+</main>
+
+<p-dialog [header]="editingMember() ? 'Editar usuario' : 'Crear cuenta de usuario'" [visible]="editorVisible()" (visibleChange)="onEditorVisibleChange($event)" [modal]="true" [draggable]="false" [resizable]="false" [style]="{width: 'min(38rem, calc(100vw - 2rem))'}">
+  @if (editingMember()) {
+    <p class="section-hint">Actualiza los datos de la cuenta y su rol en la ciudad seleccionada.</p>
+    <form #editMemberForm="ngForm" class="member-form modal-form" (ngSubmit)="saveMemberEdit()">
+      <label class="modal-field-full">Nombre<input pInputText [(ngModel)]="editName" name="editName" required></label>
+      <label class="modal-field-full">Correo<input pInputText [(ngModel)]="editEmail" name="editEmail" type="email" required></label>
+      <label>Teléfono<input pInputText [(ngModel)]="editPhone" name="editPhone"></label>
+      <label>Rol<p-select [options]="roleChoices" [(ngModel)]="editRoleId" name="editRole" placeholder="Seleccionar rol" required /></label>
+      @if (canManageSuperAdmins) {
+        <label class="superadmin-option modal-field-full">
+          <input type="checkbox" [(ngModel)]="editSuperAdmin" name="editSuperAdmin">
+          <span><strong>Super administrador</strong><small>Puede administrar todas las ciudades y acceder a funciones globales. El rol de ciudad seleccionado se conserva por separado.</small></span>
+        </label>
+      }
+      <div class="dialog-actions"><p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" (onClick)="closeEditor()" /><p-button type="submit" label="Guardar cambios" icon="pi pi-check" [loading]="saving()" /></div>
+    </form>
+  } @else {
+    <p class="section-hint">La persona recibirá un correo para definir su contraseña.</p>
+    <form #createMemberForm="ngForm" class="member-form modal-form" (ngSubmit)="createMember()">
+      <label class="modal-field-full">Nombre<input pInputText [(ngModel)]="memberName" name="memberName" placeholder="Nombre completo" required></label>
+      <label class="modal-field-full">Correo<input pInputText [(ngModel)]="memberEmail" name="memberEmail" type="email" placeholder="correo@ejemplo.com" required></label>
+      <label>Teléfono<input pInputText [(ngModel)]="memberPhone" name="memberPhone" placeholder="Teléfono"></label>
+      <label>Rol<p-select [options]="roleChoices" [(ngModel)]="memberRoleId" name="memberRole" placeholder="Seleccionar rol" required /></label>
+      <div class="dialog-actions"><p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" (onClick)="closeEditor()" /><p-button type="submit" label="Crear cuenta" icon="pi pi-user-plus" [loading]="saving()" [disabled]="!cityId() || !roleChoices.length" /></div>
+    </form>
+  }
+</p-dialog>
+
+<p-dialog
+  header="Eliminar usuario"
+  [visible]="deletingMember() !== null"
+  (visibleChange)="onDeletionDialogVisibleChange($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!saving()"
+  [closeOnEscape]="!saving()"
+  [dismissableMask]="false"
+  [style]="{width: 'min(38rem, calc(100vw - 2rem))'}">
+  @if (deletingMember(); as member) {
+    <div class="delete-confirmation">
+      <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+      <div class="delete-confirmation__copy">
+        <p>¿Eliminar a <strong>{{ member.display_name || member.email || 'este usuario' }}</strong> de esta ciudad?</p>
+        <p><strong class="delete-confirmation__emphasis">Sin actividad ni otras ciudades:</strong> se elimina su cuenta.</p>
+        <p><strong class="delete-confirmation__emphasis">En otro caso:</strong> solo pierde acceso a esta ciudad.</p>
+        @if (deletionError()) {
+          <p class="delete-confirmation__error" role="alert">{{ deletionError() }}</p>
+        }
+      </div>
+    </div>
+  }
+  <ng-template #footer>
+    <p-button label="Cancelar" icon="pi pi-times" severity="secondary" [outlined]="true" [disabled]="saving()" (onClick)="onDeletionDialogVisibleChange(false)" />
+    <p-button [label]="saving() ? 'Eliminando…' : 'Eliminar usuario'" [icon]="saving() ? 'pi pi-spinner pi-spin' : 'pi pi-trash'" severity="danger" [disabled]="saving()" (onClick)="deleteMember()" />
+  </ng-template>
+</p-dialog>
+
+<p-dialog
+  header="Eliminar usuario"
+  [visible]="deletingMember() !== null"
+  (visibleChange)="onDeletionDialogVisibleChange($event)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!saving()"
+  [closeOnEscape]="!saving()"
+  [dismissableMask]="false"
+  [style]="{width: 'min(38rem, calc(100vw - 2rem))'}">
+  @if (deletingMember(); as member) {
+    <div class="delete-confirmation">
+      <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+      <div class="delete-confirmation__copy">
+        <p>¿Eliminar a <strong>{{ member.display_name || member.email || 'este usuario' }}</strong> de esta ciudad?</p>
+        <p><strong class="delete-confirmation__emphasis">Sin actividad ni otras ciudades:</strong> se elimina su cuenta.</p>
+        <p><strong class="delete-confirmation__emphasis">En otro caso:</strong> solo pierde acceso a esta ciudad.</p>
+        @if (deletionError()) {
+          <p class="delete-confirmation__error" role="alert">{{ deletionError() }}</p>
+        }
+      </div>
+    </div>
+  }
+  <ng-template #footer>
+    <p-button label="Cancelar" icon="pi pi-times" severity="secondary" [outlined]="true" [disabled]="saving()" (onClick)="onDeletionDialogVisibleChange(false)" />
+    <p-button [label]="saving() ? 'Eliminando…' : 'Eliminar usuario'" [icon]="saving() ? 'pi pi-spinner pi-spin' : 'pi pi-trash'" severity="danger" [disabled]="saving()" (onClick)="deleteMember()" />
+  </ng-template>
+</p-dialog>
