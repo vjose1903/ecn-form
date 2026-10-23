@@ -1,0 +1,44 @@
+:host { display: block; height: 100%; min-height: 0; }
+.cities-page { display: grid; gap: 1rem; min-height: 100%; padding: 1rem; align-content: start; }
+.cities-page__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.cities-page__header h1 { margin: 0; color: #1e293b; font-size: 1.5rem; font-weight: 700; }
+.cities-page__header p:last-child { margin: .2rem 0 0; color: #64748b; font-size: .875rem; }
+.cities-page__eyebrow { margin: 0 0 .2rem; color: #64748b; font-size: .68rem; font-weight: 700; letter-spacing: .12em; }
+.cities-card { display: grid; min-width: 0; gap: .85rem; border: 1px solid #dbe3ef; border-radius: .9rem; background: #fff; padding: 1rem; }
+.cities-search { display: flex; min-height: 2.75rem; align-items: center; gap: .6rem; border: 1px solid #cbd5e1; border-radius: .6rem; padding: 0 .8rem; color: #94a3b8; }
+.cities-search:focus-within { border-color: #a72d43; box-shadow: 0 0 0 3px rgb(167 45 67 / 10%); }
+.cities-search input { width: 100%; min-width: 0; border: 0; outline: 0; box-shadow: none; }
+.cities-table-wrap { min-width: 0; overflow-x: auto; }
+.cities-table { width: 100%; border-collapse: collapse; text-align: left; }
+.cities-table th { padding: .75rem .6rem; border-bottom: 1px solid #dbe3ef; color: #64748b; font-size: .68rem; font-weight: 700; letter-spacing: .1em; }
+.cities-table td { padding: .8rem .6rem; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: .85rem; }
+.cities-table code, .city-form__identifier code { color: #475569; font-size: .8rem; }
+.cities-actions-heading, .cities-actions { width: 7rem; text-align: center; }
+.cities-empty { padding: 2rem !important; text-align: center; color: #64748b !important; }
+.cities-state { display: grid; min-height: 12rem; place-content: center; justify-items: center; gap: .65rem; color: #475569; }
+.cities-spinner { width: 1.5rem; height: 1.5rem; border: 3px solid #fecdd3; border-top-color: #a72d43; border-radius: 50%; animation: city-spin .75s linear infinite; }
+.city-form { display: grid; gap: .85rem; }
+.city-form__hint { margin: 0; color: #64748b; font-size: .85rem; line-height: 1.45; }
+.city-form label { display: grid; gap: .35rem; color: #334155; font-size: .8rem; font-weight: 600; }
+.city-form__identifier { display: grid; gap: .25rem; border-radius: .6rem; background: #f8fafc; padding: .7rem .8rem; }
+.city-form__identifier span { color: #334155; font-size: .8rem; font-weight: 600; }
+.city-form__identifier small { color: #64748b; font-size: .72rem; }
+.city-form__error { margin: 0; border-radius: .5rem; background: #fff1f2; padding: .65rem .75rem; color: #be123c; font-size: .8rem; }
+.city-form__actions { display: flex; justify-content: flex-end; gap: .6rem; padding-top: .35rem; }
+:host ::ng-deep .city-form-dialog { max-height: calc(100dvh - 2rem); }
+:host ::ng-deep .city-form-dialog .p-dialog-content { max-height: calc(100dvh - 10rem); overflow-y: auto; }
+@keyframes city-spin { to { transform: rotate(360deg); } }
+@media (min-width: 768px) { .cities-page { padding: 1.5rem; } .cities-card { padding: 1.1rem; } }
+@media (max-width: 620px) {
+  .cities-page { padding: .75rem; }
+  .cities-page__header { align-items: stretch; }
+  .cities-page__header p-button { align-self: flex-start; }
+  .cities-table thead { position: absolute; width: 1px; height: 1px; clip: rect(0,0,0,0); overflow: hidden; }
+  .cities-table, .cities-table tbody, .cities-table tr, .cities-table td { display: block; width: 100%; }
+  .cities-table tr { position: relative; display: grid; grid-template-columns: 1fr auto; gap: .15rem .75rem; border-bottom: 1px solid #e2e8f0; padding: .65rem 2.7rem .65rem .2rem; }
+  .cities-table td { padding: .2rem 0; border: 0; }
+  .cities-table td::before { display: block; margin-bottom: .1rem; color: #64748b; content: attr(data-label); font-size: .62rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .cities-table .cities-actions { position: absolute; top: .45rem; right: 0; width: auto; }
+  .cities-table .cities-empty { display: block; padding: 1.5rem .5rem !important; }
+  .city-form__actions { flex-wrap: wrap; }
+}

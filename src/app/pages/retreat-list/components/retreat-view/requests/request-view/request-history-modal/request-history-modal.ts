@@ -123,10 +123,11 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
   }
 
   canRevertInformation(item: RequestHistoryI): boolean {
+    const request = this.config.data.request as RequestClass;
     const latestInformationEvent = this.history().find(event => this.isInformationStatusChange(event));
     return item.message === 'Pareja marcada como informada'
       && latestInformationEvent?.id === item.id
-      && Boolean(this.config.data.request.is_informado);
+      && Boolean(request.is_informado && request.canReadDetailSection('informed') && request.canEditDetailSection('informed'));
   }
 
   confirmRemoveEvent(item: RequestHistoryI): void {

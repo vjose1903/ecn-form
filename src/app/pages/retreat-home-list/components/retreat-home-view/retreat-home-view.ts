@@ -33,6 +33,8 @@ export class RetreatHomeView implements OnInit, OnDestroy {
   loading = signal(false);
   imagesLoaded = signal(0);
   isSuperAdmin = Ss.authService.isSuperAdmin();
+  canAssignHomes = false;
+  canUnassignHomes = false;
   onAssignmentRequest?: (homeId: string) => void;
 
   constructor() {}
@@ -40,6 +42,8 @@ export class RetreatHomeView implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.retreatHome = this.config.data.retreatHome;
     this.onAssignmentRequest = this.config.data.onAssignmentRequest;
+    this.canAssignHomes = this.isSuperAdmin || this.config.data.canAssignHomes === true;
+    this.canUnassignHomes = this.isSuperAdmin || this.config.data.canUnassignHomes === true;
     this.preloadImages();
   }
 
@@ -124,7 +128,7 @@ export class RetreatHomeView implements OnInit, OnDestroy {
   }
 
   openAssignmentDialog(): void {
-    if (!this.isSuperAdmin || this.loading() || !this.onAssignmentRequest) return;
+    if ((!this.canAssignHomes && !this.canUnassignHomes) || this.loading() || !this.onAssignmentRequest) return;
     this.ref.close();
     this.onAssignmentRequest(this.retreatHome.id);
   }

@@ -6,10 +6,11 @@ import {
   auditUserNestedChangesV2,
   auditFileChanges,
 } from "./functions/audit/auditChanges";
-import {saveCityRole, createCityMember, sendCityMemberInvitation, resendCityMemberInvitation, updateCityMember, deleteCityMember, updateOwnProfile, createCityRetreatHome, findSimilarCityRetreatHomes, assignExistingCityRetreatHome, updateCityRetreatHome, listCityMembers} from "./functions/access-management/accessManagement";
+import {saveCityRole, saveCity, createCityMember, sendCityMemberInvitation, resendCityMemberInvitation, updateCityMember, deleteCityMember, updateOwnProfile, createCityRetreatHome, findSimilarCityRetreatHomes, assignExistingCityRetreatHome, updateCityRetreatHome, listCityMembers} from "./functions/access-management/accessManagement";
 import {getPublicFormData, createPublicRequest} from "./functions/public-form/publicForm";
 import {createPaymentUploadUrl, recordPayment, getPaymentReceiptUrl} from "./functions/payments/payments";
 import {updateRequestDetails} from "./functions/requests/updateRequestDetails";
+import {getRequestFieldGroups} from "./functions/requests/getRequestFieldGroups";
 import {changeRequestLocation} from "./functions/requests/changeRequestLocation";
 import {deleteRequestHistoryEvent} from "./functions/requests/deleteRequestHistoryEvent";
 import {touchPushTokenV2} from "./functions/touch-push-token/touchPushToken";
@@ -25,6 +26,7 @@ export {
   auditUserNestedChangesV2,
   auditFileChanges,
   saveCityRole,
+  saveCity,
   createCityMember,
   sendCityMemberInvitation,
   resendCityMemberInvitation,
@@ -42,6 +44,7 @@ export {
   recordPayment,
   getPaymentReceiptUrl,
   updateRequestDetails,
+  getRequestFieldGroups,
   changeRequestLocation,
   deleteRequestHistoryEvent,
   touchPushTokenV2,

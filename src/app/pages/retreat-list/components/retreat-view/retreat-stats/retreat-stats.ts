@@ -15,6 +15,7 @@ export class RetreatStats {
   amountPerPerson = input<number | null>(null);
   retreat = input.required<RetreatClass>();
   close = output<void>();
+  canReadInformed = computed(() => this.requests().some(request => request.canReadDetailSection('informed')));
 
   stats = computed(() => {
     const requests = this.requests();

@@ -1,9 +1,9 @@
 <p-card
   class="request-card"
-  [class.request-card--accepted]="status()?.severity === 'success'"
-  [class.request-card--pending]="status()?.severity === 'secondary'"
-  [class.request-card--rejected]="status()?.severity === 'danger'"
-  [class.request-card--archived]="status()?.severity === 'warn'"
+  [class.request-card--accepted]="showStatus() && request()?.canReadDetailSection('status') && status()?.severity === 'success'"
+  [class.request-card--pending]="showStatus() && request()?.canReadDetailSection('status') && status()?.severity === 'secondary'"
+  [class.request-card--rejected]="showStatus() && request()?.canReadDetailSection('status') && status()?.severity === 'danger'"
+  [class.request-card--archived]="showStatus() && request()?.canReadDetailSection('status') && status()?.severity === 'warn'"
   [class.request-card--selected]="selected()"
   [class.request-card--selection-mode]="selectionMode()"
   [attr.role]="selectionMode() ? 'checkbox' : null"
@@ -18,7 +18,7 @@
   @if (!skeleton()) {
     <div class="request-card__content">
       <div class="request-card__topline">
-        @if (showStatus()) {
+        @if (showStatus() && request()?.canReadDetailSection('status')) {
         <p-tag [severity]="status()?.severity" [value]="status()?.label" [rounded]="true" />
         }
         @if (showPreRetreatIndicators()) {
@@ -32,6 +32,7 @@
               <i class="pi pi-wallet" aria-hidden="true"></i>
             </span>
           }
+          @if (request()?.canReadDetailSection('informed')) {
           <span
             class="request-card__informed"
             [class.request-card__informed--yes]="request()?.is_informado"
@@ -40,6 +41,7 @@
             <i [class]="request()?.is_informado ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i>
             {{ request()?.is_informado ? 'Informada' : 'Sin informar' }}
           </span>
+          }
         }
         @if (selectionMode()) {
           <span class="request-card__selection" [attr.aria-label]="selected() ? 'Solicitud seleccionada' : 'Solicitud no seleccionada'">

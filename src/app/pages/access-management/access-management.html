@@ -1,40 +1,167 @@
 <main class="access-page">
   <header>
-    <div><p class="eyebrow">Administración</p><h1>Roles y permisos</h1></div>
-    <p-select [options]="cities()" optionLabel="label" optionValue="value" [ngModel]="cityId()" (ngModelChange)="changeCity($event)" placeholder="Seleccionar ciudad" />
+    <h1>Roles y permisos</h1>
+    <div class="access-header-actions">
+      <p-select [options]="cities()" optionLabel="label" optionValue="value" [ngModel]="cityId()" (ngModelChange)="changeCity($event)" placeholder="Seleccionar ciudad" aria-label="Ciudad" appendTo="body" />
+      <p-button label="Crear rol" icon="pi pi-plus" (onClick)="openCreateRole()" [disabled]="!cityId()" />
+    </div>
   </header>
 
-  <section class="access-section">
-    <h2>Roles y permisos</h2>
-    <div class="role-layout">
-      <div class="role-list">
-        @for (role of roles(); track role.id) {
-          <button type="button" class="role-item" (click)="editRole(role)">
-            <strong>{{ role.name }}</strong><small>{{ role.id }}</small>
-          </button>
-        }
+  <section class="roles-filters" aria-label="Filtros de roles">
+    <label class="roles-filter-search">
+      <span>Buscar</span>
+      <span class="roles-filter-search__input">
+        <i class="pi pi-search" aria-hidden="true"></i>
+        <input pInputText type="search" placeholder="Buscar por nombre o descripción..." [value]="searchTerm()" (input)="onSearchChange($any($event.target).value)" />
+      </span>
+    </label>
+    <label class="roles-filter-status">
+      <span>Estado</span>
+      <p-select [options]="statusFilterOptions" optionLabel="label" optionValue="value" [ngModel]="statusFilter()" (ngModelChange)="onStatusFilterChange($event)" appendTo="body" />
+    </label>
+    @if (hasActiveFilters) {
+      <div class="roles-active-filters" role="status">
+        <span><i class="pi pi-filter" aria-hidden="true"></i> Filtros activos: <strong>{{ activeFiltersText }}</strong></span>
+        <p-button type="button" icon="pi pi-filter-slash" severity="secondary" [text]="true" [rounded]="true" size="small" aria-label="Limpiar filtros" (onClick)="clearFilters()" />
       </div>
-      <form class="role-editor" (ngSubmit)="saveRole()">
-        <div class="form-row">
-          <label>Nombre<input pInputText [(ngModel)]="roleName" name="roleName" required maxlength="80"></label>
-          <label>ID (vacío = derivado del nombre)<input pInputText [(ngModel)]="roleId" name="roleId" maxlength="60"></label>
-        </div>
-        <label>Descripción<input pInputText [(ngModel)]="roleDescription" name="roleDescription" maxlength="240"></label>
-        <label>Permisos en JSON
-          <textarea pTextarea [(ngModel)]="permissionsJson" name="permissions" rows="12" spellcheck="false"></textarea>
-        </label>
-        <p class="hint">Acciones disponibles: listar, leer, crear, editar, archivar, transferir, pagos, miembros, casas y auditoría. En requests.fields define permisos por sección como couple_basic, contact, identity, family, relationship, invitation, status y legacy_extra.</p>
-        <p-button type="submit" label="Guardar rol" icon="pi pi-save" [loading]="saving()" />
-      </form>
-    </div>
+    }
   </section>
 
-  <section class="access-section">
-    <h2>Últimos cambios</h2>
-    <div class="table-scroll"><table><thead><tr><th>Fecha</th><th>Actor UID</th><th>Acción</th><th>Documento</th><th>Cambios</th></tr></thead>
-      <tbody>@for (event of audit(); track event.resource_path + event.actor_uid + event.action) {
-        <tr><td>{{ formatTime(event.occurred_at) }}</td><td>{{ event.actor_uid || 'Sin identificar' }}</td><td>{{ event.action }}</td><td>{{ event.resource_path }}</td><td><code>{{ event.changes | json }}</code></td></tr>
-      }</tbody>
-    </table></div>
+  <section class="roles-section" aria-label="Listado de roles">
+    @if (loading()) {
+      <div class="roles-loading" role="status" aria-live="polite">
+        <span class="roles-loading__spinner" aria-hidden="true"></span>
+        <span>Cargando roles...</span>
+      </div>
+    } @else {
+      <div class="roles-table-scroll">
+        <table>
+          <thead><tr><th>Nombre</th><th>Estado</th><th class="roles-actions-heading">Acciones</th></tr></thead>
+          <tbody>
+            @for (role of pagedRoles; track role.id) {
+              <tr>
+                <td data-label="Nombre">{{ role.name }}@if (role.description) { <small class="role-description">{{ role.description }}</small> }</td>
+                <td data-label="Estado"><span class="role-status" [class.role-status--inactive]="role.is_active === false">{{ role.is_active === false ? 'Inactivo' : 'Activo' }}</span></td>
+                <td class="roles-actions-cell" data-label="Acciones">
+                  <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="secondary" [attr.aria-label]="'Editar rol ' + role.name" title="Editar rol" (onClick)="editRole(role)" />
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="3" class="roles-empty-state">{{ hasActiveFilters ? 'Ningún rol coincide con los filtros.' : 'No hay roles registrados para esta ciudad.' }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <footer class="roles-footer" aria-label="Paginación de roles">
+        <div class="roles-pagination">
+          <p-button icon="pi pi-angle-double-left" [text]="true" [rounded]="true" aria-label="Primera página" [disabled]="currentPage() <= 1" (onClick)="currentPage.set(1)" />
+          <p-button icon="pi pi-angle-left" [text]="true" [rounded]="true" aria-label="Página anterior" [disabled]="currentPage() <= 1" (onClick)="previousPage()" />
+          <span class="roles-pagination__current" aria-current="page">{{ currentPage() }}</span>
+          <p-button icon="pi pi-angle-right" [text]="true" [rounded]="true" aria-label="Página siguiente" [disabled]="currentPage() >= pageCount" (onClick)="nextPage()" />
+          <p-button icon="pi pi-angle-double-right" [text]="true" [rounded]="true" aria-label="Última página" [disabled]="currentPage() >= pageCount" (onClick)="currentPage.set(pageCount)" />
+        </div>
+        <p-select class="roles-page-size" [options]="pageSizeOptions" optionLabel="label" optionValue="value" [ngModel]="pageSize()" (ngModelChange)="pageSize.set($event); currentPage.set(1)" aria-label="Cantidad de roles por página" appendTo="body" />
+      </footer>
+    }
   </section>
 </main>
+
+<p-dialog
+  [header]="roleId ? 'Editar rol' : 'Crear rol'"
+  [visible]="roleDialogVisible()"
+  (visibleChange)="!$event && closeRoleDialog()"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!saving()"
+  [closeOnEscape]="!saving()"
+  [dismissableMask]="false"
+  styleClass="role-permissions-dialog"
+  [style]="{width: 'min(58rem, calc(100vw - 2rem))'}">
+  <p class="role-form-hint">Define el nombre, la descripción y los permisos que tendrá este rol en la ciudad.</p>
+  <form #roleForm="ngForm" class="role-form" (ngSubmit)="saveRole()">
+    <label class="role-form__full">Nombre<input pInputText [(ngModel)]="roleName" (ngModelChange)="roleFormError.set('')" name="roleName" required maxlength="80" placeholder="Nombre del rol" /></label>
+    @if (roleId) {
+      <p class="role-form-hint role-form__full">Las asignaciones actuales se conservan aunque cambies el nombre del rol.</p>
+    }
+    @if (roleNameError) { <p class="role-name-error role-form__full" role="status">{{ roleNameError }}</p> }
+    <label class="role-form__full">Descripción<input pInputText [(ngModel)]="roleDescription" (ngModelChange)="roleFormError.set('')" name="roleDescription" maxlength="240" placeholder="Describe el alcance de este rol" /></label>
+
+    <div class="permissions-editor role-form__full" aria-label="Permisos del rol">
+      <div class="permissions-editor__heading">
+        <h2>Permisos</h2>
+        <p>Elige un área y configura las acciones que podrá realizar.</p>
+      </div>
+      <div class="permissions-workspace">
+        <aside class="permissions-navigation" aria-label="Áreas de permisos">
+          <label class="permissions-search">
+            <i class="pi pi-search" aria-hidden="true"></i>
+            <input pInputText type="search" placeholder="Buscar permisos..." [value]="permissionSearch()" (input)="onPermissionSearchChange($any($event.target).value)" />
+          </label>
+          <nav class="permissions-resource-list" [class.permissions-resource-list--dragging]="permissionListDragging()" aria-label="Áreas de permisos. Desliza horizontalmente para recorrerlas" (pointerdown)="onPermissionListPointerDown($event)" (pointermove)="onPermissionListPointerMove($event)" (pointerup)="onPermissionListPointerUp($event)" (pointercancel)="onPermissionListPointerUp($event)">
+            @for (resource of visiblePermissionResources; track resource.key) {
+              <button type="button" class="permissions-resource-link" [class.permissions-resource-link--selected]="selectedPermissionResource() === resource.key" [attr.aria-pressed]="selectedPermissionResource() === resource.key" (click)="selectPermissionResource(resource.key)">
+                <span class="permissions-resource-link__icon"><i [class]="resource.icon" aria-hidden="true"></i></span>
+                <span class="permissions-resource-link__copy"><strong>{{ resource.label }}</strong><small>{{ resource.description }}</small></span>
+                <span class="permissions-resource-link__count">{{ permissionCount(resource).selected }}/{{ permissionCount(resource).total }}</span>
+                <i class="pi pi-angle-right permissions-resource-link__chevron" aria-hidden="true"></i>
+              </button>
+            } @empty {
+              <p class="permissions-no-results">No hay áreas que coincidan con la búsqueda.</p>
+            }
+          </nav>
+        </aside>
+
+        <section class="permissions-detail" aria-live="polite">
+          @if (selectedResource; as resource) {
+            <header class="permissions-detail__header">
+              <span class="permissions-detail__icon"><i [class]="resource.icon" aria-hidden="true"></i></span>
+              <div class="permissions-detail__title"><h3>{{ resource.label }}</h3><p>{{ resource.description }}</p></div>
+              <span class="permissions-selected-count">{{ permissionCount(resource).selected }} de {{ permissionCount(resource).total }} seleccionadas</span>
+            </header>
+            <div class="permissions-detail__subheader">
+              <div><h4>Acciones disponibles</h4><p>Selecciona las acciones permitidas para este rol.</p></div>
+              <label class="permissions-select-all">
+                <input type="checkbox" [checked]="areAllResourcePermissionsEnabled(resource)" [disabled]="saving()" (change)="toggleAllResourcePermissions(resource, $any($event.target).checked)" />
+                <span>Seleccionar todas</span>
+              </label>
+            </div>
+            <div class="permission-actions">
+              @for (permission of resource.actions; track permission.key) {
+                <label class="permission-option" [class.permission-option--selected]="isPermissionEnabled(resource.key, permission.key)">
+                  <input type="checkbox" [checked]="isPermissionEnabled(resource.key, permission.key)" [disabled]="saving()" (change)="setPermission(resource.key, permission.key, $any($event.target).checked)" />
+                  <span><strong>{{ permission.label }}</strong><small>{{ permission.description }}</small></span>
+                </label>
+              }
+            </div>
+            @if (resource.fields?.length) {
+              <section class="permission-field-groups">
+                <div class="permission-field-groups__heading"><h4>Permisos por sección de solicitud</h4><p>Controla qué datos puede ver o editar.</p></div>
+                @for (field of resource.fields; track field.key) {
+                  <div class="permission-field-group">
+                    <strong>{{ field.label }}</strong>
+                    <div class="permission-field-group__actions">
+                      @for (permission of requestFieldActions; track permission.key) {
+                        <label class="permission-field-option">
+                          <input type="checkbox" [checked]="isPermissionEnabled(resource.key, permission.key, field.key)" [disabled]="saving()" (change)="setPermission(resource.key, permission.key, $any($event.target).checked, field.key)" />
+                          <span>{{ permission.label }}</span>
+                        </label>
+                      }
+                    </div>
+                  </div>
+                }
+              </section>
+            }
+          } @else {
+            <p class="permissions-no-results">Selecciona un área de permisos para configurar sus acciones.</p>
+          }
+        </section>
+      </div>
+    </div>
+    @if (roleFormError()) { <p class="role-form-error" role="alert">{{ roleFormError() }}</p> }
+    <div class="role-form-actions">
+      <p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" [disabled]="saving()" (onClick)="closeRoleDialog()" />
+      <p-button type="submit" [label]="roleId ? 'Guardar cambios' : 'Crear rol'" icon="pi pi-save" [loading]="saving()" [disabled]="!roleForm.valid || saving() || !cityId() || !!roleNameError" />
+    </div>
+  </form>
+</p-dialog>

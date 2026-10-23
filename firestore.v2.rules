@@ -13,8 +13,22 @@ service cloud.firestore {
       return /databases/$(database)/documents/city/$(cityId)/members/$(request.auth.uid);
     }
 
+    function isActiveCityMember(cityId) {
+      return signedIn()
+        && exists(membershipPath(cityId))
+        && get(membershipPath(cityId)).data.get('status', 'disabled') == 'active';
+    }
+
     function rolePath(cityId, roleId) {
       return /databases/$(database)/documents/city/$(cityId)/roles/$(roleId);
+    }
+
+    function isOwnAssignedRole(cityId, roleId) {
+      let memberExists = signedIn() && exists(membershipPath(cityId));
+      let member = memberExists ? get(membershipPath(cityId)).data : {};
+      return memberExists
+        && member.get('status', 'disabled') == 'active'
+        && member.get('role_id', '') == roleId;
     }
 
     function requestPath(cityId, requestId) {
@@ -69,9 +83,9 @@ service cloud.firestore {
     }
 
     match /city/{cityId} {
-      allow get: if hasPermission(cityId, 'city', 'read');
+      allow get: if superAdmin() || isActiveCityMember(cityId);
       allow list: if superAdmin();
-      allow create, update, delete: if hasPermission(cityId, 'city', 'manage');
+      allow create, update, delete: if false;
 
       match /members/{uid} {
         allow get: if (signedIn() && request.auth.uid == uid)
@@ -82,7 +96,7 @@ service cloud.firestore {
       }
 
       match /roles/{roleId} {
-        allow get: if hasPermission(cityId, 'roles', 'read');
+        allow get: if hasPermission(cityId, 'roles', 'read') || isOwnAssignedRole(cityId, roleId);
         allow list: if hasPermission(cityId, 'roles', 'list');
         // Prevent clients from granting permissions or escalating roles.
         allow create, update, delete: if false;
@@ -114,25 +128,23 @@ service cloud.firestore {
       match /requests/{requestId} {
         allow get: if hasPermission(cityId, 'requests', 'read');
         allow list: if hasPermission(cityId, 'requests', 'list');
-        allow create: if hasPermission(cityId, 'requests', 'create')
-          && request.resource.data.keys().hasOnly(['retreat_id', 'is_archived', 'created_at'])
-          && request.resource.data.retreat_id is string
-          && request.resource.data.is_archived is bool;
+        allow create: if false;
         allow update: if hasPermission(cityId, 'requests', 'update')
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['retreat_id', 'is_archived']);
         allow delete: if hasPermission(cityId, 'requests', 'delete');
 
         match /details/{sectionId} {
           allow get: if exists(requestPath(cityId, requestId))
+            && sectionId != 'status'
+            && sectionId != 'informed'
             && (sectionId == 'payments_summary'
               ? hasPermission(cityId, 'payments', 'read')
               : hasPermission(cityId, 'requests', 'read')
                 && hasFieldPermission(cityId, 'requests', sectionId, 'read'));
           allow list: if false;
-          allow create: if exists(requestPath(cityId, requestId))
-            && hasPermission(cityId, 'requests', 'create')
-            && hasFieldPermission(cityId, 'requests', sectionId, 'create');
-          allow update: if exists(requestPath(cityId, requestId))
+          allow create: if false;
+          allow update: if sectionId != 'status' && sectionId != 'informed'
+            && exists(requestPath(cityId, requestId))
             && hasPermission(cityId, 'requests', 'update')
             && hasFieldPermission(cityId, 'requests', sectionId, 'update');
           allow delete: if false;
@@ -176,14 +188,16 @@ service cloud.firestore {
     }
 
     match /files/{fileId} {
-      allow get, list: if signedIn() && (
+      allow get: if signedIn() && (
         superAdmin()
         || resource.data.get('is_global', false) == true
-        || hasPermission(resource.data.get('city_id', ''), 'files', 'read')
+        || hasPermission(resource.data.get('city_id', ''), 'retreat_homes', 'read')
       );
-      allow create: if signedIn() && hasPermission(request.resource.data.get('city_id', ''), 'files', 'create');
-      allow update: if signedIn() && hasPermission(resource.data.get('city_id', ''), 'files', 'update');
-      allow delete: if signedIn() && hasPermission(resource.data.get('city_id', ''), 'files', 'delete');
+      allow list: if signedIn() && (
+        superAdmin()
+        || hasPermission(resource.data.get('city_id', ''), 'retreat_homes', 'list')
+      );
+      allow create, update, delete: if false;
     }
 
     match /global_audit_logs/{eventId} {

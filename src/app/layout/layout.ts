@@ -15,9 +15,10 @@ import { MenuService } from './menu/menu.service';
 import { RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
 import { RetreatService } from '@core/entities/retreat/retreat.service';
 import { CityClass } from '@core/entities/city/city.class';
+import { CityService } from '@core/entities/city/city.service';
 import { UserService } from '@core/entities/user/user.service';
 import { SkeletonModule } from 'primeng/skeleton';
-import { Firestore, collection, getDocs, doc, getDoc } from '@angular/fire/firestore';
+import { Firestore, doc, getDoc } from '@angular/fire/firestore';
 import { buildVersion } from '../../environments/build-version';
 
 @Component({
@@ -36,11 +37,12 @@ export class Layout implements OnInit {
   retreatHomeService = inject(RetreatHomeService);
   private firestore = inject(Firestore);
   private retreatService = inject(RetreatService);
+  private cityService = inject(CityService);
 
   // Signal para la ruta actual
   currentPath = signal(fun.getActualPathName());
   city = signal<CityClass | null>(null);
-  accessibleCities = signal<CityClass[]>([]);
+  accessibleCities = this.cityService.cities;
   private citiesLoadedForUid = '';
   private observedCityId = '';
 
@@ -66,13 +68,6 @@ export class Layout implements OnInit {
   private onDestroy$ = new Subject<void>();
 
   constructor() {
-    // Solo ejecutar una vez al inicializar
-    const isAuthenticated = Ss.authService.isAuthenticated();
-
-    if (isAuthenticated) {
-      this.retreatHomeService.refresh();
-    }
-
     effect(() => {
       const isAuthRoute = this.isAuthRoute();
       const user = Ss.authService.current_user();
@@ -91,11 +86,6 @@ export class Layout implements OnInit {
   ngOnInit(): void {
     this.setupRouterListener();
 
-    // Verificar autenticación después de la inicialización
-    const isAuthenticated = Ss.authService.isAuthenticated();
-    if (isAuthenticated) {
-      this.retreatHomeService.refresh();
-    }
   }
 
   ngOnDestroy(): void {
@@ -131,10 +121,13 @@ export class Layout implements OnInit {
   private async loadAccessibleCities(uid: string): Promise<void> {
     this.citiesLoadedForUid = uid;
     try {
-      const snapshot = await getDocs(collection(this.firestore, 'city'));
-      const cities = snapshot.docs.map(item => new CityClass({id: item.id, ...item.data()} as any));
-      this.accessibleCities.set(cities);
       const activeId = Ss.authService.activeCityId() || Ss.authService.current_user()?.city || '';
+      if (Ss.authService.isSuperAdmin()) {
+        await this.cityService.loadAllCities();
+      } else if (activeId) {
+        const city = await this.cityService.getCityById(activeId);
+        this.cityService.cities.set(city ? [city] : []);
+      }
       await this.selectCity(activeId);
     } catch (error) {
       console.error('No se pudieron cargar las ciudades disponibles:', JSON.stringify(error));

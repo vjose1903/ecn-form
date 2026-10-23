@@ -24,13 +24,14 @@ exports.deleteRequestHistoryEvent = (0, https_1.onCall)(async (request) => {
         throw new https_1.HttpsError("failed-precondition", "El movimiento no pertenece a esta solicitud.");
     if (eventData.message === "Pareja marcada como informada") {
         if (!await (0, authorization_1.requireCityPermission)(request, cityId, "requests", "update")
-            || !await (0, authorization_1.hasCityFieldPermission)(request, cityId, "requests", "status", "update")) {
+            || !await (0, authorization_1.hasCityFieldPermission)(request, cityId, "requests", "informed", "update")) {
             throw new https_1.HttpsError("permission-denied", "No tienes permiso para revertir el estado de información.");
         }
         await firebase_admin_1.v2Db.runTransaction(async (transaction) => {
-            const [rootSnapshot, statusSnapshot, historySnapshot] = await Promise.all([
+            const [rootSnapshot, statusSnapshot, informedSnapshot, historySnapshot] = await Promise.all([
                 transaction.get(rootRef),
                 transaction.get(rootRef.collection("details").doc("status")),
+                transaction.get(rootRef.collection("details").doc("informed")),
                 transaction.get(rootRef.collection("history")),
             ]);
             if (!rootSnapshot.exists || !historySnapshot.docs.some(item => item.id === eventId))
@@ -38,10 +39,10 @@ exports.deleteRequestHistoryEvent = (0, https_1.onCall)(async (request) => {
             const latest = historySnapshot.docs
                 .filter(item => ["Pareja marcada como informada", "Pareja marcada como no informada"].includes(String(item.get("message"))))
                 .sort((left, right) => (right.get("happened_at")?.toMillis?.() ?? 0) - (left.get("happened_at")?.toMillis?.() ?? 0))[0];
-            if (latest?.id !== eventId || statusSnapshot.get("is_informado") !== true) {
+            if (latest?.id !== eventId || (informedSnapshot.exists ? informedSnapshot.get("is_informado") : statusSnapshot.get("is_informado")) !== true) {
                 throw new https_1.HttpsError("failed-precondition", "Solo se puede revertir el movimiento de información más reciente.");
             }
-            transaction.set(rootRef.collection("details").doc("status"), {
+            transaction.set(rootRef.collection("details").doc("informed"), {
                 is_informado: false,
                 updated_by: uid,
                 updated_at: firestore_1.FieldValue.serverTimestamp(),

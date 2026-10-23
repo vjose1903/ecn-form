@@ -10,7 +10,7 @@ import {
   requirePermissionsWithinActorRole,
   validateRolePermissions,
 } from "../../core/security/authorization";
-import {FieldValue} from "firebase-admin/firestore";
+import {FieldPath, FieldValue} from "firebase-admin/firestore";
 import {getResendApiKey, resendApiKey, sendResendEmail} from "../../core/helpers/resend";
 import {EMAIL_CONSTANTS} from "../../core/typescript/emailHelpers";
 
@@ -71,6 +71,32 @@ const requireText = (value: unknown, name: string, maxLength: number): string =>
   return value.trim();
 };
 
+const operatorPermissionsForNewCity = (value: unknown): Record<string, unknown> => {
+  const permissions = validateRolePermissions(value);
+  const retreats = permissions["retreats"] as Record<string, unknown>;
+  const requests = permissions["requests"] as Record<string, unknown>;
+  const existingFields = (requests["fields"] ?? {}) as Record<string, Record<string, boolean>>;
+  const requestSections = ["couple_basic", "contact", "identity", "family", "relationship", "invitation", "status", "informed", "legacy_extra"];
+
+  return {
+    ...permissions,
+    retreats: {...retreats, create: true},
+    requests: {
+      ...requests,
+      archive: true,
+      unarchive: true,
+      transfer: true,
+      history_read: true,
+      history_list: true,
+      history_delete: true,
+      fields: Object.fromEntries(requestSections.map(section => [section, {
+        ...(existingFields[section] ?? {}),
+        update: true,
+      }])),
+    },
+  };
+};
+
 export const saveCityRole = onCall(async (request) => {
   const data = request.data as Record<string, unknown>;
   const cityId = requireText(data.cityId, "La ciudad", 100);
@@ -100,6 +126,81 @@ export const saveCityRole = onCall(async (request) => {
       : {created_by: actorUid, created_at: timestamp}),
   }, {merge: false});
   return {roleId};
+});
+
+export const saveCity = onCall(async (request) => {
+  const actorUid = requireAuthenticated(request);
+  if (!isSuperAdmin(request)) throw new HttpsError("permission-denied", "Solo un superadmin puede administrar ciudades.");
+
+  const data = request.data as Record<string, unknown>;
+  const label = requireText(data.label, "El nombre de la ciudad", 100);
+  const largeLabel = typeof data.largeLabel === "string" && data.largeLabel.trim()
+    ? data.largeLabel.trim().slice(0, 140)
+    : label;
+  const definiteArticle = typeof data.definiteArticle === "string" ? data.definiteArticle.trim().slice(0, 20) : "";
+  const cityId = typeof data.cityId === "string" && data.cityId.trim() ? data.cityId.trim() : slug(label);
+  if (!cityId || cityId.length > 100 || !/^[a-z0-9_]+$/.test(cityId)) {
+    throw new HttpsError("invalid-argument", "El identificador de la ciudad no es válido.");
+  }
+
+  const cityRef = v2Db.doc(`city/${cityId}`);
+  const existing = await cityRef.get();
+  const timestamp = FieldValue.serverTimestamp();
+  if (existing.exists) {
+    if (typeof data.cityId !== "string" || !data.cityId.trim()) {
+      throw new HttpsError("already-exists", "Ya existe una ciudad con ese nombre.");
+    }
+    await cityRef.set({
+      ...existing.data(),
+      label,
+      large_label: largeLabel,
+      definite_article: definiteArticle,
+      updated_by: actorUid,
+      updated_at: timestamp,
+    }, {merge: false});
+    return {cityId, created: false};
+  }
+
+  if (typeof data.cityId === "string" && data.cityId.trim()) {
+    throw new HttpsError("not-found", "No se encontró la ciudad que deseas modificar.");
+  }
+
+  const sourceCities = await v2Db.collection("city").where("label", "==", "La Vega").limit(1).get();
+  if (sourceCities.empty) throw new HttpsError("failed-precondition", "No se encontró la ciudad base La Vega para copiar los roles predeterminados.");
+  const roleIds = ["city_admin", "operador", "consulta"];
+  const sourceRoles = await Promise.all(roleIds.map(roleId => sourceCities.docs[0].ref.collection("roles").doc(roleId).get()));
+  if (sourceRoles.some(role => !role.exists || !role.get("permissions"))) {
+    throw new HttpsError("failed-precondition", "La ciudad base debe tener los roles Administrador de ciudad, Operador y Consulta configurados.");
+  }
+
+  const batch = v2Db.batch();
+  batch.create(cityRef, {
+    id: cityId,
+    key: cityId,
+    label,
+    large_label: largeLabel,
+    definite_article: definiteArticle,
+    created_by: actorUid,
+    created_at: timestamp,
+  });
+  sourceRoles.forEach((role, index) => {
+    const roleData = role.data()!;
+    const sourcePermissions = roleData["permissions"];
+    const permissions = roleIds[index] === "operador"
+      ? operatorPermissionsForNewCity(sourcePermissions)
+      : validateRolePermissions(sourcePermissions);
+    batch.create(cityRef.collection("roles").doc(roleIds[index]), {
+      role_id: roleIds[index],
+      name: roleData["name"],
+      description: roleData["description"] ?? "",
+      is_active: roleData["is_active"] !== false,
+      permissions,
+      created_by: actorUid,
+      created_at: timestamp,
+    });
+  });
+  await batch.commit();
+  return {cityId, created: true, roleIds};
 });
 
 export const createCityMember = onCall(async (request) => {
@@ -273,7 +374,7 @@ export const sendCityMemberInvitation = onDocumentWritten(
   async event => {
     const snapshot = event.data?.after;
     const member = snapshot?.data();
-    if (!member || member.invitation_status !== "pending") return;
+    if (!snapshot || !member || member.invitation_status !== "pending") return;
     const invitationRequestId = String(member.invitation_request_id ?? "");
     const latestMember = await snapshot.ref.get();
     if (latestMember?.get("invitation_status") !== "pending" ||
@@ -501,25 +602,25 @@ export const deleteCityMember = onCall(async (request) => {
     throw new HttpsError("failed-precondition", "Retira primero el estatus de super administrador para eliminar esta cuenta.");
   }
 
-  const [globalActivity, cities, nestedCollections] = await Promise.all([
+  const [globalActivity, cityActivity, cities, nestedCollections] = await Promise.all([
     v2Db.collection("global_audit_logs").where("actor_uid", "==", uid).get(),
+    v2Db.collectionGroup("audit_logs").where("actor_uid", "==", uid).limit(1).get(),
     v2Db.collection("city").get(),
     profile.exists ? profileRef.listCollections() : Promise.resolve([]),
   ]);
-  const cityActivity = await Promise.all(cities.docs.map(city =>
-    v2Db.collection(`city/${city.id}/audit_logs`).where("actor_uid", "==", uid).get(),
-  ));
-  const hasAuditedActivity = [...cityActivity.flatMap(snapshot => snapshot.docs), ...globalActivity.docs].some(event => {
+  const hasCityActivity = !cityActivity.empty;
+  const hasGlobalActivity = globalActivity.docs.some(event => {
     const path = event.get("resource_path");
     return typeof path !== "string" || !path.startsWith(`user/${uid}/push_tokens/`);
   });
   const hasNonTokenProfileData = nestedCollections.some(collection => collection.id !== "push_tokens");
-  const otherMemberships = (await Promise.all(cities.docs
+  const membershipRefs = cities.docs
     .filter(city => city.id !== cityId)
-    .map(city => v2Db.doc(`city/${city.id}/members/${uid}`).get())))
+    .map(city => v2Db.doc(`city/${city.id}/members/${uid}`));
+  const otherMemberships = (membershipRefs.length ? await v2Db.getAll(...membershipRefs) : [])
     .filter(snapshot => snapshot.exists);
   const activeOtherMemberships = otherMemberships.filter(snapshot => snapshot.get("status") === "active");
-  const canHardDelete = !hasAuditedActivity && !hasNonTokenProfileData && otherMemberships.length === 0;
+  const canHardDelete = !hasCityActivity && !hasGlobalActivity && !hasNonTokenProfileData && otherMemberships.length === 0;
 
   if (canHardDelete) {
     const profileData = profile.data() ?? {};
@@ -591,19 +692,62 @@ export const listCityMembers = onCall(async (request) => {
   const data = request.data as Record<string, unknown>;
   const cityId = requireText(data.cityId, "La ciudad", 100);
   await requireCityPermission(request, cityId, "members", "list");
-  const members = await v2Db.collection(`city/${cityId}/members`).get();
+  const pageSize = typeof data.pageSize === "number" ? data.pageSize : 20;
+  if (![10, 20, 50, 100, 200].includes(pageSize)) throw new HttpsError("invalid-argument", "El tamaño de página no es válido.");
+  const direction = data.direction ?? "first";
+  if (!["first", "next", "previous", "last"].includes(String(direction))) {
+    throw new HttpsError("invalid-argument", "La dirección de paginación no es válida.");
+  }
+  const cursor = data.cursor && typeof data.cursor === "object" ? data.cursor as Record<string, unknown> : null;
+  if ((direction === "next" || direction === "previous") && (!cursor || typeof cursor.uid !== "string" || typeof cursor.status !== "string")) {
+    throw new HttpsError("invalid-argument", "El cursor de paginación no es válido.");
+  }
+  const membersRef = v2Db.collection(`city/${cityId}/members`);
+  const orderDirection = direction === "previous" || direction === "last" ? "desc" : "asc";
+  const includeTotal = direction === "last" || data.includeTotal !== false;
+  let pageQuery = membersRef.where("status", "!=", "deleted")
+    .orderBy("status", orderDirection)
+    .orderBy(FieldPath.documentId(), orderDirection);
+  if ((direction === "next" || direction === "previous") && cursor) {
+    pageQuery = pageQuery.startAfter(cursor.status as string, cursor.uid as string);
+  }
+  const [pageSnapshot, countSnapshot] = await Promise.all([
+    pageQuery.limit(pageSize + (direction === "first" || direction === "next" ? 1 : 0)).get(),
+    includeTotal ? membersRef.where("status", "!=", "deleted").count().get() : Promise.resolve(null),
+  ]);
+  let memberDocs = direction === "previous" || direction === "last" ? [...pageSnapshot.docs].reverse() : pageSnapshot.docs;
+  const hasNextPage = direction === "previous" || (direction !== "last" && memberDocs.length > pageSize);
+  memberDocs = memberDocs.slice(0, pageSize);
+  const [profiles, authUsers] = await Promise.all([
+    memberDocs.length ? v2Db.getAll(...memberDocs.map(member => v2Db.doc(`user/${member.id}`))) : Promise.resolve([]),
+    memberDocs.length ? Promise.all(Array.from({length: Math.ceil(memberDocs.length / 100)}, (_, index) =>
+      admin.auth().getUsers(memberDocs.slice(index * 100, (index + 1) * 100).map(member => ({uid: member.id}))),
+    )).then(results => results.flatMap(result => result.users)) : Promise.resolve([]),
+  ]);
+  const authByUid = new Map(authUsers.map(account => [account.uid, account]));
+  const members = memberDocs.map((member, index) => {
+    const profile = profiles[index];
+    const account = authByUid.get(member.id);
+    return {
+      uid: member.id,
+      ...member.data(),
+      email: profile.get("email") ?? "",
+      display_name: profile.get("display_name") ?? "",
+      phone: profile.get("phone") ?? "",
+      super_admin: account?.customClaims?.super_admin === true,
+      has_signed_in: account ? Boolean(account.metadata.lastSignInTime) : true,
+    };
+  });
+  const toCursor = (member: typeof memberDocs[number]): {uid: string; status: string} => ({
+    uid: member.id,
+    status: String(member.get("status")),
+  });
   return {
-    members: await Promise.all(members.docs.filter(member => member.get("status") !== "deleted").map(async member => {
-      const [profile, account] = await Promise.all([
-        v2Db.doc(`user/${member.id}`).get(),
-        admin.auth().getUser(member.id).catch((error) => {
-          const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
-          if (code.includes("user-not-found")) return null;
-          throw error;
-        }),
-      ]);
-      return {uid: member.id, ...member.data(), email: profile.get("email") ?? "", display_name: profile.get("display_name") ?? "", phone: profile.get("phone") ?? "", super_admin: account?.customClaims?.super_admin === true, has_signed_in: account ? Boolean(account.metadata.lastSignInTime) : true};
-    })),
+    members,
+    ...(countSnapshot ? {total: countSnapshot.data().count} : {}),
+    hasNextPage,
+    firstCursor: memberDocs.length ? toCursor(memberDocs[0]) : null,
+    lastCursor: memberDocs.length ? toCursor(memberDocs[memberDocs.length - 1]) : null,
   };
 });
 

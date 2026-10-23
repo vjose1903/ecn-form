@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
+import { Firestore, collection, getDocs } from '@angular/fire/firestore';
 import { FirebaseRequest } from '@core/typescript/firebase/firebaseRequest';
 import { CityI } from './city.model';
 import { CityClass } from './city.class';
@@ -7,7 +8,9 @@ import { CityClass } from './city.class';
   providedIn: 'root',
 })
 export class CityService extends FirebaseRequest<CityI> {
+  private firestore = inject(Firestore);
   private _collectionName = 'city';
+  readonly cities = signal<CityClass[]>([]);
 
   constructor() {
     super();
@@ -16,6 +19,13 @@ export class CityService extends FirebaseRequest<CityI> {
 
   get collectionName() {
     return this._collectionName;
+  }
+
+  async loadAllCities(): Promise<CityClass[]> {
+    const snapshot = await getDocs(collection(this.firestore, this._collectionName));
+    const cities = snapshot.docs.map(item => new CityClass({id: item.id, ...item.data()} as CityI));
+    this.cities.set(cities);
+    return cities;
   }
 
   async getCityById(id: string): Promise<CityClass | null> {

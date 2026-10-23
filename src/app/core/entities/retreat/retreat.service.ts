@@ -29,6 +29,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   private _loadingRetreatList: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   private _lastFetch: number = 0;
   private _cacheCityId = '';
+  private _retreatListPermissionDenied = false;
   private readonly CACHE_DURATION = 3 * 60 * 1000; // 3 minutos
 
   // Observables públicos
@@ -54,6 +55,10 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
 
   get loadingRetreats(): boolean {
     return this._loadingRetreatList.value;
+  }
+
+  get retreatListPermissionDenied(): boolean {
+    return this._retreatListPermissionDenied;
   }
 
   constructor() {
@@ -100,6 +105,7 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
     const { onlyActive } = args;
     try {
       this._loadingRetreatList.next(true);
+      this._retreatListPermissionDenied = false;
       const currentUser = this.authService.current_user();
 
       if (!currentUser?.id) {
@@ -115,7 +121,11 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
           where('retreat_id', '==', retreat.id),
           where('is_archived', '==', false)
         );
-        retreat.request_count = (await getCountFromServer(requests)).data().count;
+        try {
+          retreat.request_count = (await getCountFromServer(requests)).data().count;
+        } catch (error) {
+          if (!['permission-denied', 'firestore/permission-denied'].includes((error as {code?: string})?.code ?? '')) throw error;
+        }
       }));
 
       this._retreats.next(retreatList);
@@ -124,6 +134,11 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
 
       return retreatList;
     } catch (error) {
+      if (['permission-denied', 'firestore/permission-denied'].includes((error as {code?: string})?.code ?? '')) {
+        this._retreatListPermissionDenied = true;
+        this._retreats.next([]);
+        return [];
+      }
       console.error('Error al obtener retiros:', error);
       Ss.toastService.error({ message: 'Error al cargar los retiros', title: 'Error de carga' });
       throw error;
@@ -141,15 +156,15 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
   }
 
   /**
-   * En Firestore, retreat_home se guarda como referencia. Esa referencia solo
-   * contiene el ID, así que hay que resolverla con la casa asignada a la ciudad.
+   * Resuelve solo el nombre de la casa enlazada. La lectura de una relación
+   * no requiere permiso para listar ni administrar el catálogo de casas.
    */
   private async attachRetreatHomeData(retreats: RetreatClass[]): Promise<void> {
     if (!retreats.some(retreat => retreat.retreat_home && !retreat.retreatHomeData?.name)) return;
 
     try {
       const homeIds = [...new Set(retreats.filter(retreat => retreat.retreat_home && !retreat.retreatHomeData?.name).map(retreat => retreat.retreat_home))];
-      const homes = await Promise.all(homeIds.map(id => this.retreatHomeService.getRetreatHomeById(id)));
+      const homes = await Promise.all(homeIds.map(id => this.retreatHomeService.getRetreatHomeReferenceById(id, retreats[0].city_id)));
       const homesById = new Map(homes.filter(home => home !== null).map(home => [home.id, home]));
       retreats.forEach(retreat => {
         const home = homesById.get(retreat.retreat_home);
@@ -180,11 +195,16 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
     const currentUser = this.authService.current_user();
     const cityId = this.authService.activeCityId() || currentUser?.city;
     if (cityId) {
-      const snapshot = await getDoc(doc(Ss.firestore, `city/${cityId}/retreat/${id}`));
-      if (!snapshot.exists()) return null;
-      const retreat = new RetreatClass({ ...snapshot.data(), id: snapshot.id } as RetreatI);
-      await this.attachRetreatHomeData([retreat]);
-      return retreat;
+      try {
+        const snapshot = await getDoc(doc(Ss.firestore, `city/${cityId}/retreat/${id}`));
+        if (!snapshot.exists()) return null;
+        const retreat = new RetreatClass({ ...snapshot.data(), id: snapshot.id } as RetreatI);
+        await this.attachRetreatHomeData([retreat]);
+        return retreat;
+      } catch (error) {
+        if (['permission-denied', 'firestore/permission-denied'].includes((error as {code?: string})?.code ?? '')) return null;
+        throw error;
+      }
     }
 
     return this.processGetRetreat(id, 'id');
@@ -202,6 +222,10 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
           resolve(retreatObj);
         })
         .catch(error => {
+          if (['permission-denied', 'firestore/permission-denied'].includes((error as {code?: string})?.code ?? '')) {
+            resolve(null);
+            return;
+          }
           console.error(`Error al obtener retiro por ${by}:`, error);
           reject(error);
         });

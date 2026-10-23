@@ -9,7 +9,7 @@
       <!-- Botón de refrescar -->
       <p-button type="button" icon="pi pi-refresh" severity="secondary" [text]="true" [loading]="loading()" pTooltip="Refrescar datos" (onClick)="refreshData()" [attr.aria-label]="'Refrescar datos'"> </p-button>
 
-      @if (isSuperAdmin) {
+      @if (canManageAssignments) {
         <p-button type="button" icon="pi pi-sliders-h" label="Asignaciones" severity="secondary" [disabled]="loading()" (onClick)="showAssignmentDialog()" />
       }
 
@@ -35,13 +35,17 @@
   </div>
 </div>
 
-<p-dialog header="Asignar casas de retiro a ciudades" [visible]="assignmentDialogVisible()" (visibleChange)="assignmentDialogVisible.set($event)" [modal]="true" [draggable]="false" [resizable]="false" [style]="{ width: 'min(58rem, calc(100vw - 2rem))' }">
-  <p class="mb-4 text-sm text-gray-600">Selecciona una o varias casas y una o varias ciudades. La ficha global se comparte; solo se crea o elimina la relación con cada ciudad.</p>
+<p-dialog [header]="isSuperAdmin ? 'Asignar casas de retiro a ciudades' : 'Asignar casas de retiro a tu ciudad'" [visible]="assignmentDialogVisible()" (visibleChange)="assignmentDialogVisible.set($event)" [modal]="true" [draggable]="false" [resizable]="false" [style]="{ width: 'min(58rem, calc(100vw - 2rem))' }">
+  <p class="mb-4 text-sm text-gray-600">{{ isSuperAdmin ? 'Selecciona una o varias casas y una o varias ciudades.' : 'Selecciona las casas que deseas relacionar con tu ciudad.' }} La ficha global se comparte; solo se crea o elimina la relación con cada ciudad.</p>
 
-  <div class="mb-4 flex gap-2 rounded-lg bg-gray-100 p-1">
-    <button type="button" class="flex-1 rounded-md px-3 py-2 text-sm font-semibold transition" [class.bg-white]="assignmentMode() === 'associate'" [class.shadow-sm]="assignmentMode() === 'associate'" [class.text-blue-700]="assignmentMode() === 'associate'" (click)="assignmentMode.set('associate')">Asociar</button>
-    <button type="button" class="flex-1 rounded-md px-3 py-2 text-sm font-semibold transition" [class.bg-white]="assignmentMode() === 'unassociate'" [class.shadow-sm]="assignmentMode() === 'unassociate'" [class.text-red-700]="assignmentMode() === 'unassociate'" (click)="assignmentMode.set('unassociate')">Desasociar</button>
-  </div>
+  @if (assignmentPermissions().canAssign && assignmentPermissions().canUnassign) {
+    <div class="mb-4 flex gap-2 rounded-lg bg-gray-100 p-1">
+      <button type="button" class="flex-1 rounded-md px-3 py-2 text-sm font-semibold transition" [class.bg-white]="assignmentMode() === 'associate'" [class.shadow-sm]="assignmentMode() === 'associate'" [class.text-red-700]="assignmentMode() === 'associate'" (click)="assignmentMode.set('associate')">Asignar</button>
+      <button type="button" class="flex-1 rounded-md px-3 py-2 text-sm font-semibold transition" [class.bg-white]="assignmentMode() === 'unassociate'" [class.shadow-sm]="assignmentMode() === 'unassociate'" [class.text-red-700]="assignmentMode() === 'unassociate'" (click)="assignmentMode.set('unassociate')">Desasignar</button>
+    </div>
+  } @else {
+    <p class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{{ assignmentMode() === 'associate' ? 'Puedes asignar casas de retiro a tu ciudad.' : 'Puedes desasignar casas de retiro de tu ciudad.' }}</p>
+  }
 
   @if (assignmentLoading()) {
     <div class="flex min-h-48 items-center justify-center gap-2 text-gray-500"><i class="pi pi-spin pi-spinner"></i> Cargando casas y ciudades...</div>
@@ -71,7 +75,7 @@
           }
         </div>
       </section>
-
+      @if (isSuperAdmin) {
       <section class="min-w-0 rounded-xl border border-gray-200 p-3">
         <div class="mb-2 flex items-center justify-between gap-2">
           <h2 class="font-semibold">Ciudades <span class="text-sm font-normal text-gray-500">({{ selectedCityIds().length }} seleccionadas)</span></h2>
@@ -90,6 +94,12 @@
           }
         </div>
       </section>
+      } @else {
+        <section class="min-w-0 rounded-xl border border-gray-200 p-3 md:col-span-2">
+          <h2 class="font-semibold">Ciudad</h2>
+          <p class="mt-2 text-sm text-gray-600">La operación se aplicará únicamente a {{ assignmentOverview().cities[0]?.label || 'tu ciudad' }}.</p>
+        </section>
+      }
     </div>
 
     <div class="mt-4 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-600">
@@ -113,6 +123,6 @@
 
   <ng-template #footer>
     <p-button label="Cancelar" severity="secondary" [outlined]="true" (onClick)="assignmentDialogVisible.set(false)" [disabled]="assignmentSaving()" />
-    <p-button [label]="assignmentMode() === 'associate' ? 'Asociar' : 'Desasociar'" [icon]="assignmentMode() === 'associate' ? 'pi pi-link' : 'pi pi-times'" [severity]="assignmentMode() === 'associate' ? 'primary' : 'danger'" (onClick)="saveAssignments()" [loading]="assignmentSaving()" [disabled]="!selectedRelationCount || assignmentLoading() || assignmentLinksLoading() || !!assignmentError() || assignmentSaving()" />
+    <p-button [label]="assignmentMode() === 'associate' ? 'Asignar' : 'Desasignar'" [icon]="assignmentMode() === 'associate' ? 'pi pi-link' : 'pi pi-times'" severity="danger" (onClick)="saveAssignments()" [loading]="assignmentSaving()" [disabled]="!selectedRelationCount || assignmentLoading() || assignmentLinksLoading() || !!assignmentError() || assignmentSaving()" />
   </ng-template>
 </p-dialog>

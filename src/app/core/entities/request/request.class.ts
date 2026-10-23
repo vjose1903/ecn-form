@@ -10,6 +10,8 @@ import { inject, runInInjectionContext } from '@angular/core';
 
 export class RequestClass {
   id: string = '';
+  readableSections: string[] | null = null;
+  editableSections: string[] | null = null;
   is_active: boolean = true;
   how_find_us: string = '';
   retreat: string = '';
@@ -46,6 +48,14 @@ export class RequestClass {
 
   get isArchived(): boolean {
     return Boolean(this.archived_at);
+  }
+
+  canReadDetailSection(section: string): boolean {
+    return this.readableSections === null || this.readableSections.includes(section);
+  }
+
+  canEditDetailSection(section: string): boolean {
+    return this.editableSections === null || this.editableSections.includes(section);
   }
 
   get displayArchivedAt(): string {
@@ -131,7 +141,7 @@ export class RequestClass {
     return this._retreatData;
   }
 
-  constructor(request?: RequestI & { retreat?: any }) {
+  constructor(request?: RequestI & { retreat?: any; readableSections?: string[] | null; editableSections?: string[] | null }) {
     if (request) {
       this.initializeFromData(request);
     }
@@ -181,8 +191,10 @@ export class RequestClass {
   /**
    * Inicializa la instancia desde datos externos
    */
-  private initializeFromData(request: RequestI & { retreat?: any }): void {
+  private initializeFromData(request: RequestI & { retreat?: any; readableSections?: string[] | null; editableSections?: string[] | null }): void {
     this.id = request.id || '';
+    this.readableSections = request.readableSections ?? null;
+    this.editableSections = request.editableSections ?? null;
     this.how_find_us = request.how_find_us || '';
     this.archived_retreat_id = request.archived_retreat_id || '';
     this.archived_at = request.archived_at ? fun.convertFirebaseTimestamp(request.archived_at) : null;
@@ -384,10 +396,9 @@ export class RequestClass {
    * Clona la instancia
    */
   clone(): RequestClass {
-    const request = this.asJson();
-    request.id = '';
-
-    return new RequestClass(request as any);
+    return new RequestClass({
+      ...this.asJson(), id: '', readableSections: this.readableSections, editableSections: this.editableSections,
+    } as any);
   }
 
   /**
@@ -395,6 +406,8 @@ export class RequestClass {
    */
   updateFrom(other: RequestClass): void {
     this.id = other.id;
+    this.readableSections = other.readableSections;
+    this.editableSections = other.editableSections;
     this.how_find_us = other.how_find_us;
     this.retreat = other.retreat;
     this.have_wedding_date = other.have_wedding_date;

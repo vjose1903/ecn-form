@@ -45,8 +45,9 @@ exports.updateRequestDetails = (0, https_1.onCall)(async (request) => {
     }
     const relationshipKeys = ["how_find_us", "how_find_us_other", "have_wedding_date", "wedding_date", "dating_period_year", "dating_period_month"];
     const invitationKeys = ["who_invited_you", "who_invited_you_phone"];
-    const statusKeys = ["status", "is_active", "is_informado"];
-    for (const [group, keys] of [["relationship", relationshipKeys], ["invitation", invitationKeys], ["status", statusKeys]]) {
+    const statusKeys = ["status", "is_active"];
+    const informedKeys = ["is_informado"];
+    for (const [group, keys] of [["relationship", relationshipKeys], ["invitation", invitationKeys], ["status", statusKeys], ["informed", informedKeys]]) {
         const normalized = Object.fromEntries(keys.filter(key => key in source).map(key => [key, source[key]]));
         if (Object.keys(normalized).length)
             sections[group] = normalized;
@@ -66,11 +67,20 @@ exports.updateRequestDetails = (0, https_1.onCall)(async (request) => {
         if (!root.exists)
             throw new https_1.HttpsError("not-found", "No se encontró la solicitud.");
         const entries = Object.entries(sections);
-        const snapshots = await Promise.all(entries.map(([group]) => transaction.get(rootRef.collection("details").doc(group))));
+        const informedIndex = entries.findIndex(([group]) => group === "informed");
+        const statusIndex = entries.findIndex(([group]) => group === "status");
+        const [snapshots, legacyStatusSnapshot] = await Promise.all([
+            Promise.all(entries.map(([group]) => transaction.get(rootRef.collection("details").doc(group)))),
+            informedIndex !== -1 && statusIndex === -1
+                ? transaction.get(rootRef.collection("details").doc("status"))
+                : Promise.resolve(null),
+        ]);
         const eventAt = firestore_1.FieldValue.serverTimestamp();
         for (let index = 0; index < entries.length; index++) {
             const [group, next] = entries[index];
-            const previous = snapshots[index].data() ?? {};
+            const previous = snapshots[index].data() ?? (group === "informed" && legacyStatusSnapshot?.exists
+                ? { is_informado: legacyStatusSnapshot.get("is_informado") }
+                : {});
             for (const [field, value] of Object.entries(next)) {
                 if (JSON.stringify(previous[field] ?? null) !== JSON.stringify(value ?? null)) {
                     changed[`${group}.${field}`] = { before: previous[field] ?? null, after: value ?? null };

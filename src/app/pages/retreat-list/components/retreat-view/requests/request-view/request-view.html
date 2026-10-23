@@ -4,7 +4,9 @@
 @if (request(); as req) {
 <div class="request-view">
   <div class="request-overview">
+  @if (req.canReadDetailSection('status') || req.canReadDetailSection('relationship')) {
   <section class="request-summary" aria-label="Información principal de la solicitud">
+    @if (req.canReadDetailSection('status')) {
     <div class="request-summary__item">
       <view-item title="Estado" icon="pi pi-info-circle" [content]="req.statusInfo.label">
         <p-tag [severity]="req.statusInfo.severity" [value]="req.statusInfo.label" [rounded]="true" />
@@ -18,6 +20,8 @@
         <view-item title="Fecha de archivado" icon="pi pi-inbox" [content]="req.displayArchivedAt" />
       </div>
     }
+    }
+    @if (req.canReadDetailSection('relationship')) {
     <div class="request-summary__item">
       <view-item title="Tiempo de noviazgo" icon="pi pi-id-card" [content]="req.displayDatingPeriod" />
     </div>
@@ -29,29 +33,35 @@
         <view-item title="Fecha de boda" icon="pi pi-calendar" [content]="req.displayWeddingDate" />
       </div>
     }
+    }
   </section>
+  }
 
+  @if (req.canReadDetailSection('relationship') || req.canReadDetailSection('invitation')) {
   <section class="request-origin" aria-label="Cómo conocieron el retiro">
+    @if (req.canReadDetailSection('relationship') && req.displayHowFindUs) {
     <div class="request-summary__item">
       <view-item title="Cómo se enteraron del retiro" icon="pi pi-megaphone" [content]="req.displayHowFindUs" />
     </div>
-    @if (req.who_invited_you) {
+    }
+    @if (req.canReadDetailSection('invitation') && req.who_invited_you) {
       <div class="request-summary__item">
         <view-item title="Quién los invitó al retiro" icon="pi pi-user-plus" [content]="req.who_invited_you" />
       </div>
     }
-    @if (req.who_invited_you_phone) {
+    @if (req.canReadDetailSection('invitation') && req.who_invited_you_phone) {
       <div class="request-summary__item">
         <view-item title="Teléfono de quien los invitó" icon="pi pi-phone" [content]="req.who_invited_you_phone" />
       </div>
     }
   </section>
+  }
 
   </div>
 
   <div class="grid grid-cols-12 gap-6">
     <div class="col-span-12 md:col-span-6">
-      <couple-view [couple]="req.she" [coupleType]="CoupleType.SHE" />
+      <couple-view [couple]="req.she" [coupleType]="CoupleType.SHE" [readableSections]="req.readableSections" />
     </div>
 
     <div class="col-span-12 md:hidden">
@@ -59,7 +69,7 @@
     </div>
 
     <div class="col-span-12 md:col-span-6">
-      <couple-view [couple]="req.he" [coupleType]="CoupleType.HE" />
+      <couple-view [couple]="req.he" [coupleType]="CoupleType.HE" [readableSections]="req.readableSections" />
     </div>
 
     <div class="col-span-12"></div>
@@ -76,8 +86,10 @@
 
     <div class="request-view__actions-buttons flex gap-3">
       @if (!isArchivedView()) {
-      <p-button type="button" label="Aceptar solicitud" severity="success" [disabled]="loading() || req.status == RequestStatus.ACCEPTED" icon="pi pi-check" class="w-auto" (onClick)="toggleStatus(RequestStatus.ACCEPTED)" size="small" />
-      <p-button type="button" label="Rechazar solicitud" severity="danger" [disabled]="loading() || req.status == RequestStatus.REJECTED" icon="pi pi-times" class="w-auto" (onClick)="toggleStatus(RequestStatus.REJECTED)" size="small" />
+      @if (req.canEditDetailSection('status')) {
+      <p-button type="button" label="Aceptar solicitud" severity="success" [disabled]="loading() || (req.canReadDetailSection('status') && req.status == RequestStatus.ACCEPTED)" icon="pi pi-check" class="w-auto" (onClick)="toggleStatus(RequestStatus.ACCEPTED)" size="small" />
+      <p-button type="button" label="Rechazar solicitud" severity="danger" [disabled]="loading() || (req.canReadDetailSection('status') && req.status == RequestStatus.REJECTED)" icon="pi pi-times" class="w-auto" (onClick)="toggleStatus(RequestStatus.REJECTED)" size="small" />
+      }
       } @else {
       <p-button type="button" label="Transferir solicitud" severity="help" [disabled]="loading()" icon="pi pi-send" class="w-auto" (onClick)="openTransferModal()" size="small" />
       <p-button type="button" label="Desarchivar solicitud" severity="success" [disabled]="loading()" icon="pi pi-replay" class="w-auto" (onClick)="unarchiveRequest()" size="small" />

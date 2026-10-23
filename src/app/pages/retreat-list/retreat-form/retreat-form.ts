@@ -50,6 +50,7 @@ export class RetreatForm implements OnInit, OnDestroy {
   FormControlName = FormControlName;
 
   retreatHomes = signal<RetreatHomeClass[]>([]);
+  retreatHomeListUnavailable = signal(false);
   mixedModalityDates = signal<{ date: string; label: string }[]>([]);
   mixedModalityData = signal<{ [key: string]: RetreatModalityType }>({});
   retreatHomesLoading = signal(true);
@@ -82,6 +83,7 @@ export class RetreatForm implements OnInit, OnDestroy {
   get isFormValid(): boolean {
     const form = this.formGroup();
     if (!form || !form.valid) return false;
+    if (this.retreatHomeListUnavailable() && !form.get(FormControlName.retreat_home)?.value) return false;
 
     // Si es modalidad mixta, verificar que todas las fechas tengan valor
     if (form.get(FormControlName.modality)?.value === RetreatModality.MIXTO) {
@@ -154,14 +156,24 @@ export class RetreatForm implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Error al cargar casas de retiro:', error);
     } finally {
+      this.retreatHomeListUnavailable.set(this.retreatHomeService.retreatHomeListPermissionDenied);
+      this.updateRetreatHomeOptions(this.retreatHomeService.retreatHomes);
       this.retreatHomesLoading.set(this.retreatHomeService.loadingRetreatHomes);
     }
   }
 
+  private updateRetreatHomeOptions(homes: RetreatHomeClass[]): void {
+    const availableHomes = homes.filter(home => home.is_active);
+    const relatedHome = this.retreat?.retreatHomeData;
+    if (this.retreatHomeListUnavailable() && relatedHome?.id && !availableHomes.some(home => home.id === relatedHome.id)) {
+      availableHomes.unshift(relatedHome);
+    }
+    this.retreatHomes.set(availableHomes);
+  }
+
   private setupRetreatHomeStreams(): void {
     this.retreatHomeService.retreatHomes$.pipe(takeUntil(this.destroy$)).subscribe(retreatHomes => {
-      const activeRetreatHomes = retreatHomes.filter(retreatHome => retreatHome.is_active);
-      this.retreatHomes.set(activeRetreatHomes);
+      this.updateRetreatHomeOptions(retreatHomes);
     });
 
     this.retreatHomeService.loadingRetreatHomes$.pipe(takeUntil(this.destroy$)).subscribe(loading => {
@@ -169,8 +181,7 @@ export class RetreatForm implements OnInit, OnDestroy {
     });
 
     if (this.retreatHomeService.retreatHomes.length > 0) {
-      const activeRetreatHomes = this.retreatHomeService.retreatHomes.filter(retreatHome => retreatHome.is_active);
-      this.retreatHomes.set(activeRetreatHomes);
+      this.updateRetreatHomeOptions(this.retreatHomeService.retreatHomes);
       this.retreatHomesLoading.set(false);
     }
   }
@@ -204,7 +215,8 @@ export class RetreatForm implements OnInit, OnDestroy {
           // max_request_date, number, retreat_home, is_active, accept_requests
           form.get(FormControlName.max_request_date)?.enable();
           form.get(FormControlName.number)?.enable();
-          form.get(FormControlName.retreat_home)?.enable();
+          if (this.retreatHomeListUnavailable()) form.get(FormControlName.retreat_home)?.disable();
+          else form.get(FormControlName.retreat_home)?.enable();
           form.get(FormControlName.is_active)?.enable();
           form.get(FormControlName.accept_requests)?.enable();
 

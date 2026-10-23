@@ -25,6 +25,8 @@ export class RetreatHomeDataGrid implements OnInit, OnDestroy {
   @Input() item!: RetreatHomeClass;
   @Input() showActions: boolean = true;
   @Input() enableSelection: boolean = false;
+  @Input() canAssignHomes: boolean = false;
+  @Input() canUnassignHomes: boolean = false;
   @Input() onAssignmentRequest?: (homeId: string) => void;
 
   loading = signal(false);
@@ -86,6 +88,8 @@ export class RetreatHomeDataGrid implements OnInit, OnDestroy {
       data: {
         retreatHome: this.item,
         onAssignmentRequest: this.onAssignmentRequest,
+        canAssignHomes: this.canAssignHomes,
+        canUnassignHomes: this.canUnassignHomes,
       },
       breakpoints: { '960px': '75vw', '640px': '90vw' },
     });

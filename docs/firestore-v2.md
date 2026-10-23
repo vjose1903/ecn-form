@@ -21,7 +21,7 @@ global_audit_logs/{auditId}
 
 Una solicitud mantiene el mismo ID aunque se transfiera a otro retiro. La transferencia actualiza `retreat_id`; pagos e historial permanecen bajo el registro estable. Las consultas por retiro usan `where('retreat_id', '==', retreatId)` y paginación.
 
-Los datos de la pareja se dividen por secciones (`couple_basic`, `contact`, `identity`, `family`, `relationship`, entre otras). Cada sección vive en `details/{sectionId}` y los roles reciben permisos de lectura/creación/edición por sección. El catálogo de secciones permitido lo define la plataforma; los roles pueden combinarlo sin desplegar código.
+Los datos de la pareja se dividen por secciones (`couple_basic`, `contact`, `identity`, `family`, `relationship`, entre otras). Cada sección vive en `details/{sectionId}` y los roles reciben permisos de lectura y edición por sección. Las solicitudes solo se crean mediante el formulario público dedicado de las parejas, cuyas funciones callable no requieren sesión y guardan los datos con Admin SDK; la plataforma administrativa no otorga permisos de creación y las reglas de Firestore bloquean escrituras directas de creación. El estado de la solicitud (`status`: pendiente, aceptada o rechazada) y el indicador de información (`is_informado`) usan permisos independientes (`status` e `informed`). Como los registros existentes guardan ambos en `details/status`, el callable `getRequestFieldGroups` devuelve únicamente los campos autorizados; el cliente no puede leer directamente esos documentos. Los cambios de `is_informado` nuevos se guardan en `details/informed`, y la lectura mantiene compatibilidad con el valor antiguo sin volver a ejecutar la migración.
 
 ## Identificadores de documentos
 
@@ -40,8 +40,13 @@ Los IDs incluyen datos operativos reconocibles, como el número de retiro, fecha
 
 ## Permisos y auditoría
 
-- `city/{cityId}/members/{uid}` indica la membresía activa y su `role_id`.
-- `city/{cityId}/roles/{roleId}` contiene las acciones y grupos de campos permitidos.
+- `city/{cityId}/members/{uid}` indica la membresía activa y su `role_id`. Cualquier miembro activo puede leer los datos básicos de su propia ciudad; las ciudades y su administración siguen reservadas al superadmin. La lectura de la ciudad no es un permiso configurable del rol.
+- `city/{cityId}/roles/{roleId}` contiene las acciones y grupos de campos permitidos; cada miembro activo puede consultar únicamente el rol que tiene asignado para resolver qué opciones mostrar en el menú.
+- La administración de ciudades está reservada al superadmin. Al crear una ciudad, el callable `saveCity` copia atómicamente desde La Vega los roles `city_admin`, `operador` y `consulta`, incluyendo sus permisos; al `operador` de la nueva ciudad le activa además `retreats.create`, las acciones de archivar/restaurar/transferir solicitudes, las acciones de historial y la edición de todas las secciones de solicitudes. Esta configuración solo se aplica al crear ciudades y no modifica los roles existentes de La Vega. Una edición solo modifica los datos descriptivos de la ciudad.
+- Consultar una entidad relacionada por el ID guardado en una entidad que el usuario puede leer es una lectura puntual y de solo lectura; no concede acceso al listado ni a la edición de la entidad relacionada. Por ejemplo, un retiro puede mostrar el nombre de su casa enlazada aunque el rol no pueda administrar el catálogo.
+- En formularios, si falta permiso para listar una entidad relacionada, se conserva visible la relación ya guardada y su selector queda bloqueado con un aviso; no se debe borrar ni sustituir el valor al guardar otros campos. Las acciones que requieren elegir otra entidad quedan bloqueadas hasta que el usuario pueda consultar sus opciones.
+- En casas de retiro, `retreat_homes.assign` habilita asignar al usuario autenticado y `retreat_homes.unassign` habilita desasignar; los miembros quedan limitados a su ciudad activa y las reglas de Firestore validan cada operación. El superadmin conserva la administración entre ciudades.
+- Las imágenes de las casas de retiro se administran con `retreat_homes.create` o `retreat_homes.update`; no existe un recurso independiente `files` para los roles. Los recibos de pagos se rigen por los permisos de `payments`.
 - Las reglas deniegan por defecto, restringen cada lectura a la ciudad y separan permisos de listado, lectura y escritura.
 - Los cambios de cuenta y rol pasan por Cloud Functions. Los cambios de documentos de ciudad generan eventos de auditoría con actor, hora de servidor, ruta y diferencias anteriores/nuevas.
 - Los registros de auditoría no son editables por clientes. Las identidades `service_account` deben incluir el actor original en el evento de negocio cuando la operación venga del backend.

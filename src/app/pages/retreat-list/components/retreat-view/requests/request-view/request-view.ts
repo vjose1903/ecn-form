@@ -108,6 +108,7 @@ export class RequestView implements OnInit, AfterViewInit {
               {
                 label: this.request()?.is_informado ? 'Marcar como no informado' : 'Marcar como informado',
                 icon: this.request()?.is_informado ? 'pi pi-eye-slash' : 'pi pi-check-circle',
+                visible: Boolean(this.request()?.canReadDetailSection('informed') && this.request()?.canEditDetailSection('informed')),
                 command: () => void this.togglePreRetreatInformed(),
               },
               {
@@ -181,7 +182,8 @@ export class RequestView implements OnInit, AfterViewInit {
 
   async togglePreRetreatInformed(): Promise<void> {
     const currentRequest = this.request();
-    if (this.loading() || !currentRequest || !this.retreat) return;
+    if (this.loading() || !currentRequest || !this.retreat
+      || !currentRequest.canReadDetailSection('informed') || !currentRequest.canEditDetailSection('informed')) return;
 
     const isInformado = !currentRequest.is_informado;
     this.loading.set(true);
@@ -191,7 +193,7 @@ export class RequestView implements OnInit, AfterViewInit {
         this.retreat,
         this.isArchivedView()
       );
-      this._request.set(new RequestClass(updated));
+      this._request.set(new RequestClass({ ...updated, readableSections: currentRequest.readableSections, editableSections: currentRequest.editableSections }));
       this.config.data.request = this._request();
       this.actions = this.buildActions();
       Ss.toastService.success({
@@ -225,7 +227,7 @@ export class RequestView implements OnInit, AfterViewInit {
 
     dialogRef?.onClose.subscribe((updated?: RequestI) => {
       if (!updated) return;
-      this._request.set(new RequestClass(updated));
+      this._request.set(new RequestClass({ ...updated, readableSections: this.request()?.readableSections ?? null, editableSections: this.request()?.editableSections ?? null }));
       this.config.data.request = this._request();
     });
   }
@@ -435,7 +437,7 @@ export class RequestView implements OnInit, AfterViewInit {
     dialogRef.onClose.subscribe((result: RequestI | undefined) => {
       if (result) {
         if (result && result.id) {
-          const newRequest = new RequestClass(result);
+          const newRequest = new RequestClass({ ...result, readableSections: this.request()?.readableSections ?? null, editableSections: this.request()?.editableSections ?? null });
           this._request.set(newRequest);
           this.config.data.request = newRequest;
         }

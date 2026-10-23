@@ -1,16 +1,45 @@
 <main class="users-page">
   <header>
-    <div><p class="eyebrow">Administración</p><h1>Usuarios</h1></div>
-    <p-button label="Crear usuario" icon="pi pi-user-plus" (onClick)="openCreate()" [disabled]="!cityId() || !roleChoices.length" />
+    <div><h1>Usuarios</h1></div>
+    <p-button label="Crear usuario" icon="pi pi-user-plus" (onClick)="openCreate()" [disabled]="!cityId() || !roleChoices.length || roleListUnavailable()" />
   </header>
 
+  <section class="users-filters" aria-label="Filtros de usuarios">
+    <div class="users-filters__mobile-toggle">
+      <span>Filtros</span>
+      <p-button [icon]="filtersExpanded() ? 'pi pi-times' : 'pi pi-filter'" [text]="true" severity="secondary" [attr.aria-label]="filtersExpanded() ? 'Ocultar filtros' : 'Mostrar filtros'" (onClick)="toggleFilters()" />
+    </div>
+    <div class="users-filter-controls" [class.users-filter-controls--expanded]="filtersExpanded()">
+      <label class="users-filter-search">
+        <span>Buscar</span>
+        <span class="users-filter-search__input">
+          <i class="pi pi-search" aria-hidden="true"></i>
+          <input pInputText type="search" placeholder="Buscar por nombre, correo o rol en esta página..." [value]="searchTerm()" (input)="searchTerm.set($any($event.target).value)" />
+        </span>
+      </label>
+      <label class="users-filter-status">
+        <span>Estado</span>
+        <p-select [options]="statusFilterOptions" optionLabel="label" optionValue="value" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)" appendTo="body" />
+      </label>
+    </div>
+    @if (hasActiveFilters) {
+      <div class="users-active-filters" role="status">
+        <span><i class="pi pi-filter" aria-hidden="true"></i> Filtros activos: <strong>{{ activeFiltersText }}</strong></span>
+        <p-button type="button" icon="pi pi-filter-slash" severity="secondary" [text]="true" [rounded]="true" size="small" aria-label="Limpiar filtros" (onClick)="clearFilters()" />
+      </div>
+    }
+  </section>
+
   <section class="users-section">
-    <h2>Usuarios de la ciudad</h2>
     @if (loading()) {
-      <p class="section-hint">Cargando usuarios...</p>
+      <div class="users-loading" role="status" aria-live="polite">
+        <span class="users-loading__spinner" aria-hidden="true"></span>
+        <span>Cargando usuarios...</span>
+      </div>
     } @else {
       <div class="table-scroll"><table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th class="actions-heading">Acciones</th></tr></thead>
-        <tbody>@for (member of members(); track member.uid) {
+        <tbody>
+          @for (member of filteredMembers; track member.uid) {
           <tr>
             <td data-label="Nombre">{{ member.display_name || member.email || member.uid }}</td>
             <td data-label="Correo">{{ member.email || '—' }}</td>
@@ -28,9 +57,29 @@
             </td>
           </tr>
         } @empty {
-          <tr><td colspan="5" class="empty-state">No hay usuarios registrados para esta ciudad.</td></tr>
-        }</tbody>
+          <tr><td colspan="5" class="empty-state">{{ hasActiveFilters ? 'Ningún usuario de esta página coincide con los filtros.' : 'No hay usuarios registrados para esta ciudad.' }}</td></tr>
+          }
+        </tbody>
       </table></div>
+      <footer class="members-footer" aria-label="Paginación de usuarios">
+      <div class="pagination-controls">
+        <p-button icon="pi pi-angle-double-left" [text]="true" [rounded]="true" aria-label="Primera página" [disabled]="loading() || currentPage() <= 1" (onClick)="goToFirstPage()" />
+        <p-button icon="pi pi-angle-left" [text]="true" [rounded]="true" aria-label="Página anterior" [disabled]="loading() || currentPage() <= 1" (onClick)="goToPreviousPage()" />
+        <span class="pagination-page" aria-current="page">{{ currentPage() }}</span>
+        <p-button icon="pi pi-angle-right" [text]="true" [rounded]="true" aria-label="Página siguiente" [disabled]="loading() || !hasNextPage()" (onClick)="goToNextPage()" />
+        <p-button icon="pi pi-angle-double-right" [text]="true" [rounded]="true" aria-label="Última página" [disabled]="loading() || !hasNextPage()" (onClick)="goToLastPage()" />
+      </div>
+      <p-select
+        class="page-size-select"
+        [options]="pageSizeOptions"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="pageSize()"
+        (ngModelChange)="changePageSize($event)"
+        aria-label="Cantidad de usuarios por página"
+        [disabled]="loading()"
+        appendTo="body" />
+      </footer>
     }
   </section>
 </main>
@@ -42,7 +91,9 @@
       <label class="modal-field-full">Nombre<input pInputText [(ngModel)]="editName" name="editName" required></label>
       <label class="modal-field-full">Correo<input pInputText [(ngModel)]="editEmail" name="editEmail" type="email" required></label>
       <label>Teléfono<input pInputText [(ngModel)]="editPhone" name="editPhone"></label>
-      <label>Rol<p-select [options]="roleChoices" [(ngModel)]="editRoleId" name="editRole" placeholder="Seleccionar rol" required /></label>
+      <label>Rol<p-select [options]="roleChoices" [(ngModel)]="editRoleId" name="editRole" placeholder="Seleccionar rol" required [disabled]="roleListUnavailable()" />
+        @if (roleListUnavailable()) { <small class="section-hint">No tienes permiso para ver el listado de roles. El rol actual se muestra solo como lectura.</small> }
+      </label>
       @if (canManageSuperAdmins) {
         <label class="superadmin-option modal-field-full">
           <input type="checkbox" [(ngModel)]="editSuperAdmin" name="editSuperAdmin">
@@ -57,8 +108,10 @@
       <label class="modal-field-full">Nombre<input pInputText [(ngModel)]="memberName" name="memberName" placeholder="Nombre completo" required></label>
       <label class="modal-field-full">Correo<input pInputText [(ngModel)]="memberEmail" name="memberEmail" type="email" placeholder="correo@ejemplo.com" required></label>
       <label>Teléfono<input pInputText [(ngModel)]="memberPhone" name="memberPhone" placeholder="Teléfono"></label>
-      <label>Rol<p-select [options]="roleChoices" [(ngModel)]="memberRoleId" name="memberRole" placeholder="Seleccionar rol" required /></label>
-      <div class="dialog-actions"><p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" (onClick)="closeEditor()" /><p-button type="submit" label="Crear cuenta" icon="pi pi-user-plus" [loading]="saving()" [disabled]="!cityId() || !roleChoices.length" /></div>
+      <label>Rol<p-select [options]="roleChoices" [(ngModel)]="memberRoleId" name="memberRole" placeholder="Seleccionar rol" required [disabled]="roleListUnavailable()" />
+        @if (roleListUnavailable()) { <small class="section-hint">No tienes permiso para ver el listado de roles; no puedes asignar uno nuevo.</small> }
+      </label>
+      <div class="dialog-actions"><p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" (onClick)="closeEditor()" /><p-button type="submit" label="Crear cuenta" icon="pi pi-user-plus" [loading]="saving()" [disabled]="!cityId() || !roleChoices.length || roleListUnavailable()" /></div>
     </form>
   }
 </p-dialog>
