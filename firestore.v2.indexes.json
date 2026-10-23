@@ -7,6 +7,22 @@
         {"fieldPath": "retreat_id", "order": "ASCENDING"},
         {"fieldPath": "is_archived", "order": "ASCENDING"}
       ]
+    },
+    {
+      "collectionGroup": "members",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "status", "order": "ASCENDING"},
+        {"fieldPath": "__name__", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "members",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "status", "order": "DESCENDING"},
+        {"fieldPath": "__name__", "order": "DESCENDING"}
+      ]
     }
   ],
   "fieldOverrides": [

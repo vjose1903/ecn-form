@@ -254,12 +254,15 @@ const sendMemberInvitationEmail = async ({ cityId, email, displayName, idempoten
         idempotencyKey,
     });
 };
-exports.sendCityMemberInvitation = (0, firestore_1.onDocumentCreated)({ database: "ecn-platform-v2", document: "city/{cityId}/members/{uid}", secrets: [resend_1.resendApiKey], retry: true }, async (event) => {
-    const member = event.data?.data();
-    if (!member || member.invitation_status !== "pending")
+exports.sendCityMemberInvitation = (0, firestore_1.onDocumentWritten)({ database: "ecn-platform-v2", document: "city/{cityId}/members/{uid}", secrets: [resend_1.resendApiKey], retry: true }, async (event) => {
+    const snapshot = event.data?.after;
+    const member = snapshot?.data();
+    if (!snapshot || !member || member.invitation_status !== "pending")
         return;
-    const latestMember = await event.data?.ref.get();
-    if (latestMember?.get("invitation_status") !== "pending")
+    const invitationRequestId = String(member.invitation_request_id ?? "");
+    const latestMember = await snapshot.ref.get();
+    if (latestMember?.get("invitation_status") !== "pending" ||
+        String(latestMember?.get("invitation_request_id") ?? "") !== invitationRequestId)
         return;
     const { cityId, uid } = event.params;
     const profile = await firebase_admin_1.v2Db.doc(`user/${uid}`).get();
@@ -271,9 +274,18 @@ exports.sendCityMemberInvitation = (0, firestore_1.onDocumentCreated)({ database
         cityId,
         email,
         displayName,
-        idempotencyKey: `city-member-invitation-${uid}`,
+        idempotencyKey: `city-member-invitation-${uid}-${invitationRequestId || "initial"}`,
     });
-    await event.data?.ref.update({ invitation_status: "sent", invitation_sent_at: firestore_2.FieldValue.serverTimestamp() });
+    await firebase_admin_1.v2Db.runTransaction(async (transaction) => {
+        const current = await transaction.get(snapshot.ref);
+        if (current.get("invitation_status") === "pending" &&
+            String(current.get("invitation_request_id") ?? "") === invitationRequestId) {
+            transaction.update(snapshot.ref, {
+                invitation_status: "sent",
+                invitation_sent_at: firestore_2.FieldValue.serverTimestamp(),
+            });
+        }
+    });
 });
 exports.resendCityMemberInvitation = (0, https_1.onCall)({ secrets: [resend_1.resendApiKey], invoker: "public" }, async (request) => {
     const data = request.data;
@@ -314,7 +326,7 @@ exports.resendCityMemberInvitation = (0, https_1.onCall)({ secrets: [resend_1.re
         : actorUid;
     let authEmailUpdated = false;
     let profileEmailUpdated = false;
-    let emailSent = false;
+    let invitationQueued = false;
     try {
         if (emailChanged) {
             await firebase_admin_1.admin.auth().updateUser(uid, { email, emailVerified: false });
@@ -324,20 +336,16 @@ exports.resendCityMemberInvitation = (0, https_1.onCall)({ secrets: [resend_1.re
             await profileRef.set({ email, updated_by: actorCanUpdate, updated_at: firestore_2.FieldValue.serverTimestamp() }, { merge: true });
             profileEmailUpdated = true;
         }
-        await sendMemberInvitationEmail({
-            cityId,
-            email,
-            displayName: String(profile.get("display_name") ?? authUser.displayName ?? ""),
-            idempotencyKey: `city-member-invitation-${uid}-${(0, node_crypto_1.randomBytes)(8).toString("hex")}`,
+        await memberRef.update({
+            invitation_status: "pending",
+            invitation_request_id: (0, node_crypto_1.randomBytes)(8).toString("hex"),
+            invitation_requested_at: firestore_2.FieldValue.serverTimestamp(),
         });
-        emailSent = true;
-        await memberRef.update({ invitation_status: "sent", invitation_sent_at: firestore_2.FieldValue.serverTimestamp() }).catch(error => {
-            console.error("No se pudo actualizar el estado de invitación:", JSON.stringify({ cityId, uid, error }));
-        });
+        invitationQueued = true;
         return { uid, email };
     }
     catch (error) {
-        if (!emailSent) {
+        if (!invitationQueued) {
             if (profileEmailUpdated)
                 await profileRef.set({ email: profileEmail }, { merge: true }).catch(() => undefined);
             if (authEmailUpdated)
@@ -495,23 +503,25 @@ exports.deleteCityMember = (0, https_1.onCall)(async (request) => {
     if (authUser.customClaims?.super_admin === true) {
         throw new https_1.HttpsError("failed-precondition", "Retira primero el estatus de super administrador para eliminar esta cuenta.");
     }
-    const [globalActivity, cities, nestedCollections] = await Promise.all([
+    const [globalActivity, cityActivity, cities, nestedCollections] = await Promise.all([
         firebase_admin_1.v2Db.collection("global_audit_logs").where("actor_uid", "==", uid).get(),
+        firebase_admin_1.v2Db.collectionGroup("audit_logs").where("actor_uid", "==", uid).limit(1).get(),
         firebase_admin_1.v2Db.collection("city").get(),
         profile.exists ? profileRef.listCollections() : Promise.resolve([]),
     ]);
-    const cityActivity = await Promise.all(cities.docs.map(city => firebase_admin_1.v2Db.collection(`city/${city.id}/audit_logs`).where("actor_uid", "==", uid).get()));
-    const hasAuditedActivity = [...cityActivity.flatMap(snapshot => snapshot.docs), ...globalActivity.docs].some(event => {
+    const hasCityActivity = !cityActivity.empty;
+    const hasGlobalActivity = globalActivity.docs.some(event => {
         const path = event.get("resource_path");
         return typeof path !== "string" || !path.startsWith(`user/${uid}/push_tokens/`);
     });
     const hasNonTokenProfileData = nestedCollections.some(collection => collection.id !== "push_tokens");
-    const otherMemberships = (await Promise.all(cities.docs
+    const membershipRefs = cities.docs
         .filter(city => city.id !== cityId)
-        .map(city => firebase_admin_1.v2Db.doc(`city/${city.id}/members/${uid}`).get())))
+        .map(city => firebase_admin_1.v2Db.doc(`city/${city.id}/members/${uid}`));
+    const otherMemberships = (membershipRefs.length ? await firebase_admin_1.v2Db.getAll(...membershipRefs) : [])
         .filter(snapshot => snapshot.exists);
     const activeOtherMemberships = otherMemberships.filter(snapshot => snapshot.get("status") === "active");
-    const canHardDelete = !hasAuditedActivity && !hasNonTokenProfileData && otherMemberships.length === 0;
+    const canHardDelete = !hasCityActivity && !hasGlobalActivity && !hasNonTokenProfileData && otherMemberships.length === 0;
     if (canHardDelete) {
         const profileData = profile.data() ?? {};
         const memberData = member.data() ?? {};
@@ -584,20 +594,57 @@ exports.listCityMembers = (0, https_1.onCall)(async (request) => {
     const data = request.data;
     const cityId = requireText(data.cityId, "La ciudad", 100);
     await (0, authorization_1.requireCityPermission)(request, cityId, "members", "list");
-    const members = await firebase_admin_1.v2Db.collection(`city/${cityId}/members`).get();
+    const pageSize = typeof data.pageSize === "number" ? data.pageSize : 20;
+    if (![10, 20, 50, 100, 200].includes(pageSize))
+        throw new https_1.HttpsError("invalid-argument", "El tamaño de página no es válido.");
+    const direction = data.direction ?? "first";
+    if (!["first", "next", "previous", "last"].includes(String(direction))) {
+        throw new https_1.HttpsError("invalid-argument", "La dirección de paginación no es válida.");
+    }
+    const cursor = data.cursor && typeof data.cursor === "object" ? data.cursor : null;
+    if ((direction === "next" || direction === "previous") && (!cursor || typeof cursor.uid !== "string" || typeof cursor.status !== "string")) {
+        throw new https_1.HttpsError("invalid-argument", "El cursor de paginación no es válido.");
+    }
+    const membersRef = firebase_admin_1.v2Db.collection(`city/${cityId}/members`);
+    const orderDirection = direction === "previous" || direction === "last" ? "desc" : "asc";
+    let pageQuery = membersRef.where("status", "!=", "deleted")
+        .orderBy("status", orderDirection)
+        .orderBy(firestore_2.FieldPath.documentId(), orderDirection);
+    if ((direction === "next" || direction === "previous") && cursor) {
+        pageQuery = pageQuery.startAfter(cursor.status, cursor.uid);
+    }
+    const [pageSnapshot, countSnapshot] = await Promise.all([
+        pageQuery.limit(pageSize).get(),
+        membersRef.where("status", "!=", "deleted").count().get(),
+    ]);
+    const memberDocs = direction === "previous" || direction === "last" ? [...pageSnapshot.docs].reverse() : pageSnapshot.docs;
+    const [profiles, authUsers] = await Promise.all([
+        memberDocs.length ? firebase_admin_1.v2Db.getAll(...memberDocs.map(member => firebase_admin_1.v2Db.doc(`user/${member.id}`))) : Promise.resolve([]),
+        memberDocs.length ? firebase_admin_1.admin.auth().getUsers(memberDocs.map(member => ({ uid: member.id }))) : Promise.resolve({ users: [], notFound: [] }),
+    ]);
+    const authByUid = new Map(authUsers.users.map(account => [account.uid, account]));
+    const members = memberDocs.map((member, index) => {
+        const profile = profiles[index];
+        const account = authByUid.get(member.id);
+        return {
+            uid: member.id,
+            ...member.data(),
+            email: profile.get("email") ?? "",
+            display_name: profile.get("display_name") ?? "",
+            phone: profile.get("phone") ?? "",
+            super_admin: account?.customClaims?.super_admin === true,
+            has_signed_in: account ? Boolean(account.metadata.lastSignInTime) : true,
+        };
+    });
+    const toCursor = (member) => ({
+        uid: member.id,
+        status: String(member.get("status")),
+    });
     return {
-        members: await Promise.all(members.docs.filter(member => member.get("status") !== "deleted").map(async (member) => {
-            const [profile, account] = await Promise.all([
-                firebase_admin_1.v2Db.doc(`user/${member.id}`).get(),
-                firebase_admin_1.admin.auth().getUser(member.id).catch((error) => {
-                    const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
-                    if (code.includes("user-not-found"))
-                        return null;
-                    throw error;
-                }),
-            ]);
-            return { uid: member.id, ...member.data(), email: profile.get("email") ?? "", display_name: profile.get("display_name") ?? "", phone: profile.get("phone") ?? "", super_admin: account?.customClaims?.super_admin === true, has_signed_in: account ? Boolean(account.metadata.lastSignInTime) : true };
-        })),
+        members,
+        total: countSnapshot.data().count,
+        firstCursor: memberDocs.length ? toCursor(memberDocs[0]) : null,
+        lastCursor: memberDocs.length ? toCursor(memberDocs[memberDocs.length - 1]) : null,
     };
 });
 exports.updateOwnProfile = (0, https_1.onCall)(async (request) => {
