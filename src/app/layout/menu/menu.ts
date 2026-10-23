@@ -12,12 +12,13 @@ import { Account } from '@pages/account/account';
 import { CityClass } from '@core/entities/city/city.class';
 import { Firestore, doc, getDoc } from '@angular/fire/firestore';
 
-type MenuPermissionRequirement = {resource: string; actions: string[]};
+type MenuPermissionRequirement = {resource: string; actions: string[]; any?: boolean};
 
 const MENU_PERMISSION_REQUIREMENTS: Record<string, MenuPermissionRequirement[]> = {
   '/dashboard': [
     {resource: 'retreats', actions: ['read', 'list']},
     {resource: 'requests', actions: ['read', 'list']},
+    {resource: 'dashboard', actions: [], any: true},
   ],
   '/retiros': [{resource: 'retreats', actions: ['read', 'list']}],
   '/solicitudes-archivadas': [{resource: 'requests', actions: ['read', 'list']}],
@@ -67,7 +68,7 @@ export class Menu implements OnInit, OnDestroy {
     if (!requirements) return false;
     const permissions = this.menuPermissions();
     return requirements.every(({resource, actions}) =>
-      actions.every(action => permissions[resource]?.[action] === true)
+      actions.length ? actions.every(action => permissions[resource]?.[action] === true) : Object.values(permissions[resource] ?? {}).some(value => value === true)
     );
   }));
 

@@ -97,6 +97,13 @@ const operatorPermissionsForNewCity = (value: unknown): Record<string, unknown> 
   };
 };
 
+const dashboardSections = ["total_requests", "request_status", "requests_per_retreat", "wedding_date", "inviter", "main_source", "dating_average", "participants_children", "church_marriage", "requests_status_chart", "requests_per_retreat_chart", "acquisition_source_chart", "retreat_evolution_chart", "dating_years_chart", "wedding_date_chart", "inviter_chart", "participant_ages_chart", "declared_religion_chart", "residence_city_chart"];
+
+const withAllDashboardPermissions = (value: unknown): Record<string, unknown> => {
+  const permissions = validateRolePermissions(value);
+  return {...permissions, dashboard: Object.fromEntries(dashboardSections.map(section => [section, true]))};
+};
+
 export const saveCityRole = onCall(async (request) => {
   const data = request.data as Record<string, unknown>;
   const cityId = requireText(data.cityId, "La ciudad", 100);
@@ -186,9 +193,9 @@ export const saveCity = onCall(async (request) => {
   sourceRoles.forEach((role, index) => {
     const roleData = role.data()!;
     const sourcePermissions = roleData["permissions"];
-    const permissions = roleIds[index] === "operador"
+    const permissions = withAllDashboardPermissions(roleIds[index] === "operador"
       ? operatorPermissionsForNewCity(sourcePermissions)
-      : validateRolePermissions(sourcePermissions);
+      : sourcePermissions);
     batch.create(cityRef.collection("roles").doc(roleIds[index]), {
       role_id: roleIds[index],
       name: roleData["name"],

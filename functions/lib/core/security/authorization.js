@@ -11,6 +11,7 @@ const resources = {
     requests: ["read", "list", "update", "delete", "archive", "unarchive", "transfer", "history_read", "history_list", "history_delete"],
     payments: ["read", "list", "create", "update", "delete"],
     audit: ["read", "list"],
+    dashboard: ["total_requests", "request_status", "requests_per_retreat", "wedding_date", "inviter", "main_source", "dating_average", "participants_children", "church_marriage", "requests_status_chart", "requests_per_retreat_chart", "acquisition_source_chart", "retreat_evolution_chart", "dating_years_chart", "wedding_date_chart", "inviter_chart", "participant_ages_chart", "declared_religion_chart", "residence_city_chart"],
 };
 const isSuperAdmin = (request) => request.auth?.token.super_admin === true;
 exports.isSuperAdmin = isSuperAdmin;
