@@ -81,6 +81,11 @@ const operatorPermissionsForNewCity = (value) => {
         },
     };
 };
+const dashboardSections = ["total_requests", "request_status", "requests_per_retreat", "wedding_date", "inviter", "main_source", "dating_average", "participants_children", "church_marriage", "requests_status_chart", "requests_per_retreat_chart", "acquisition_source_chart", "retreat_evolution_chart", "dating_years_chart", "wedding_date_chart", "inviter_chart", "participant_ages_chart", "declared_religion_chart", "residence_city_chart"];
+const withAllDashboardPermissions = (value) => {
+    const permissions = (0, authorization_1.validateRolePermissions)(value);
+    return { ...permissions, dashboard: Object.fromEntries(dashboardSections.map(section => [section, true])) };
+};
 exports.saveCityRole = (0, https_1.onCall)(async (request) => {
     const data = request.data;
     const cityId = requireText(data.cityId, "La ciudad", 100);
@@ -167,9 +172,9 @@ exports.saveCity = (0, https_1.onCall)(async (request) => {
     sourceRoles.forEach((role, index) => {
         const roleData = role.data();
         const sourcePermissions = roleData["permissions"];
-        const permissions = roleIds[index] === "operador"
+        const permissions = withAllDashboardPermissions(roleIds[index] === "operador"
             ? operatorPermissionsForNewCity(sourcePermissions)
-            : (0, authorization_1.validateRolePermissions)(sourcePermissions);
+            : sourcePermissions);
         batch.create(cityRef.collection("roles").doc(roleIds[index]), {
             role_id: roleIds[index],
             name: roleData["name"],

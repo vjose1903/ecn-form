@@ -4,6 +4,7 @@ import { RetreatService } from '@core/entities/retreat/retreat.service';
 import { CoupleI, RequestStatus } from '@core/entities/request/request.model';
 import { RequestClass } from '@core/entities/request/request.class';
 import { Ss } from '@core/services/singleton.service';
+import { Firestore, doc, getDoc } from '@angular/fire/firestore';
 import type { EChartsOption } from 'echarts';
 import type { DashboardChart, DashboardData, DashboardDateRange, DashboardKpi, DashboardPeriodFilter } from './dashboard.model';
 
@@ -17,11 +18,14 @@ interface CounterEntry {
   value: number;
 }
 
+const DASHBOARD_PERMISSION_KEYS = ['total_requests', 'request_status', 'requests_per_retreat', 'wedding_date', 'inviter', 'main_source', 'dating_average', 'participants_children', 'church_marriage', 'requests_status_chart', 'requests_per_retreat_chart', 'acquisition_source_chart', 'retreat_evolution_chart', 'dating_years_chart', 'wedding_date_chart', 'inviter_chart', 'participant_ages_chart', 'declared_religion_chart', 'residence_city_chart'];
+
 @Injectable({
   providedIn: 'root',
 })
 export class DashboardService {
   private retreatService = inject(RetreatService);
+  private firestore = inject(Firestore);
   private readonly chartPalette = ['#a83044', '#2563eb', '#16a34a', '#f59e0b', '#7c3aed', '#0891b2', '#ef4444', '#0f766e', '#ea580c', '#475569', '#db2777', '#65a30d'];
 
   async getDashboardData(filter: DashboardPeriodFilter, customRange: DashboardDateRange): Promise<DashboardData> {
@@ -31,6 +35,8 @@ export class DashboardService {
       throw new Error('Usuario no autenticado');
     }
 
+    const permissions = await this.getDashboardPermissions(currentUser.uid || currentUser.id, Ss.authService.activeCityId() || currentUser.city);
+
     const retreats = await this.retreatService.getAll();
     const cityRetreats = retreats.filter(retreat => retreat.is_active && this.isRetreatInUserCity(retreat, Ss.authService.activeCityId() || currentUser.city));
     const scopedRetreats = this.filterRetreatsByPeriod(cityRetreats, filter, customRange);
@@ -38,11 +44,23 @@ export class DashboardService {
     const entries = requestGroups.flatMap(group => group.requests.map(request => ({ retreat: group.retreat, request })));
 
     return {
-      kpis: this.buildKpis(entries),
-      charts: this.buildCharts(scopedRetreats, entries),
+      kpis: this.buildKpis(entries).filter(kpi => permissions[kpi.permissionKey] === true),
+      charts: this.buildCharts(scopedRetreats, entries).filter(chart => permissions[chart.permissionKey] === true),
       retreatCount: scopedRetreats.length,
       requestCount: entries.length,
     };
+  }
+
+  private async getDashboardPermissions(uid: string, city: unknown): Promise<Record<string, boolean>> {
+    if (Ss.authService.isSuperAdmin()) return Object.fromEntries(DASHBOARD_PERMISSION_KEYS.map(key => [key, true]));
+    const cityId = this.extractId(city);
+    if (!cityId || !uid) return {};
+    const member = await getDoc(doc(this.firestore, `city/${cityId}/members/${uid}`));
+    const roleId = member.exists() && member.get('status') === 'active' ? member.get('role_id') : '';
+    if (typeof roleId !== 'string' || !roleId) return {};
+    const role = await getDoc(doc(this.firestore, `city/${cityId}/roles/${roleId}`));
+    if (!role.exists() || role.get('is_active') !== true) return {};
+    return (role.get('permissions')?.['dashboard'] ?? {}) as Record<string, boolean>;
   }
 
   private filterRetreatsByPeriod(retreats: RetreatClass[], filter: DashboardPeriodFilter, customRange: DashboardDateRange): RetreatClass[] {
@@ -111,39 +129,39 @@ export class DashboardService {
     const mainSource = this.topEntry(this.countBy(entries, entry => this.getSource(entry.request)))?.name || 'Sin datos';
 
     return [
-      { label: 'Total de solicitudes', value: this.formatNumber(total), icon: 'pi pi-chart-bar', tone: 'primary' },
+      { permissionKey: 'total_requests', label: 'Total de solicitudes', value: this.formatNumber(total), icon: 'pi pi-chart-bar', tone: 'primary' },
       {
-        label: 'Estado de solicitudes',
+        permissionKey: 'request_status', label: 'Estado de solicitudes',
         value: `${statusCounts[RequestStatus.PENDING] || 0} / ${statusCounts[RequestStatus.ACCEPTED] || 0} / ${statusCounts[RequestStatus.REJECTED] || 0}`,
         icon: 'pi pi-check-circle',
         tone: 'success',
         detail: 'Pendientes / aceptadas / rechazadas',
       },
       {
-        label: 'Solicitudes por retiro',
+        permissionKey: 'requests_per_retreat', label: 'Solicitudes por retiro',
         value: `${this.averagePerRetreat(entries).toFixed(1)} prom.`,
         icon: 'pi pi-calendar-clock',
         tone: 'info',
         detail: `${new Set(entries.map(entry => entry.retreat.id)).size} retiros con solicitudes`,
       },
       {
-        label: 'Con fecha de boda',
+        permissionKey: 'wedding_date', label: 'Con fecha de boda',
         value: this.formatNumber(weddingCounts['con'] || 0),
         icon: 'pi pi-heart-fill',
         tone: 'danger',
         detail: `${weddingCounts['sin'] || 0} sin fecha`,
       },
       {
-        label: 'Con invitador registrado',
+        permissionKey: 'inviter', label: 'Con invitador registrado',
         value: this.formatNumber(invitedCounts['con'] || 0),
         icon: 'pi pi-user-plus',
         tone: 'warning',
         detail: `${invitedCounts['sin'] || 0} sin invitador`,
       },
-      { label: 'Fuente principal', value: mainSource, icon: 'pi pi-compass', tone: 'primary' },
-      { label: 'Promedio de noviazgo', value: `${averageDatingYears.toFixed(1)} años`, icon: 'pi pi-clock', tone: 'info' },
-      { label: 'Participantes con hijos', value: this.formatNumber(withChildren), icon: 'pi pi-users', tone: 'warning', detail: `${participants.length} participantes` },
-      { label: 'Casados por la iglesia', value: this.formatNumber(churchMarried), icon: 'pi pi-building-columns', tone: 'success', detail: `${participants.length} participantes` },
+      { permissionKey: 'main_source', label: 'Fuente principal', value: mainSource, icon: 'pi pi-compass', tone: 'primary' },
+      { permissionKey: 'dating_average', label: 'Promedio de noviazgo', value: `${averageDatingYears.toFixed(1)} años`, icon: 'pi pi-clock', tone: 'info' },
+      { permissionKey: 'participants_children', label: 'Participantes con hijos', value: this.formatNumber(withChildren), icon: 'pi pi-users', tone: 'warning', detail: `${participants.length} participantes` },
+      { permissionKey: 'church_marriage', label: 'Casados por la iglesia', value: this.formatNumber(churchMarried), icon: 'pi pi-building-columns', tone: 'success', detail: `${participants.length} participantes` },
     ];
   }
 
@@ -180,16 +198,16 @@ export class DashboardService {
     const cityData = this.countByNormalized(participants, participant => participant.city_of_residence).slice(0, 12);
 
     return [
-      { title: 'Estado de solicitudes', subtitle: 'Pendientes, aceptadas y rechazadas', option: this.pieOption(requestStatus), empty: entries.length === 0 },
-      { title: 'Solicitudes por retiro', subtitle: 'Total por retiro seleccionado', option: this.barOption(requestsByRetreat), empty: entries.length === 0 },
-      { title: 'Fuente de captación', subtitle: 'Cómo se enteraron del retiro', option: this.horizontalBarOption(sourceData), empty: entries.length === 0 },
-      { title: 'Evolución por fecha de retiro', subtitle: 'Solicitudes agrupadas por fecha de inicio del retiro', option: this.barOption(evolutionData), empty: entries.length === 0 },
-      { title: 'Años de noviazgo', subtitle: 'Distribución por ficha', option: this.barOption(datingYears), empty: entries.length === 0 },
-      { title: 'Fecha de boda', subtitle: 'Solicitudes con y sin fecha definida', option: this.pieOption(weddingData), empty: entries.length === 0 },
-      { title: 'Invitador registrado', subtitle: 'Solicitudes con referencia de invitador', option: this.pieOption(invitedData), empty: entries.length === 0 },
-      { title: 'Edades de participantes', subtitle: 'Rangos de edad entre novio y novia', option: this.barOption(ageData), empty: participants.length === 0, size: 'half' },
-      { title: 'Religión declarada', subtitle: 'Valores normalizados visualmente', option: this.horizontalBarOption(religionData), empty: participants.length === 0, size: 'half' },
-      { title: 'Ciudad de residencia', subtitle: 'Distribución entre solicitantes', option: this.horizontalBarOption(cityData), empty: participants.length === 0, size: 'full' },
+      { permissionKey: 'requests_status_chart', title: 'Estado de solicitudes', subtitle: 'Pendientes, aceptadas y rechazadas', option: this.pieOption(requestStatus), empty: entries.length === 0 },
+      { permissionKey: 'requests_per_retreat_chart', title: 'Solicitudes por retiro', subtitle: 'Total por retiro seleccionado', option: this.barOption(requestsByRetreat), empty: entries.length === 0 },
+      { permissionKey: 'acquisition_source_chart', title: 'Fuente de captación', subtitle: 'Cómo se enteraron del retiro', option: this.horizontalBarOption(sourceData), empty: entries.length === 0 },
+      { permissionKey: 'retreat_evolution_chart', title: 'Evolución por fecha de retiro', subtitle: 'Solicitudes agrupadas por fecha de inicio del retiro', option: this.barOption(evolutionData), empty: entries.length === 0 },
+      { permissionKey: 'dating_years_chart', title: 'Años de noviazgo', subtitle: 'Distribución por ficha', option: this.barOption(datingYears), empty: entries.length === 0 },
+      { permissionKey: 'wedding_date_chart', title: 'Fecha de boda', subtitle: 'Solicitudes con y sin fecha definida', option: this.pieOption(weddingData), empty: entries.length === 0 },
+      { permissionKey: 'inviter_chart', title: 'Invitador registrado', subtitle: 'Solicitudes con referencia de invitador', option: this.pieOption(invitedData), empty: entries.length === 0 },
+      { permissionKey: 'participant_ages_chart', title: 'Edades de participantes', subtitle: 'Rangos de edad entre novio y novia', option: this.barOption(ageData), empty: participants.length === 0, size: 'half' },
+      { permissionKey: 'declared_religion_chart', title: 'Religión declarada', subtitle: 'Valores normalizados visualmente', option: this.horizontalBarOption(religionData), empty: participants.length === 0, size: 'half' },
+      { permissionKey: 'residence_city_chart', title: 'Ciudad de residencia', subtitle: 'Distribución entre solicitantes', option: this.horizontalBarOption(cityData), empty: participants.length === 0, size: 'full' },
     ];
   }
 

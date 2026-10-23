@@ -13,6 +13,7 @@ export interface DashboardDateRange {
 }
 
 export interface DashboardKpi {
+  permissionKey: string;
   label: string;
   value: string;
   icon: string;
@@ -21,6 +22,7 @@ export interface DashboardKpi {
 }
 
 export interface DashboardChart {
+  permissionKey: string;
   title: string;
   subtitle: string;
   option: EChartsOption;

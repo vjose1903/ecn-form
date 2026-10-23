@@ -20,6 +20,7 @@ interface PermissionResource {key: string; label: string; description: string; i
 const DEFAULT_PERMISSIONS: Record<string, unknown> = {
   requests: {read: true, list: true, fields: {couple_basic: {read: true}, contact: {read: false}, identity: {read: false}}},
   payments: {read: false, list: false, create: false},
+  dashboard: {total_requests: true, request_status: true, requests_per_retreat: true, wedding_date: true, inviter: true, main_source: true, dating_average: true, participants_children: true, church_marriage: true, requests_status_chart: true, requests_per_retreat_chart: true, acquisition_source_chart: true, retreat_evolution_chart: true, dating_years_chart: true, wedding_date_chart: true, inviter_chart: true, participant_ages_chart: true, declared_religion_chart: true, residence_city_chart: true},
 };
 
 const action = (key: string, label: string, description: string): PermissionAction => ({key, label, description});
@@ -64,6 +65,7 @@ export class AccessManagement implements OnInit {
     ]},
     {key: 'payments', label: 'Pagos', description: 'Pagos asociados a las solicitudes.', icon: 'pi pi-wallet', actions: [action('read', 'Ver', 'Consultar un pago.'), action('list', 'Listar', 'Ver pagos.'), action('create', 'Registrar', 'Registrar pagos.'), action('update', 'Editar', 'Modificar pagos.'), action('delete', 'Eliminar', 'Eliminar pagos.')]},
     {key: 'audit', label: 'Auditoría', description: 'Registro de acciones y cambios.', icon: 'pi pi-history', actions: [action('read', 'Ver', 'Consultar un evento de auditoría.'), action('list', 'Listar', 'Ver el registro de auditoría.')]},
+    {key: 'dashboard', label: 'Dashboard', description: 'Indicadores y gráficos que se muestran en el dashboard.', icon: 'pi pi-chart-bar', actions: [action('total_requests', 'Total de solicitudes', 'Mostrar el KPI total de solicitudes.'), action('request_status', 'Estado de solicitudes', 'Mostrar el KPI de solicitudes por estado.'), action('requests_per_retreat', 'Solicitudes por retiro', 'Mostrar el KPI de solicitudes por retiro.'), action('wedding_date', 'Fecha de boda', 'Mostrar el KPI de fecha de boda.'), action('inviter', 'Invitador registrado', 'Mostrar el KPI de invitadores.'), action('main_source', 'Fuente principal', 'Mostrar el KPI de fuente principal.'), action('dating_average', 'Promedio de noviazgo', 'Mostrar el KPI de años de noviazgo.'), action('participants_children', 'Participantes con hijos', 'Mostrar el KPI de participantes con hijos.'), action('church_marriage', 'Casados por la iglesia', 'Mostrar el KPI de casados por la iglesia.'), action('requests_status_chart', 'Gráfico: estado de solicitudes', 'Mostrar el gráfico de estados.'), action('requests_per_retreat_chart', 'Gráfico: solicitudes por retiro', 'Mostrar solicitudes por retiro.'), action('acquisition_source_chart', 'Gráfico: fuente de captación', 'Mostrar fuentes de captación.'), action('retreat_evolution_chart', 'Gráfico: evolución por retiro', 'Mostrar evolución por fecha.'), action('dating_years_chart', 'Gráfico: años de noviazgo', 'Mostrar distribución de años de noviazgo.'), action('wedding_date_chart', 'Gráfico: fecha de boda', 'Mostrar fechas de boda.'), action('inviter_chart', 'Gráfico: invitador', 'Mostrar datos de invitación.'), action('participant_ages_chart', 'Gráfico: edades', 'Mostrar edades de participantes.'), action('declared_religion_chart', 'Gráfico: religión', 'Mostrar religión declarada.'), action('residence_city_chart', 'Gráfico: ciudad de residencia', 'Mostrar ciudades de residencia.')]},
   ];
   readonly statusFilterOptions = [
     {label: 'Todos los estados', value: 'all'},
@@ -349,6 +351,7 @@ export class AccessManagement implements OnInit {
 
   private clonePermissions(value: Record<string, unknown>): Record<string, unknown> {
     const permissions = JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+    permissions['dashboard'] = {...(DEFAULT_PERMISSIONS['dashboard'] as Record<string, boolean>), ...(this.asRecord(permissions['dashboard']) ?? {})};
     delete permissions['files'];
     delete permissions['city'];
     const requests = this.asRecord(permissions['requests']);
