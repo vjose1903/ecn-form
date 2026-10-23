@@ -1,12 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import { RetreatClass } from '@core/entities/retreat/retreat.class';
 import { RetreatService } from '@core/entities/retreat/retreat.service';
+import { RequestService } from '@core/entities/request/request.service';
 import { CoupleI, RequestStatus } from '@core/entities/request/request.model';
 import { RequestClass } from '@core/entities/request/request.class';
 import { Ss } from '@core/services/singleton.service';
 import { Firestore, doc, getDoc } from '@angular/fire/firestore';
 import type { EChartsOption } from 'echarts';
-import type { DashboardChart, DashboardData, DashboardDateRange, DashboardKpi, DashboardPeriodFilter } from './dashboard.model';
+import type { DashboardChart, DashboardData, DashboardDateRange, DashboardKpi, DashboardPeriodFilter, DashboardSkeletonLayout } from './dashboard.model';
 
 interface DashboardRequestEntry {
   retreat: RetreatClass;
@@ -18,30 +19,42 @@ interface CounterEntry {
   value: number;
 }
 
-const DASHBOARD_PERMISSION_KEYS = ['total_requests', 'request_status', 'requests_per_retreat', 'wedding_date', 'inviter', 'main_source', 'dating_average', 'participants_children', 'church_marriage', 'requests_status_chart', 'requests_per_retreat_chart', 'acquisition_source_chart', 'retreat_evolution_chart', 'dating_years_chart', 'wedding_date_chart', 'inviter_chart', 'participant_ages_chart', 'declared_religion_chart', 'residence_city_chart'];
+const DASHBOARD_KPI_KEYS = ['total_requests', 'request_status', 'requests_per_retreat', 'wedding_date', 'inviter', 'main_source', 'dating_average', 'participants_children', 'church_marriage'];
+const DASHBOARD_CHART_KEYS = ['requests_status_chart', 'requests_per_retreat_chart', 'acquisition_source_chart', 'retreat_evolution_chart', 'dating_years_chart', 'wedding_date_chart', 'inviter_chart', 'participant_ages_chart', 'declared_religion_chart', 'residence_city_chart'];
+const DASHBOARD_PERMISSION_KEYS = [...DASHBOARD_KPI_KEYS, ...DASHBOARD_CHART_KEYS];
 
 @Injectable({
   providedIn: 'root',
 })
 export class DashboardService {
   private retreatService = inject(RetreatService);
+  private requestService = inject(RequestService);
   private firestore = inject(Firestore);
   private readonly chartPalette = ['#a83044', '#2563eb', '#16a34a', '#f59e0b', '#7c3aed', '#0891b2', '#ef4444', '#0f766e', '#ea580c', '#475569', '#db2777', '#65a30d'];
 
-  async getDashboardData(filter: DashboardPeriodFilter, customRange: DashboardDateRange): Promise<DashboardData> {
+  async getDashboardData(filter: DashboardPeriodFilter, customRange: DashboardDateRange, onPermissionsResolved?: (layout: DashboardSkeletonLayout) => void): Promise<DashboardData> {
     const currentUser = Ss.authService.current_user();
 
     if (!currentUser?.id) {
       throw new Error('Usuario no autenticado');
     }
 
-    const permissions = await this.getDashboardPermissions(currentUser.uid || currentUser.id, Ss.authService.activeCityId() || currentUser.city);
-
-    const retreats = await this.retreatService.getAll();
+    const permissionsPromise = this.getDashboardPermissions(currentUser.uid || currentUser.id, Ss.authService.activeCityId() || currentUser.city);
+    const retreatsPromise = this.retreatService.getForDashboard();
+    const permissions = await permissionsPromise;
+    onPermissionsResolved?.({
+      kpiKeys: DASHBOARD_KPI_KEYS.filter(key => permissions[key] === true),
+      chartKeys: DASHBOARD_CHART_KEYS.filter(key => permissions[key] === true),
+    });
+    const retreats = await retreatsPromise;
     const cityRetreats = retreats.filter(retreat => retreat.is_active && this.isRetreatInUserCity(retreat, Ss.authService.activeCityId() || currentUser.city));
     const scopedRetreats = this.filterRetreatsByPeriod(cityRetreats, filter, customRange);
-    const requestGroups = await Promise.all(scopedRetreats.map(retreat => this.retreatService.getRequests(retreat).then(requests => ({ retreat, requests }))));
-    const entries = requestGroups.flatMap(group => group.requests.map(request => ({ retreat: group.retreat, request })));
+    const requests = await this.requestService.getRequestsForRetreats(scopedRetreats);
+    const retreatsById = new Map(scopedRetreats.map(retreat => [retreat.id, retreat]));
+    const entries = requests.flatMap(request => {
+      const retreat = retreatsById.get(request.retreat);
+      return retreat ? [{retreat, request}] : [];
+    });
 
     return {
       kpis: this.buildKpis(entries).filter(kpi => permissions[kpi.permissionKey] === true),
@@ -167,23 +180,18 @@ export class DashboardService {
 
   private buildCharts(retreats: RetreatClass[], entries: DashboardRequestEntry[]): DashboardChart[] {
     const participants = entries.flatMap(entry => this.getParticipants(entry.request));
+    const requestCountByRetreat = this.countBy(entries, entry => entry.retreat.id);
     const requestStatus = [
       { name: 'Pendientes', value: entries.filter(entry => entry.request.status === RequestStatus.PENDING).length },
       { name: 'Aceptadas', value: entries.filter(entry => entry.request.status === RequestStatus.ACCEPTED).length },
       { name: 'Rechazadas', value: entries.filter(entry => entry.request.status === RequestStatus.REJECTED).length },
     ];
-    const requestsByRetreat = retreats.map(retreat => ({
-      name: `Retiro ${retreat.displayNumber}`,
-      value: entries.filter(entry => entry.retreat.id === retreat.id).length,
-    }));
+    const requestsByRetreat = retreats.map(retreat => ({name: `Retiro ${retreat.displayNumber}`, value: requestCountByRetreat[retreat.id] || 0}));
     const sourceData = this.toSortedEntries(this.countBy(entries, entry => this.getSource(entry.request)));
     const evolutionData = retreats
       .slice()
       .sort((left, right) => new Date(left.start_date).getTime() - new Date(right.start_date).getTime())
-      .map(retreat => ({
-        name: this.formatDate(retreat.start_date),
-        value: entries.filter(entry => entry.retreat.id === retreat.id).length,
-      }));
+      .map(retreat => ({name: this.formatDate(retreat.start_date), value: requestCountByRetreat[retreat.id] || 0}));
     const datingYears = this.toSortedEntries(this.countBy(entries, entry => `${entry.request.dating_period_year || 0} años`), (left, right) => Number.parseInt(left.name) - Number.parseInt(right.name));
     const weddingData = [
       { name: 'Con fecha', value: entries.filter(entry => entry.request.have_wedding_date).length },

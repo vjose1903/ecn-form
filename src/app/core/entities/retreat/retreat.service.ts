@@ -98,6 +98,13 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
     return this.fetchAllRetreats(args);
   }
 
+  async getForDashboard(): Promise<RetreatClass[]> {
+    const currentUser = this.authService.current_user();
+    if (!currentUser?.id) throw new Error('Usuario no autenticado');
+    const cityId = this.authService.activeCityId() || currentUser.city;
+    return this.readCityRetreats(cityId, false);
+  }
+
   /**
    * Obtiene todos los retiros desde Firebase usando la colección padre
    */
