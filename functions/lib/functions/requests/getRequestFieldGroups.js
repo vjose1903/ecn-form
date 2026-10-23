@@ -5,9 +5,17 @@ const https_1 = require("firebase-functions/v2/https");
 const authorization_1 = require("../../core/security/authorization");
 const firebase_admin_1 = require("../../core/firebase-admin");
 const statusFields = ["status", "action", "is_active", "created_at", "archived_at", "archived_retreat_id"];
-exports.getRequestFieldGroups = (0, https_1.onCall)(async (request) => {
+const dashboardFields = {
+    contact: ["city_of_residence"],
+    identity: ["age", "religion", "religion_other", "are_you_married"],
+    family: ["have_children"],
+    relationship: ["how_find_us", "how_find_us_other", "have_wedding_date", "dating_period_year"],
+    invitation: ["who_invited_you"],
+};
+exports.getRequestFieldGroups = (0, https_1.onCall)({ minInstances: 1 }, async (request) => {
     const data = request.data;
     const cityId = typeof data.cityId === "string" ? data.cityId.trim() : "";
+    const includeDashboardDetails = data.includeDashboardDetails === true;
     const requestIds = Array.isArray(data.requestIds) ? [...new Set(data.requestIds.filter((id) => typeof id === "string" && /^[^/]{1,180}$/.test(id)))] : [];
     if (!cityId || requestIds.length > 200)
         throw new https_1.HttpsError("invalid-argument", "La ciudad o lista de solicitudes no es válida.");
@@ -36,6 +44,7 @@ exports.getRequestFieldGroups = (0, https_1.onCall)(async (request) => {
     const canUpdateRequests = (0, authorization_1.isSuperAdmin)(request) || requestPermissions.update === true;
     const canUpdateStatus = (0, authorization_1.isSuperAdmin)(request) || requestPermissions.fields?.status?.update === true;
     const canUpdateInformed = (0, authorization_1.isSuperAdmin)(request) || requestPermissions.fields?.informed?.update === true;
+    const readableDashboardSections = Object.keys(dashboardFields).filter(section => (0, authorization_1.isSuperAdmin)(request) || (requestPermissions.read === true && requestPermissions.fields?.[section]?.read === true));
     const readableSections = [
         ...(canReadStatus ? ["status"] : []),
         ...(canReadInformed ? ["informed"] : []),
@@ -44,21 +53,63 @@ exports.getRequestFieldGroups = (0, https_1.onCall)(async (request) => {
         ...(canUpdateRequests && canUpdateStatus ? ["status"] : []),
         ...(canUpdateRequests && canUpdateInformed ? ["informed"] : []),
     ];
-    return Object.fromEntries(await Promise.all(requestIds.map(async (requestId) => {
+    const statusRefs = canReadStatus || canReadInformed
+        ? requestIds.map(id => firebase_admin_1.v2Db.doc(`city/${cityId}/requests/${id}/details/status`))
+        : [];
+    const informedRefs = canReadInformed
+        ? requestIds.map(id => firebase_admin_1.v2Db.doc(`city/${cityId}/requests/${id}/details/informed`))
+        : [];
+    const dashboardRefs = includeDashboardDetails
+        ? readableDashboardSections.flatMap(section => requestIds.map(id => firebase_admin_1.v2Db.doc(`city/${cityId}/requests/${id}/details/${section}`)))
+        : [];
+    const snapshots = statusRefs.length + informedRefs.length + dashboardRefs.length
+        ? await firebase_admin_1.v2Db.getAll(...statusRefs, ...informedRefs, ...dashboardRefs)
+        : [];
+    const statusSnapshots = snapshots.slice(0, statusRefs.length);
+    const informedSnapshots = snapshots.slice(statusRefs.length, statusRefs.length + informedRefs.length);
+    const dashboardStart = statusRefs.length + informedRefs.length;
+    const dashboardSnapshots = readableDashboardSections.map((_, sectionIndex) => snapshots.slice(dashboardStart + sectionIndex * requestIds.length, dashboardStart + (sectionIndex + 1) * requestIds.length));
+    return Object.fromEntries(requestIds.map((requestId, index) => {
         const result = { readableSections, editableSections };
-        if (!canReadStatus && !canReadInformed)
-            return [requestId, result];
-        const statusSnapshot = await firebase_admin_1.v2Db.doc(`city/${cityId}/requests/${requestId}/details/status`).get();
-        if (canReadStatus) {
+        if (includeDashboardDetails) {
+            const details = {};
+            readableDashboardSections.forEach((section, sectionIndex) => {
+                const snapshot = dashboardSnapshots[sectionIndex]?.[index];
+                if (!snapshot?.exists)
+                    return;
+                const source = snapshot.data() ?? {};
+                const fields = dashboardFields[section];
+                if (["contact", "identity", "family"].includes(section)) {
+                    const people = Object.fromEntries(["she", "he"].flatMap(person => {
+                        const personData = source[person];
+                        if (!personData || typeof personData !== "object")
+                            return [];
+                        const picked = Object.fromEntries(fields.filter(field => field in personData).map(field => [field, personData[field]]));
+                        return Object.keys(picked).length ? [[person, picked]] : [];
+                    }));
+                    if (Object.keys(people).length)
+                        details[section] = people;
+                }
+                else {
+                    details[section] = Object.fromEntries(fields.filter(field => field in source).map(field => [field, source[field]]));
+                }
+            });
+            result.details = details;
+            result.readableSections = [...readableSections, ...Object.keys(details)];
+        }
+        const statusSnapshot = statusSnapshots[index];
+        if (canReadStatus && statusSnapshot) {
             result.status = Object.fromEntries(statusFields
                 .filter(field => statusSnapshot.get(field) !== undefined)
                 .map(field => [field, statusSnapshot.get(field)]));
         }
-        if (canReadInformed) {
-            const informedSnapshot = await firebase_admin_1.v2Db.doc(`city/${cityId}/requests/${requestId}/details/informed`).get();
-            result.is_informado = informedSnapshot.exists ? informedSnapshot.get("is_informado") === true : statusSnapshot.get("is_informado") === true;
+        if (canReadInformed && statusSnapshot) {
+            const informedSnapshot = informedSnapshots[index];
+            result.is_informado = informedSnapshot?.exists
+                ? informedSnapshot.get("is_informado") === true
+                : statusSnapshot.get("is_informado") === true;
         }
         return [requestId, result];
-    })));
+    }));
 });
 //# sourceMappingURL=getRequestFieldGroups.js.map

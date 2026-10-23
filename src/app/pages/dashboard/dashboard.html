@@ -57,53 +57,106 @@
   </header>
 
   <section class="dashboard-kpi-grid">
-    @for (kpi of kpis(); track kpi.label) {
-      <article class="dashboard-kpi dashboard-kpi--{{ kpi.tone }}">
-        <div class="dashboard-kpi__body">
-          <div class="dashboard-kpi__icon">
-            <i class="{{ kpi.icon }}"></i>
+    @if (loading()) {
+      @for (key of loadingLayout().kpiKeys; track key) {
+        <article class="dashboard-kpi dashboard-kpi--{{ kpiTone(key) }} dashboard-kpi--skeleton" aria-hidden="true">
+          <div class="dashboard-kpi__body">
+            <div class="dashboard-kpi__icon dashboard-skeleton-block"></div>
+            <div class="dashboard-kpi__content">
+              <span class="dashboard-skeleton-block dashboard-kpi-skeleton__label"></span>
+              <strong class="dashboard-skeleton-block dashboard-kpi-skeleton__value"></strong>
+              @if (kpiHasDetail(key)) {
+                <small class="dashboard-skeleton-block dashboard-kpi-skeleton__detail"></small>
+              }
+            </div>
           </div>
-          <div class="dashboard-kpi__content">
-            <span>{{ kpi.label }}</span>
-            <strong>{{ kpi.value }}</strong>
-            @if (kpi.detail) {
-            <small>{{ kpi.detail }}</small>
-            }
+        </article>
+      }
+    } @else {
+      @for (kpi of kpis(); track kpi.label) {
+        <article class="dashboard-kpi dashboard-kpi--{{ kpi.tone }}">
+          <div class="dashboard-kpi__body">
+            <div class="dashboard-kpi__icon">
+              <i class="{{ kpi.icon }}"></i>
+            </div>
+            <div class="dashboard-kpi__content">
+              <span>{{ kpi.label }}</span>
+              <strong>{{ kpi.value }}</strong>
+              @if (kpi.detail) {
+              <small>{{ kpi.detail }}</small>
+              }
+            </div>
           </div>
-        </div>
-      </article>
+        </article>
+      }
     }
   </section>
 
   <section class="dashboard-chart-grid">
-    @for (chart of charts(); track chart.title) {
-      <article
-        #chartCard
-        class="dashboard-chart-card"
-        role="button"
-        tabindex="0"
-        [class.dashboard-chart-card--wide]="chart.wide"
-        [class.dashboard-chart-card--half]="chart.size === 'half'"
-        [class.dashboard-chart-card--full]="chart.size === 'full'"
-        (click)="openChartFullscreen(chart, chartCard, $event)"
-        (keydown.enter)="openChartFullscreen(chart, chartCard, $event)"
-        (keydown.space)="openChartFullscreen(chart, chartCard, $event)">
-        <div class="dashboard-chart-card__header">
-          <div>
-            <h2>{{ chart.title }}</h2>
-            <p>{{ chart.subtitle }}</p>
+    @if (loading()) {
+      @for (key of loadingLayout().chartKeys; track key; let index = $index) {
+        <article
+          class="dashboard-chart-card dashboard-chart-card--skeleton"
+          [class.dashboard-chart-card--half]="chartSkeletonSize(key) === 'half'"
+          [class.dashboard-chart-card--full]="chartSkeletonSize(key) === 'full'"
+          [class.dashboard-chart-card--donut]="chartSkeletonType(key) === 'donut'"
+          [class.dashboard-chart-card--horizontal]="chartSkeletonType(key) === 'horizontal'"
+          aria-hidden="true">
+          <div class="dashboard-chart-card__header">
+            <div class="dashboard-chart-skeleton__heading">
+              <span class="dashboard-skeleton-block dashboard-chart-skeleton__title"></span>
+              <span class="dashboard-skeleton-block dashboard-chart-skeleton__subtitle"></span>
+            </div>
           </div>
-        </div>
+          <div class="dashboard-chart-skeleton__plot">
+            @if (chartSkeletonType(key) === 'donut') {
+              <div class="dashboard-skeleton-block dashboard-chart-skeleton__donut"></div>
+            } @else if (chartSkeletonType(key) === 'horizontal') {
+              <div class="dashboard-chart-skeleton__rows">
+                @for (row of skeletonRows; track row) {
+                  <span class="dashboard-skeleton-block" [style.width.%]="skeletonRowWidth(row)"></span>
+                }
+              </div>
+            } @else {
+              <div class="dashboard-chart-skeleton__bars">
+                @for (bar of skeletonBars; track bar) {
+                  <span class="dashboard-skeleton-block" [style.height.%]="skeletonBarHeight(bar)"></span>
+                }
+              </div>
+            }
+          </div>
+        </article>
+      }
+    } @else {
+      @for (chart of charts(); track chart.title) {
+        <article
+          #chartCard
+          class="dashboard-chart-card"
+          role="button"
+          tabindex="0"
+          [class.dashboard-chart-card--wide]="chart.wide"
+          [class.dashboard-chart-card--half]="chart.size === 'half'"
+          [class.dashboard-chart-card--full]="chart.size === 'full'"
+          (click)="openChartFullscreen(chart, chartCard, $event)"
+          (keydown.enter)="openChartFullscreen(chart, chartCard, $event)"
+          (keydown.space)="openChartFullscreen(chart, chartCard, $event)">
+          <div class="dashboard-chart-card__header">
+            <div>
+              <h2>{{ chart.title }}</h2>
+              <p>{{ chart.subtitle }}</p>
+            </div>
+          </div>
 
-        @if (chart.empty) {
-          <div class="dashboard-empty-chart">
-            <i class="pi pi-chart-bar"></i>
-            <span>No hay datos para este rango</span>
-          </div>
-        } @else {
-          <app-dashboard-chart [option]="chart.option" />
-        }
-      </article>
+          @if (chart.empty) {
+            <div class="dashboard-empty-chart">
+              <i class="pi pi-chart-bar"></i>
+              <span>No hay datos para este rango</span>
+            </div>
+          } @else {
+            <app-dashboard-chart [option]="chart.option" />
+          }
+        </article>
+      }
     }
   </section>
 

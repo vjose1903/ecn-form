@@ -18,12 +18,14 @@ interface UpdateRequestOptions {
 }
 
 const REQUEST_DETAIL_SECTIONS = ['couple_basic', 'contact', 'identity', 'family', 'relationship', 'invitation', 'legacy_extra'] as const;
+const DASHBOARD_DETAIL_SECTIONS = ['contact', 'identity', 'family', 'relationship', 'invitation'] as const;
 
 interface RequestFieldGroups {
   status?: Record<string, unknown>;
   is_informado?: boolean;
   readableSections: string[];
   editableSections: string[];
+  details?: Record<string, Record<string, unknown>>;
 }
 
 @Injectable({
@@ -80,20 +82,36 @@ export class RequestService extends FirebaseRequest<RequestI> {
     return Promise.all(snapshot.docs.map(requestDoc => this.hydrateV2Request(retreat.city_id, requestDoc, fieldGroups[requestDoc.id])));
   }
 
-  private async getRequestFieldGroups(cityId: string, requestIds: string[]): Promise<Record<string, RequestFieldGroups>> {
+  async getRequestsForRetreats(retreats: RetreatClass[]): Promise<RequestClass[]> {
+    const cityId = this.authService.activeCityId() || this.authService.current_user()?.city;
+    const retreatIds = [...new Set(retreats.map(retreat => retreat.id).filter((id): id is string => Boolean(id)))];
+    if (!cityId || !retreatIds.length) return [];
+
+    const requestsRef = collection(this.firestore, `city/${cityId}/requests`);
+    const retreatIdBatches = Array.from({length: Math.ceil(retreatIds.length / 30)}, (_, index) => retreatIds.slice(index * 30, (index + 1) * 30));
+    const snapshots = await Promise.all(retreatIdBatches.map(ids =>
+      getDocs(query(requestsRef, where('retreat_id', 'in', ids), where('is_archived', '==', false)))
+    ));
+    const requestDocs = snapshots.flatMap(snapshot => snapshot.docs);
+    const fieldGroups = await this.getRequestFieldGroups(cityId, requestDocs.map(item => item.id), true);
+    return Promise.all(requestDocs.map(requestDoc => this.hydrateV2Request(cityId, requestDoc, fieldGroups[requestDoc.id], false, DASHBOARD_DETAIL_SECTIONS)));
+  }
+
+  private async getRequestFieldGroups(cityId: string, requestIds: string[], includeDashboardDetails = false): Promise<Record<string, RequestFieldGroups>> {
     if (!requestIds.length) return {};
-    const getGroups = httpsCallable<{cityId: string; requestIds: string[]}, Record<string, RequestFieldGroups>>(this.functions, 'getRequestFieldGroups');
-    const batches = Array.from({length: Math.ceil(requestIds.length / 200)}, (_, index) => requestIds.slice(index * 200, (index + 1) * 200));
-    const results = await Promise.all(batches.map(requestIds => getGroups({cityId, requestIds})));
+    const getGroups = httpsCallable<{cityId: string; requestIds: string[]; includeDashboardDetails?: boolean}, Record<string, RequestFieldGroups>>(this.functions, 'getRequestFieldGroups');
+    const batchSize = includeDashboardDetails ? 50 : 200;
+    const batches = Array.from({length: Math.ceil(requestIds.length / batchSize)}, (_, index) => requestIds.slice(index * batchSize, (index + 1) * batchSize));
+    const results = await Promise.all(batches.map(requestIds => getGroups({cityId, requestIds, includeDashboardDetails})));
     return Object.assign({}, ...results.map(result => result.data));
   }
 
-  private async hydrateV2Request(cityId: string, requestDoc: {id: string; data: () => Record<string, any>}, fieldGroups: RequestFieldGroups): Promise<RequestClass> {
+  private async hydrateV2Request(cityId: string, requestDoc: {id: string; data: () => Record<string, any>}, fieldGroups: RequestFieldGroups, includePayments = true, sections: readonly string[] = REQUEST_DETAIL_SECTIONS): Promise<RequestClass> {
       const requestPath = `city/${cityId}/requests/${requestDoc.id}`;
       const root = requestDoc.data();
       const retreatId = root['retreat_id'] as string;
       const [sectionResults, paymentsSnapshot] = await Promise.all([
-        Promise.all(REQUEST_DETAIL_SECTIONS
+        fieldGroups.details ? Promise.resolve([]) : Promise.all(sections
           .map(async section => {
             try {
               return await getDoc(doc(this.firestore, `${requestPath}/details/${section}`));
@@ -102,19 +120,23 @@ export class RequestService extends FirebaseRequest<RequestI> {
               throw error;
             }
           })),
-        getDocs(collection(this.firestore, `${requestPath}/payments`)),
+        includePayments ? getDocs(collection(this.firestore, `${requestPath}/payments`)) : Promise.resolve(null),
       ]);
       const reconstructed: Record<string, any> = { id: requestDoc.id, retreat: retreatId };
       reconstructed['readableSections'] = [
-        ...REQUEST_DETAIL_SECTIONS.filter((_, index) => sectionResults[index] !== null),
+        ...(fieldGroups.details ? Object.keys(fieldGroups.details) : sections.filter((_, index) => sectionResults[index] !== null)),
         ...fieldGroups.readableSections,
       ];
       reconstructed['editableSections'] = fieldGroups.editableSections;
       if (fieldGroups.status) Object.assign(reconstructed, fieldGroups.status);
       if (fieldGroups.is_informado !== undefined) reconstructed['is_informado'] = fieldGroups.is_informado;
-      for (const detail of sectionResults) {
-        if (!detail?.exists()) continue;
-        mergeRequestDetail(reconstructed, detail.id, detail.data()!);
+      if (fieldGroups.details) {
+        for (const [section, detail] of Object.entries(fieldGroups.details)) mergeRequestDetail(reconstructed, section, detail);
+      } else {
+        for (const detail of sectionResults) {
+          if (!detail?.exists()) continue;
+          mergeRequestDetail(reconstructed, detail.id, detail.data()!);
+        }
       }
       reconstructed['retreat'] = retreatId;
       if (root['is_archived']) {
@@ -122,7 +144,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
         reconstructed['status'] = RequestStatus.ARCHIVED;
         reconstructed['archived_retreat_id'] = retreatId;
       }
-      reconstructed['pre_retreat_payments'] = paymentsSnapshot.docs.map(payment => ({ ...payment.data(), id: payment.id }));
+      reconstructed['pre_retreat_payments'] = paymentsSnapshot?.docs.map(payment => ({ ...payment.data(), id: payment.id })) ?? [];
       return new RequestClass(reconstructed as RequestI);
   }
 

@@ -8,7 +8,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { DashboardChartComponent } from './dashboard-chart.component';
 import { DashboardFullscreenCardComponent } from './dashboard-fullscreen-card.component';
 import { DashboardService } from './dashboard.service';
-import type { DashboardChart, DashboardData, DashboardDateRange, DashboardPeriodFilter, DashboardPeriodOption } from './dashboard.model';
+import type { DashboardChart, DashboardData, DashboardDateRange, DashboardPeriodFilter, DashboardPeriodOption, DashboardSkeletonLayout } from './dashboard.model';
 import { Ss } from '@core/services/singleton.service';
 
 @Component({
@@ -22,6 +22,7 @@ export class DashboardPage implements OnInit {
 
   loading = signal(false);
   data = signal<DashboardData | null>(null);
+  loadingLayout = signal<DashboardSkeletonLayout>({kpiKeys: [], chartKeys: []});
   selectedPeriod = signal<DashboardPeriodFilter>('all');
   customFrom = signal<Date | null>(null);
   customTo = signal<Date | null>(null);
@@ -36,6 +37,9 @@ export class DashboardPage implements OnInit {
     { label: 'Rango personalizado', value: 'custom' },
   ];
 
+  skeletonBars = [0, 1, 2, 3, 4, 5];
+  skeletonRows = [0, 1, 2, 3, 4];
+
   showCustomRange = computed(() => this.selectedPeriod() === 'custom');
   kpis = computed(() => this.data()?.kpis || []);
   charts = computed(() => this.data()?.charts || []);
@@ -43,7 +47,7 @@ export class DashboardPage implements OnInit {
     const data = this.data();
 
     if (!data) {
-      return 'Sin datos cargados';
+      return this.loading() ? 'Cargando datos…' : 'Sin datos cargados';
     }
 
     return `${data.retreatCount} retiros · ${data.requestCount} solicitudes`;
@@ -86,6 +90,43 @@ export class DashboardPage implements OnInit {
     this.fullscreenOriginRect.set(null);
   }
 
+  kpiTone(key: string): string {
+    const tones: Record<string, string> = {
+      request_status: 'success',
+      requests_per_retreat: 'info',
+      wedding_date: 'danger',
+      inviter: 'warning',
+      dating_average: 'info',
+      participants_children: 'warning',
+      church_marriage: 'success',
+    };
+    return tones[key] || 'primary';
+  }
+
+  kpiHasDetail(key: string): boolean {
+    return ['request_status', 'requests_per_retreat', 'wedding_date', 'inviter', 'participants_children', 'church_marriage'].includes(key);
+  }
+
+  chartSkeletonSize(key: string): 'half' | 'full' | null {
+    if (key === 'participant_ages_chart' || key === 'declared_religion_chart') return 'half';
+    if (key === 'residence_city_chart') return 'full';
+    return null;
+  }
+
+  chartSkeletonType(key: string): 'donut' | 'horizontal' | 'bars' {
+    if (['requests_status_chart', 'wedding_date_chart', 'inviter_chart'].includes(key)) return 'donut';
+    if (['acquisition_source_chart', 'declared_religion_chart', 'residence_city_chart'].includes(key)) return 'horizontal';
+    return 'bars';
+  }
+
+  skeletonBarHeight(index: number): number {
+    return [38, 76, 54, 88, 63, 46][index] ?? 50;
+  }
+
+  skeletonRowWidth(index: number): number {
+    return [78, 92, 64, 85, 54][index] ?? 70;
+  }
+
   private async loadDashboard(): Promise<void> {
     try {
       this.loading.set(true);
@@ -94,7 +135,7 @@ export class DashboardPage implements OnInit {
         to: this.customTo(),
       };
 
-      this.data.set(await this.dashboardService.getDashboardData(this.selectedPeriod(), range));
+      this.data.set(await this.dashboardService.getDashboardData(this.selectedPeriod(), range, layout => this.loadingLayout.set(layout)));
     } catch (error) {
       console.error('Error al cargar el dashboard:', error);
       Ss.toastService.error({ title: 'Error', message: 'No se pudo cargar el dashboard' });

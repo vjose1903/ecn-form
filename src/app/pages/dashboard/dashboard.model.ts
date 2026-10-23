@@ -37,3 +37,8 @@ export interface DashboardData {
   retreatCount: number;
   requestCount: number;
 }
+
+export interface DashboardSkeletonLayout {
+  kpiKeys: string[];
+  chartKeys: string[];
+}
