@@ -34,6 +34,7 @@ export class UsersManagement implements OnInit {
   readonly cities = signal<Choice[]>([]);
   readonly cityId = signal('');
   readonly roles = signal<RoleRecord[]>([]);
+  readonly roleListUnavailable = signal(false);
   readonly members = signal<MemberRecord[]>([]);
   readonly loading = signal(false);
   readonly currentPage = signal(1);
@@ -149,16 +150,36 @@ export class UsersManagement implements OnInit {
     this.currentPage.set(1);
     this.totalMembers.set(0);
     this.members.set([]);
+    this.roles.set([]);
+    this.roleListUnavailable.set(false);
     this.legacyMembers = null;
     this.loading.set(true);
     try {
       const currentUid = this.auth.currentUser?.uid;
       const [rolesSnapshot, currentMember, membersResult] = await Promise.all([
-        getDocs(collection(this.db, `city/${cityId}/roles`)),
+        getDocs(collection(this.db, `city/${cityId}/roles`)).catch(error => {
+          if (this.isPermissionDenied(error)) return null;
+          throw error;
+        }),
         currentUid && !this.canManageSuperAdmins ? getDoc(doc(this.db, `city/${cityId}/members/${currentUid}`)) : Promise.resolve(null),
         this.requestMembersPage(cityId, 'first', null),
       ]);
-      this.roles.set(rolesSnapshot.docs.map(item => ({id: item.id, ...item.data()} as RoleRecord)));
+      this.roleListUnavailable.set(rolesSnapshot === null);
+      if (rolesSnapshot) {
+        this.roles.set(rolesSnapshot.docs.map(item => ({id: item.id, ...item.data()} as RoleRecord)));
+      } else {
+        const roleIds = [...new Set([currentMember?.get('role_id'), ...membersResult.data.members.map(member => member.role_id)].filter((id): id is string => typeof id === 'string' && !!id))];
+        const relatedRoles = await Promise.all(roleIds.map(async id => {
+          try {
+            const snapshot = await getDoc(doc(this.db, `city/${cityId}/roles/${id}`));
+            return {id, name: snapshot.exists() ? String(snapshot.get('name') ?? id) : id} as RoleRecord;
+          } catch (error) {
+            if (this.isPermissionDenied(error)) return {id, name: id} as RoleRecord;
+            throw error;
+          }
+        }));
+        this.roles.set(relatedRoles);
+      }
       this.currentUserRoleId.set(currentMember?.get('role_id') ?? null);
       this.applyMembersPage(membersResult.data, 1);
     } catch (error) {
@@ -167,6 +188,10 @@ export class UsersManagement implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  private isPermissionDenied(error: unknown): boolean {
+    return ['permission-denied', 'firestore/permission-denied'].includes((error as {code?: string})?.code ?? '');
   }
 
   private requestMembersPage(cityId: string, direction: PageDirection, cursor: MemberCursor | null) {

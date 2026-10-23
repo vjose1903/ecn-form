@@ -1,0 +1,67 @@
+<main class="cities-page">
+  <header class="cities-page__header">
+    <div>
+      <p class="cities-page__eyebrow">ADMINISTRACIÓN</p>
+      <h1>Ciudades</h1>
+      <p>Administra las ciudades y sus datos de presentación.</p>
+    </div>
+    <p-button label="Crear ciudad" icon="pi pi-plus" [disabled]="loading()" (onClick)="openCreate()" />
+  </header>
+
+  <section class="cities-card" aria-label="Listado de ciudades">
+    <label class="cities-search">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <input pInputText type="search" placeholder="Buscar ciudad..." [value]="searchTerm()" (input)="searchTerm.set($any($event.target).value)" aria-label="Buscar ciudad" />
+    </label>
+
+    @if (loading()) {
+      <div class="cities-state" role="status"><span class="cities-spinner" aria-hidden="true"></span>Cargando ciudades...</div>
+    } @else {
+      <div class="cities-table-wrap">
+        <table class="cities-table">
+          <thead><tr><th>CIUDAD</th><th>NOMBRE COMPLETO</th><th>IDENTIFICADOR</th><th class="cities-actions-heading">ACCIONES</th></tr></thead>
+          <tbody>
+            @for (city of filteredCities(); track city.id) {
+              <tr>
+                <td data-label="Ciudad"><strong>{{ city.label }}</strong></td>
+                <td data-label="Nombre completo">{{ city.large_label || city.label }}</td>
+                <td data-label="Identificador"><code>{{ city.id }}</code></td>
+                <td class="cities-actions" data-label="Acciones">
+                  <p-button icon="pi pi-pencil" [text]="true" [rounded]="true" severity="secondary" [attr.aria-label]="'Editar ciudad ' + city.label" title="Editar ciudad" (onClick)="openEdit(city)" />
+                </td>
+              </tr>
+            } @empty {
+              <tr><td class="cities-empty" colspan="4">{{ searchTerm().trim() ? 'Ninguna ciudad coincide con la búsqueda.' : 'No hay ciudades registradas.' }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</main>
+
+<p-dialog
+  [header]="editingCity() ? 'Editar ciudad' : 'Crear ciudad'"
+  [visible]="dialogVisible()"
+  (visibleChange)="!$event && !saving() && dialogVisible.set(false)"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [closable]="!saving()"
+  [closeOnEscape]="!saving()"
+  [dismissableMask]="false"
+  styleClass="city-form-dialog"
+  [style]="{width: 'min(36rem, calc(100vw - 2rem))'}">
+  <form class="city-form" (ngSubmit)="saveCity()">
+    <p class="city-form__hint">{{ editingCity() ? 'Actualiza cómo aparece esta ciudad en la plataforma.' : 'La nueva ciudad recibirá los roles Administrador de ciudad, Operador y Consulta con los permisos de La Vega.' }}</p>
+    <label>Nombre de la ciudad<input pInputText [(ngModel)]="label" name="label" required maxlength="100" placeholder="Ej. Santiago" /></label>
+    <label>Nombre completo<input pInputText [(ngModel)]="largeLabel" name="largeLabel" maxlength="140" placeholder="Si se deja vacío, se usará el nombre de la ciudad" /></label>
+    <label>Artículo<input pInputText [(ngModel)]="definiteArticle" name="definiteArticle" maxlength="20" placeholder="Ej. La" /></label>
+    <div class="city-form__identifier"><span>Identificador</span><code>{{ cityIdPreview() || 'Se generará al escribir el nombre' }}</code><small>Se genera del nombre y no se puede cambiar después.</small></div>
+    @if (error()) { <p class="city-form__error" role="alert">{{ error() }}</p> }
+    <footer class="city-form__actions">
+      <p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" [disabled]="saving()" (onClick)="dialogVisible.set(false)" />
+      <p-button type="submit" [label]="editingCity() ? 'Guardar cambios' : 'Crear ciudad'" icon="pi pi-save" [loading]="saving()" [disabled]="saving()" />
+    </footer>
+  </form>
+</p-dialog>

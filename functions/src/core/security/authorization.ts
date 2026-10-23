@@ -4,15 +4,13 @@ import {v2Db} from "../firebase-admin";
 type PermissionMap = Record<string, unknown>;
 
 const resources: Record<string, string[]> = {
-  city: ["read", "manage"],
   members: ["read", "list", "create", "update", "disable", "delete", "assign_role"],
   roles: ["read", "list", "create", "update", "delete"],
   retreat_homes: ["read", "list", "create", "assign", "update", "unassign"],
   retreats: ["read", "list", "create", "update", "delete"],
-  requests: ["read", "list", "create", "update", "delete", "archive", "unarchive", "transfer", "history_read", "history_list", "history_delete"],
+  requests: ["read", "list", "update", "delete", "archive", "unarchive", "transfer", "history_read", "history_list", "history_delete"],
   payments: ["read", "list", "create", "update", "delete"],
   audit: ["read", "list"],
-  files: ["read", "create", "update", "delete"],
 };
 
 export const isSuperAdmin = (request: CallableRequest<unknown>): boolean => request.auth?.token.super_admin === true;
@@ -29,6 +27,7 @@ export const hasCityPermission = async (
   resource: string,
   action: string,
 ): Promise<boolean> => {
+  if (resource === "requests" && action === "create") return false;
   if (isSuperAdmin(request)) return true;
   const uid = request.auth?.uid;
   if (!uid || !cityId) return false;
@@ -63,7 +62,7 @@ export const hasCityFieldPermission = async (
   const requestPermissions = permissions?.[resource] as PermissionMap | undefined;
   const fields = requestPermissions?.fields as PermissionMap | undefined;
   const group = fields?.[fieldGroup] as PermissionMap | undefined;
-  return group?.[action] === true;
+  return action !== "create" && group?.[action] === true;
 };
 
 export const requireCityPermission = async (
@@ -86,6 +85,7 @@ export const validateRolePermissions = (value: unknown): PermissionMap => {
   const input = value as Record<string, unknown>;
   const result: PermissionMap = {};
   for (const [resource, actionsValue] of Object.entries(input)) {
+    if (resource === "files" || resource === "city") continue;
     const allowedActions = resources[resource];
     if (!allowedActions || !actionsValue || typeof actionsValue !== "object" || Array.isArray(actionsValue)) {
       throw new HttpsError("invalid-argument", `El recurso ${resource} no está permitido.`);
@@ -93,6 +93,7 @@ export const validateRolePermissions = (value: unknown): PermissionMap => {
     const actions = actionsValue as Record<string, unknown>;
     const normalized: Record<string, unknown> = {};
     for (const [action, enabled] of Object.entries(actions)) {
+      if (resource === "requests" && action === "create") continue;
       if (action === "fields" && resource === "requests") {
         if (!enabled || typeof enabled !== "object" || Array.isArray(enabled)) {
           throw new HttpsError("invalid-argument", "Los permisos por sección no son válidos.");
@@ -105,6 +106,7 @@ export const validateRolePermissions = (value: unknown): PermissionMap => {
           }
           const normalizedFieldActions: Record<string, boolean> = {};
           for (const [fieldAction, allowed] of Object.entries(fieldActions as Record<string, unknown>)) {
+            if (fieldAction === "create") continue;
             if (!["read", "create", "update"].includes(fieldAction) || typeof allowed !== "boolean") {
               throw new HttpsError("invalid-argument", `La acción ${fieldAction} de ${section} no es válida.`);
             }

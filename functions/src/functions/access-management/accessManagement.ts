@@ -71,6 +71,32 @@ const requireText = (value: unknown, name: string, maxLength: number): string =>
   return value.trim();
 };
 
+const operatorPermissionsForNewCity = (value: unknown): Record<string, unknown> => {
+  const permissions = validateRolePermissions(value);
+  const retreats = permissions["retreats"] as Record<string, unknown>;
+  const requests = permissions["requests"] as Record<string, unknown>;
+  const existingFields = (requests["fields"] ?? {}) as Record<string, Record<string, boolean>>;
+  const requestSections = ["couple_basic", "contact", "identity", "family", "relationship", "invitation", "status", "informed", "legacy_extra"];
+
+  return {
+    ...permissions,
+    retreats: {...retreats, create: true},
+    requests: {
+      ...requests,
+      archive: true,
+      unarchive: true,
+      transfer: true,
+      history_read: true,
+      history_list: true,
+      history_delete: true,
+      fields: Object.fromEntries(requestSections.map(section => [section, {
+        ...(existingFields[section] ?? {}),
+        update: true,
+      }])),
+    },
+  };
+};
+
 export const saveCityRole = onCall(async (request) => {
   const data = request.data as Record<string, unknown>;
   const cityId = requireText(data.cityId, "La ciudad", 100);
@@ -100,6 +126,81 @@ export const saveCityRole = onCall(async (request) => {
       : {created_by: actorUid, created_at: timestamp}),
   }, {merge: false});
   return {roleId};
+});
+
+export const saveCity = onCall(async (request) => {
+  const actorUid = requireAuthenticated(request);
+  if (!isSuperAdmin(request)) throw new HttpsError("permission-denied", "Solo un superadmin puede administrar ciudades.");
+
+  const data = request.data as Record<string, unknown>;
+  const label = requireText(data.label, "El nombre de la ciudad", 100);
+  const largeLabel = typeof data.largeLabel === "string" && data.largeLabel.trim()
+    ? data.largeLabel.trim().slice(0, 140)
+    : label;
+  const definiteArticle = typeof data.definiteArticle === "string" ? data.definiteArticle.trim().slice(0, 20) : "";
+  const cityId = typeof data.cityId === "string" && data.cityId.trim() ? data.cityId.trim() : slug(label);
+  if (!cityId || cityId.length > 100 || !/^[a-z0-9_]+$/.test(cityId)) {
+    throw new HttpsError("invalid-argument", "El identificador de la ciudad no es válido.");
+  }
+
+  const cityRef = v2Db.doc(`city/${cityId}`);
+  const existing = await cityRef.get();
+  const timestamp = FieldValue.serverTimestamp();
+  if (existing.exists) {
+    if (typeof data.cityId !== "string" || !data.cityId.trim()) {
+      throw new HttpsError("already-exists", "Ya existe una ciudad con ese nombre.");
+    }
+    await cityRef.set({
+      ...existing.data(),
+      label,
+      large_label: largeLabel,
+      definite_article: definiteArticle,
+      updated_by: actorUid,
+      updated_at: timestamp,
+    }, {merge: false});
+    return {cityId, created: false};
+  }
+
+  if (typeof data.cityId === "string" && data.cityId.trim()) {
+    throw new HttpsError("not-found", "No se encontró la ciudad que deseas modificar.");
+  }
+
+  const sourceCities = await v2Db.collection("city").where("label", "==", "La Vega").limit(1).get();
+  if (sourceCities.empty) throw new HttpsError("failed-precondition", "No se encontró la ciudad base La Vega para copiar los roles predeterminados.");
+  const roleIds = ["city_admin", "operador", "consulta"];
+  const sourceRoles = await Promise.all(roleIds.map(roleId => sourceCities.docs[0].ref.collection("roles").doc(roleId).get()));
+  if (sourceRoles.some(role => !role.exists || !role.get("permissions"))) {
+    throw new HttpsError("failed-precondition", "La ciudad base debe tener los roles Administrador de ciudad, Operador y Consulta configurados.");
+  }
+
+  const batch = v2Db.batch();
+  batch.create(cityRef, {
+    id: cityId,
+    key: cityId,
+    label,
+    large_label: largeLabel,
+    definite_article: definiteArticle,
+    created_by: actorUid,
+    created_at: timestamp,
+  });
+  sourceRoles.forEach((role, index) => {
+    const roleData = role.data()!;
+    const sourcePermissions = roleData["permissions"];
+    const permissions = roleIds[index] === "operador"
+      ? operatorPermissionsForNewCity(sourcePermissions)
+      : validateRolePermissions(sourcePermissions);
+    batch.create(cityRef.collection("roles").doc(roleIds[index]), {
+      role_id: roleIds[index],
+      name: roleData["name"],
+      description: roleData["description"] ?? "",
+      is_active: roleData["is_active"] !== false,
+      permissions,
+      created_by: actorUid,
+      created_at: timestamp,
+    });
+  });
+  await batch.commit();
+  return {cityId, created: true, roleIds};
 });
 
 export const createCityMember = onCall(async (request) => {

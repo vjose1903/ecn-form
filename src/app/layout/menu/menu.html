@@ -11,7 +11,7 @@
 
 <ng-template #menuContent>
   <ul class="flex flex-col gap-2 h-full">
-    @for(item of items; track item.label){
+    @for(item of visibleItems(); track item.label){
     @if (item.label === 'Cerrar sesión' && authService.isSuperAdmin() && availableCities().length > 1) {
       <li>
         <button type="button" class="group flex w-full cursor-pointer items-center gap-3 rounded p-2 text-left text-black transition-colors hover:bg-gray-100" (click)="cityPopover.toggle($event)">

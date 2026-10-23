@@ -17,6 +17,15 @@ interface UpdateRequestOptions {
   trackAsEdited?: boolean;
 }
 
+const REQUEST_DETAIL_SECTIONS = ['couple_basic', 'contact', 'identity', 'family', 'relationship', 'invitation', 'legacy_extra'] as const;
+
+interface RequestFieldGroups {
+  status?: Record<string, unknown>;
+  is_informado?: boolean;
+  readableSections: string[];
+  editableSections: string[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -67,15 +76,24 @@ export class RequestService extends FirebaseRequest<RequestI> {
     if (!this.authService.current_user()) return [];
     const requestsRef = collection(this.firestore, `city/${retreat.city_id}/requests`);
     const snapshot = await getDocs(query(requestsRef, where('retreat_id', '==', retreat.id), where('is_archived', '==', false)));
-    return Promise.all(snapshot.docs.map(requestDoc => this.hydrateV2Request(retreat.city_id, requestDoc)));
+    const fieldGroups = await this.getRequestFieldGroups(retreat.city_id, snapshot.docs.map(requestDoc => requestDoc.id));
+    return Promise.all(snapshot.docs.map(requestDoc => this.hydrateV2Request(retreat.city_id, requestDoc, fieldGroups[requestDoc.id])));
   }
 
-  private async hydrateV2Request(cityId: string, requestDoc: {id: string; data: () => Record<string, any>}): Promise<RequestClass> {
+  private async getRequestFieldGroups(cityId: string, requestIds: string[]): Promise<Record<string, RequestFieldGroups>> {
+    if (!requestIds.length) return {};
+    const getGroups = httpsCallable<{cityId: string; requestIds: string[]}, Record<string, RequestFieldGroups>>(this.functions, 'getRequestFieldGroups');
+    const batches = Array.from({length: Math.ceil(requestIds.length / 200)}, (_, index) => requestIds.slice(index * 200, (index + 1) * 200));
+    const results = await Promise.all(batches.map(requestIds => getGroups({cityId, requestIds})));
+    return Object.assign({}, ...results.map(result => result.data));
+  }
+
+  private async hydrateV2Request(cityId: string, requestDoc: {id: string; data: () => Record<string, any>}, fieldGroups: RequestFieldGroups): Promise<RequestClass> {
       const requestPath = `city/${cityId}/requests/${requestDoc.id}`;
       const root = requestDoc.data();
       const retreatId = root['retreat_id'] as string;
       const [sectionResults, paymentsSnapshot] = await Promise.all([
-        Promise.all(['couple_basic', 'contact', 'identity', 'family', 'relationship', 'invitation', 'status', 'legacy_extra']
+        Promise.all(REQUEST_DETAIL_SECTIONS
           .map(async section => {
             try {
               return await getDoc(doc(this.firestore, `${requestPath}/details/${section}`));
@@ -87,6 +105,13 @@ export class RequestService extends FirebaseRequest<RequestI> {
         getDocs(collection(this.firestore, `${requestPath}/payments`)),
       ]);
       const reconstructed: Record<string, any> = { id: requestDoc.id, retreat: retreatId };
+      reconstructed['readableSections'] = [
+        ...REQUEST_DETAIL_SECTIONS.filter((_, index) => sectionResults[index] !== null),
+        ...fieldGroups.readableSections,
+      ];
+      reconstructed['editableSections'] = fieldGroups.editableSections;
+      if (fieldGroups.status) Object.assign(reconstructed, fieldGroups.status);
+      if (fieldGroups.is_informado !== undefined) reconstructed['is_informado'] = fieldGroups.is_informado;
       for (const detail of sectionResults) {
         if (!detail?.exists()) continue;
         mergeRequestDetail(reconstructed, detail.id, detail.data()!);
@@ -164,7 +189,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
     retreat?: RetreatClass | null;
     event: RequestHistoryI;
     isArchived?: boolean;
-  }): Promise<{ request: RequestI; deleted: boolean }> {
+  }): Promise<{ request: RequestI & {readableSections?: string[] | null; editableSections?: string[] | null}; deleted: boolean }> {
     const {request, retreat, event} = args;
     const cityId = retreat?.city_id || this.authService.activeCityId() || this.authService.current_user()?.city;
     if (!request.id || !cityId || !event.id) throw new Error('Solicitud, ciudad o movimiento no disponible');
@@ -177,7 +202,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
     const result = await remove({cityId, requestId: request.id, eventId: event.id});
     if (!result.data.deleted) return {request, deleted: false};
 
-    const updated = {...request.asJson()};
+    const updated = {...request.asJson(), readableSections: request.readableSections, editableSections: request.editableSections};
     if (result.data.kind === 'payment') {
       updated.pre_retreat_payments = (updated.pre_retreat_payments ?? []).filter(payment => payment.id !== event.payment_id);
     } else {
@@ -254,7 +279,8 @@ export class RequestService extends FirebaseRequest<RequestI> {
       this._loadingRequestsList.next(true);
       try {
         const snapshot = await getDocs(query(collection(this.firestore, `city/${cityId}/requests`), where('is_archived', '==', false)));
-        this._requests.next(await Promise.all(snapshot.docs.map(item => this.hydrateV2Request(cityId, item))));
+        const fieldGroups = await this.getRequestFieldGroups(cityId, snapshot.docs.map(item => item.id));
+        this._requests.next(await Promise.all(snapshot.docs.map(item => this.hydrateV2Request(cityId, item, fieldGroups[item.id]))));
         this._cacheCityId = cityId;
         this._lastFetch = Date.now();
       } finally {
@@ -271,7 +297,9 @@ export class RequestService extends FirebaseRequest<RequestI> {
     const cityId = this.authService.activeCityId() || this.authService.current_user()?.city;
     if (!cityId) return null;
     const snapshot = await getDoc(doc(this.firestore, `city/${cityId}/requests/${id}`));
-    return snapshot.exists() ? this.hydrateV2Request(cityId, snapshot) : null;
+    if (!snapshot.exists()) return null;
+    const fieldGroups = await this.getRequestFieldGroups(cityId, [id]);
+    return this.hydrateV2Request(cityId, snapshot, fieldGroups[id]);
   }
 
   async createRequest(args: { payload: RequestI; refString: string; retreat: RetreatClass }): Promise<RequestI> {
@@ -451,7 +479,8 @@ export class RequestService extends FirebaseRequest<RequestI> {
       const archivedRequestsQuery = query(archivedRequestsRef, ...constraints);
       const archivedRequestsSnapshot = await getDocs(archivedRequestsQuery);
 
-      return Promise.all(archivedRequestsSnapshot.docs.map(requestDoc => this.hydrateV2Request(cityId, requestDoc)))
+      const fieldGroups = await this.getRequestFieldGroups(cityId, archivedRequestsSnapshot.docs.map(requestDoc => requestDoc.id));
+      return Promise.all(archivedRequestsSnapshot.docs.map(requestDoc => this.hydrateV2Request(cityId, requestDoc, fieldGroups[requestDoc.id])))
         .then(requests => requests.sort((a, b) => new Date(b.archived_at || 0).getTime() - new Date(a.archived_at || 0).getTime()));
     } catch (error) {
       console.error('Error al obtener solicitudes archivadas:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message, ...('code' in error ? { code: error.code } : {}) } : error));
@@ -559,8 +588,13 @@ export class RequestService extends FirebaseRequest<RequestI> {
    * Actualiza o agrega un retiro en el observable
    */
   private updateRequestInCache(requestData: RequestI, action: 'create' | 'update'): void {
-    const requestInstance = new RequestClass(requestData);
     const currentRequests = this._requests.value;
+    const existing = currentRequests.find(item => item.id === requestData.id);
+    const requestInstance = new RequestClass({
+      ...requestData,
+      readableSections: existing?.readableSections ?? currentRequests[0]?.readableSections ?? [],
+      editableSections: existing?.editableSections ?? currentRequests[0]?.editableSections ?? [],
+    });
 
     if (action === 'create') {
       // Agregar al final del array

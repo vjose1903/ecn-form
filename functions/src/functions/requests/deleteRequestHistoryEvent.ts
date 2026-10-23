@@ -21,23 +21,24 @@ export const deleteRequestHistoryEvent = onCall(async request => {
 
   if (eventData.message === "Pareja marcada como informada") {
     if (!await requireCityPermission(request, cityId, "requests", "update")
-      || !await hasCityFieldPermission(request, cityId, "requests", "status", "update")) {
+      || !await hasCityFieldPermission(request, cityId, "requests", "informed", "update")) {
       throw new HttpsError("permission-denied", "No tienes permiso para revertir el estado de información.");
     }
     await v2Db.runTransaction(async transaction => {
-      const [rootSnapshot, statusSnapshot, historySnapshot] = await Promise.all([
+      const [rootSnapshot, statusSnapshot, informedSnapshot, historySnapshot] = await Promise.all([
         transaction.get(rootRef),
         transaction.get(rootRef.collection("details").doc("status")),
+        transaction.get(rootRef.collection("details").doc("informed")),
         transaction.get(rootRef.collection("history")),
       ]);
       if (!rootSnapshot.exists || !historySnapshot.docs.some(item => item.id === eventId)) throw new HttpsError("not-found", "El movimiento ya no está disponible.");
       const latest = historySnapshot.docs
         .filter(item => ["Pareja marcada como informada", "Pareja marcada como no informada"].includes(String(item.get("message"))))
         .sort((left, right) => (right.get("happened_at")?.toMillis?.() ?? 0) - (left.get("happened_at")?.toMillis?.() ?? 0))[0];
-      if (latest?.id !== eventId || statusSnapshot.get("is_informado") !== true) {
+      if (latest?.id !== eventId || (informedSnapshot.exists ? informedSnapshot.get("is_informado") : statusSnapshot.get("is_informado")) !== true) {
         throw new HttpsError("failed-precondition", "Solo se puede revertir el movimiento de información más reciente.");
       }
-      transaction.set(rootRef.collection("details").doc("status"), {
+      transaction.set(rootRef.collection("details").doc("informed"), {
         is_informado: false,
         updated_by: uid,
         updated_at: FieldValue.serverTimestamp(),

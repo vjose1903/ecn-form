@@ -16,6 +16,7 @@ import { BadgeModule } from 'primeng/badge';
 export class CoupleView {
   couple = input.required<CoupleI>();
   coupleType = input.required<CoupleType>();
+  readableSections = input<string[] | null>(null);
 
   type = input<'complete' | 'essential'>('complete');
 
@@ -41,6 +42,15 @@ export class CoupleView {
 
   get isComplete() {
     return this.type() === 'complete';
+  }
+
+  canReadSection(section: string): boolean {
+    const readableSections = this.readableSections();
+    return readableSections === null || readableSections.includes(section);
+  }
+
+  hasEmergencyContact(couple: CoupleI): boolean {
+    return Boolean(couple.emergency_full_name || couple.emergency_relationship || couple.emergency_phone);
   }
 
   getReligionDisplay(couple: CoupleI): string {

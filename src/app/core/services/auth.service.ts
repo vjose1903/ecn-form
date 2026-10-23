@@ -43,9 +43,10 @@ export class AuthService implements OnDestroy {
 
   // Subject para limpiar suscripciones
   private destroy$ = new Subject<void>();
-
-  // Intervalo para verificar expiración de token (cada 5 minutos)
-  private tokenCheckInterval: any;
+  private readonly sessionExpiresAtKey = 'ecn_session_expires_at';
+  private readonly keepSessionActiveKey = 'ecn_keep_session_active';
+  private readonly sessionDurationMs = 24 * 60 * 60 * 1000;
+  private sessionExpirationTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.initializeAuthStateListener();
@@ -55,8 +56,8 @@ export class AuthService implements OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    if (this.tokenCheckInterval) {
-      clearInterval(this.tokenCheckInterval);
+    if (this.sessionExpirationTimeout) {
+      clearTimeout(this.sessionExpirationTimeout);
     }
   }
 
@@ -70,6 +71,13 @@ export class AuthService implements OnDestroy {
       if (firebaseUser) {
         // Usuario autenticado en Firebase
         this.firebaseUser.set(firebaseUser);
+
+        if (this.isSessionExpired()) {
+          await this.logout();
+          this.isLoading.set(false);
+          return;
+        }
+        this.ensureSessionExpiration();
 
         try {
           // Verificar si el token es válido
@@ -91,8 +99,7 @@ export class AuthService implements OnDestroy {
 
               void this.messagingService.syncTokenOnLogin(user);
 
-              // Iniciar verificación periódica de token
-              this.startTokenExpirationCheck();
+              this.scheduleSessionExpiration();
             } else {
               console.warn('⚠️ [AuthService] Usuario no encontrado en Firestore');
               await this.handleUserNotRegistered();
@@ -114,36 +121,29 @@ export class AuthService implements OnDestroy {
     });
   }
 
-  /**
-   * Inicia la verificación periódica de expiración de token
-   */
-  private startTokenExpirationCheck(): void {
-    if (this.tokenCheckInterval) {
-      clearInterval(this.tokenCheckInterval);
+  private isSessionExpired(): boolean {
+    if (localStorage.getItem(this.keepSessionActiveKey) === 'true') return false;
+    const expiresAt = Number(localStorage.getItem(this.sessionExpiresAtKey));
+    return Number.isFinite(expiresAt) && expiresAt > 0 && Date.now() >= expiresAt;
+  }
+
+  private ensureSessionExpiration(): void {
+    const expiresAt = Number(localStorage.getItem(this.sessionExpiresAtKey));
+    if (localStorage.getItem(this.keepSessionActiveKey) !== 'true' && (!Number.isFinite(expiresAt) || expiresAt <= 0)) {
+      localStorage.setItem(this.sessionExpiresAtKey, String(Date.now() + this.sessionDurationMs));
     }
+  }
 
-    this.tokenCheckInterval = setInterval(async () => {
-      const firebaseUser = this.firebaseUser();
-      if (firebaseUser) {
-        try {
-          const tokenResult = await getIdTokenResult(firebaseUser, true); // Force refresh
-
-          if (tokenResult.expirationTime) {
-            const expirationTime = new Date(tokenResult.expirationTime).getTime();
-            const currentTime = Date.now();
-            const timeUntilExpiration = expirationTime - currentTime;
-
-            // Si el token expira en menos de 10 minutos, renovarlo
-            if (timeUntilExpiration < 10 * 60 * 1000) {
-              await firebaseUser.getIdToken(true);
-            }
-          }
-        } catch (error) {
-          console.error('❌ [AuthService] Error verificando expiración de token:', error);
-          await this.handleInvalidUser();
-        }
-      }
-    }, 5 * 60 * 1000); // Verificar cada 5 minutos
+  private scheduleSessionExpiration(): void {
+    if (this.sessionExpirationTimeout) clearTimeout(this.sessionExpirationTimeout);
+    if (localStorage.getItem(this.keepSessionActiveKey) === 'true') return;
+    const expiresAt = Number(localStorage.getItem(this.sessionExpiresAtKey));
+    const remaining = expiresAt - Date.now();
+    if (remaining <= 0) {
+      void this.logout();
+      return;
+    }
+    this.sessionExpirationTimeout = setTimeout(() => void this.logout(), remaining);
   }
 
   /**
@@ -182,10 +182,10 @@ export class AuthService implements OnDestroy {
     localStorage.removeItem(environment.X_TOKEN);
     localStorage.removeItem(environment.X_EMAIL);
 
-    // Limpiar intervalo de verificación
-    if (this.tokenCheckInterval) {
-      clearInterval(this.tokenCheckInterval);
-    }
+    if (this.sessionExpirationTimeout) clearTimeout(this.sessionExpirationTimeout);
+    this.sessionExpirationTimeout = null;
+    localStorage.removeItem(this.sessionExpiresAtKey);
+    localStorage.removeItem(this.keepSessionActiveKey);
   }
 
   /**
@@ -195,6 +195,14 @@ export class AuthService implements OnDestroy {
     return runInInjectionContext(this.injector, () => {
       return new Promise<void>((resolve, reject) => {
         this.isLoading.set(true);
+
+        if (payload.keepSessionActive) {
+          localStorage.setItem(this.keepSessionActiveKey, 'true');
+          localStorage.removeItem(this.sessionExpiresAtKey);
+        } else {
+          localStorage.setItem(this.keepSessionActiveKey, 'false');
+          localStorage.setItem(this.sessionExpiresAtKey, String(Date.now() + this.sessionDurationMs));
+        }
 
         signInWithEmailAndPassword(this.auth, payload.email, payload.password)
           .then(async (userCredential: UserCredential) => {
@@ -207,6 +215,8 @@ export class AuthService implements OnDestroy {
             }
           })
           .catch(error => {
+            localStorage.removeItem(this.sessionExpiresAtKey);
+            localStorage.removeItem(this.keepSessionActiveKey);
             console.error('❌ [AuthService] Error de autenticación:', error);
             const authResult = this.getAuthMessage(error);
             this.toastService.error({
@@ -280,6 +290,11 @@ export class AuthService implements OnDestroy {
     const firebaseUser = this.firebaseUser();
 
     if (!firebaseUser) {
+      return false;
+    }
+
+    if (this.isSessionExpired()) {
+      await this.logout();
       return false;
     }
 

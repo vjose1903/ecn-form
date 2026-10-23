@@ -33,6 +33,7 @@ export class Login implements OnInit, OnDestroy {
   isLoading = this.auth.isLoading;
 
   isSubmitting = signal(false);
+  keepSessionActive = false;
 
   private destroy$ = new Subject<void>();
 
@@ -63,7 +64,7 @@ export class Login implements OnInit, OnDestroy {
   async onSubmit() {
     if (this.formGroup.valid && !this.isSubmitting()) {
       this.isSubmitting.set(true);
-      const payload: AuthPayload = this.formGroup.value as AuthPayload;
+      const payload: AuthPayload = {...this.formGroup.value, keepSessionActive: this.keepSessionActive} as AuthPayload;
 
       try {
         await this.auth.login(payload);

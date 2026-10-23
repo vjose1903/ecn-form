@@ -294,9 +294,8 @@ const main = async () => {
           roles: { read: true, list: true, create: true, update: true },
           retreat_homes: { read: true, list: true, create: true, assign: true, update: true, unassign: true },
           retreats: { read: true, list: true, create: true, update: true, delete: true },
-          requests: { read: true, list: true, create: true, update: true, delete: true, archive: true, unarchive: true, transfer: true, history_read: true, history_list: true, history_delete: true, fields: Object.fromEntries(['couple_basic', 'contact', 'identity', 'family', 'relationship', 'invitation', 'status', 'legacy_extra'].map(section => [section, { read: true, create: true, update: true }])) },
+          requests: { read: true, list: true, update: true, delete: true, archive: true, unarchive: true, transfer: true, history_read: true, history_list: true, history_delete: true, fields: Object.fromEntries(['couple_basic', 'contact', 'identity', 'family', 'relationship', 'invitation', 'status', 'informed', 'legacy_extra'].map(section => [section, { read: true, update: true }])) },
           payments: { read: true, list: true, create: true, update: true, delete: true },
-          files: { read: true, create: true, update: true, delete: true },
           audit: { read: true, list: true },
         },
       });

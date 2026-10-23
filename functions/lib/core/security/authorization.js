@@ -4,15 +4,13 @@ exports.availableRolePermissions = exports.requirePermissionsWithinActorRole = e
 const https_1 = require("firebase-functions/v2/https");
 const firebase_admin_1 = require("../firebase-admin");
 const resources = {
-    city: ["read", "manage"],
     members: ["read", "list", "create", "update", "disable", "delete", "assign_role"],
     roles: ["read", "list", "create", "update", "delete"],
     retreat_homes: ["read", "list", "create", "assign", "update", "unassign"],
     retreats: ["read", "list", "create", "update", "delete"],
-    requests: ["read", "list", "create", "update", "delete", "archive", "unarchive", "transfer", "history_read", "history_list", "history_delete"],
+    requests: ["read", "list", "update", "delete", "archive", "unarchive", "transfer", "history_read", "history_list", "history_delete"],
     payments: ["read", "list", "create", "update", "delete"],
     audit: ["read", "list"],
-    files: ["read", "create", "update", "delete"],
 };
 const isSuperAdmin = (request) => request.auth?.token.super_admin === true;
 exports.isSuperAdmin = isSuperAdmin;
@@ -24,6 +22,8 @@ const requireAuthenticated = (request) => {
 };
 exports.requireAuthenticated = requireAuthenticated;
 const hasCityPermission = async (request, cityId, resource, action) => {
+    if (resource === "requests" && action === "create")
+        return false;
     if ((0, exports.isSuperAdmin)(request))
         return true;
     const uid = request.auth?.uid;
@@ -62,7 +62,7 @@ const hasCityFieldPermission = async (request, cityId, resource, fieldGroup, act
     const requestPermissions = permissions?.[resource];
     const fields = requestPermissions?.fields;
     const group = fields?.[fieldGroup];
-    return group?.[action] === true;
+    return action !== "create" && group?.[action] === true;
 };
 exports.hasCityFieldPermission = hasCityFieldPermission;
 const requireCityPermission = async (request, cityId, resource, action) => {
@@ -80,6 +80,8 @@ const validateRolePermissions = (value) => {
     const input = value;
     const result = {};
     for (const [resource, actionsValue] of Object.entries(input)) {
+        if (resource === "files" || resource === "city")
+            continue;
         const allowedActions = resources[resource];
         if (!allowedActions || !actionsValue || typeof actionsValue !== "object" || Array.isArray(actionsValue)) {
             throw new https_1.HttpsError("invalid-argument", `El recurso ${resource} no está permitido.`);
@@ -87,6 +89,8 @@ const validateRolePermissions = (value) => {
         const actions = actionsValue;
         const normalized = {};
         for (const [action, enabled] of Object.entries(actions)) {
+            if (resource === "requests" && action === "create")
+                continue;
             if (action === "fields" && resource === "requests") {
                 if (!enabled || typeof enabled !== "object" || Array.isArray(enabled)) {
                     throw new https_1.HttpsError("invalid-argument", "Los permisos por sección no son válidos.");
@@ -99,6 +103,8 @@ const validateRolePermissions = (value) => {
                     }
                     const normalizedFieldActions = {};
                     for (const [fieldAction, allowed] of Object.entries(fieldActions)) {
+                        if (fieldAction === "create")
+                            continue;
                         if (!["read", "create", "update"].includes(fieldAction) || typeof allowed !== "boolean") {
                             throw new https_1.HttpsError("invalid-argument", `La acción ${fieldAction} de ${section} no es válida.`);
                         }

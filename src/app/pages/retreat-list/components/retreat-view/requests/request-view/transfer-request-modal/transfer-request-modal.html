@@ -12,7 +12,11 @@
         (ngModelChange)="selectedRetreatId.set($event)"
         placeholder="Selecciona un retiro"
         appendTo="body"
+        [disabled]="retreatListUnavailable()"
       />
+      @if (retreatListUnavailable()) {
+        <p class="text-sm text-slate-500" role="status">No tienes permiso para ver el listado de retiros; no puedes cambiar el retiro relacionado.</p>
+      }
       <p class="text-sm text-gray-500">
         {{ requests.length === 1 ? 'La solicitud se transferirá' : requests.length + ' solicitudes se transferirán' }} desde
         @if (sourceRetreatCount > 1) {
@@ -25,7 +29,7 @@
 
     <div class="flex justify-end gap-3 pt-2">
       <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="ref.close()" />
-      <p-button [label]="requests.length === 1 ? 'Transferir solicitud' : 'Transferir solicitudes'" icon="pi pi-send" severity="help" [loading]="saving()" (onClick)="transfer()" />
+      <p-button [label]="requests.length === 1 ? 'Transferir solicitud' : 'Transferir solicitudes'" icon="pi pi-send" severity="help" [loading]="saving()" [disabled]="retreatListUnavailable()" (onClick)="transfer()" />
     </div>
   }
 </div>

@@ -9,6 +9,14 @@ const firestore_1 = require("firebase-admin/firestore");
 const text = (value, max = 180) => typeof value === "string" ? value.trim().slice(0, max) : "";
 const slug = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80) || "archivo";
 const bucket = () => firebase_admin_1.admin.storage().bucket("ecn-platform.firebasestorage.app");
+const requireRetreatHomeImagePermission = async (request, cityId) => {
+    const uid = (0, authorization_1.requireAuthenticated)(request);
+    const canCreate = await (0, authorization_1.hasCityPermission)(request, cityId, "retreat_homes", "create");
+    const canUpdate = canCreate || await (0, authorization_1.hasCityPermission)(request, cityId, "retreat_homes", "update");
+    if (!canUpdate)
+        throw new https_1.HttpsError("permission-denied", "No tienes permiso para modificar las imágenes de casas de retiro.");
+    return uid;
+};
 exports.createCityFileUploadUrl = (0, https_1.onCall)(async (request) => {
     const data = request.data;
     const cityId = text(data.cityId, 100);
@@ -18,7 +26,7 @@ exports.createCityFileUploadUrl = (0, https_1.onCall)(async (request) => {
     if (!cityId || !name || !/^image\/(jpeg|png|webp|heic)$/.test(contentType) || !Number.isFinite(size) || size <= 0 || size > 5 * 1024 * 1024) {
         throw new https_1.HttpsError("invalid-argument", "Selecciona una imagen válida de hasta 5 MB.");
     }
-    await (0, authorization_1.requireCityPermission)(request, cityId, "files", "create");
+    await requireRetreatHomeImagePermission(request, cityId);
     const fileId = `${slug(name)}_${(0, node_crypto_1.randomBytes)(4).toString("hex")}`;
     const path = `retreat_homes/${cityId}/${fileId}-${name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const [uploadUrl] = await bucket().file(path).getSignedUrl({
@@ -38,7 +46,7 @@ exports.recordCityFileUpload = (0, https_1.onCall)(async (request) => {
     if (!cityId || !fileId || !name || path.split("/").length !== 3 || !path.startsWith(`retreat_homes/${cityId}/${fileId}-`)) {
         throw new https_1.HttpsError("invalid-argument", "La referencia del archivo no es válida.");
     }
-    const uid = await (0, authorization_1.requireCityPermission)(request, cityId, "files", "create");
+    const uid = await requireRetreatHomeImagePermission(request, cityId);
     const file = bucket().file(path);
     const [exists] = await file.exists();
     if (!exists)
@@ -68,7 +76,7 @@ exports.deleteCityFile = (0, https_1.onCall)(async (request) => {
     const fileId = text(data.fileId, 180);
     if (!cityId || !fileId)
         throw new https_1.HttpsError("invalid-argument", "La ciudad y el archivo son obligatorios.");
-    const uid = await (0, authorization_1.requireCityPermission)(request, cityId, "files", "delete");
+    const uid = await (0, authorization_1.requireCityPermission)(request, cityId, "retreat_homes", "update");
     const fileRef = firebase_admin_1.v2Db.doc(`files/${fileId}`);
     const snapshot = await fileRef.get();
     if (!snapshot.exists || snapshot.get("city_id") !== cityId)

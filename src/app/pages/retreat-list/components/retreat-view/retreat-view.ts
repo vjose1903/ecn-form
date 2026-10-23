@@ -64,11 +64,11 @@ export class RetreatView implements OnInit, OnDestroy {
     }
 
     return filteredRequests.filter(request =>
-      (status === RequestStatus.ALL || request.status === status) &&
+      (!request.canReadDetailSection('status') || status === RequestStatus.ALL || request.status === status) &&
       (payments === 'all' || (payments === 'paid'
         ? this.getPaymentStatus(request) !== 'none'
         : this.getPaymentStatus(request) === payments)) &&
-      (informed === 'all' || (informed === 'yes') === !!request.is_informado)
+      (!request.canReadDetailSection('informed') || informed === 'all' || (informed === 'yes') === !!request.is_informado)
     ).sort((left, right) => this.getRequestCreationTime(right) - this.getRequestCreationTime(left));
   });
 
@@ -78,9 +78,9 @@ export class RetreatView implements OnInit, OnDestroy {
   selectedPaymentFilter = signal<'all' | 'none' | 'paid' | 'partial' | 'complete'>('all');
   selectedInformedFilter = signal<'all' | 'yes' | 'no'>('all');
   activeFilterCount = computed(() =>
-    Number(this.selectedRequestStatus() !== RequestStatus.ALL) +
+    Number(this.canReadRequestSection('status') && this.selectedRequestStatus() !== RequestStatus.ALL) +
     Number(this.selectedPaymentFilter() !== 'all') +
-    Number(this.selectedInformedFilter() !== 'all')
+    Number(this.canReadRequestSection('informed') && this.selectedInformedFilter() !== 'all')
   );
   filterWord = signal<string>('');
   requestStatusOptions = [
@@ -464,11 +464,15 @@ export class RetreatView implements OnInit, OnDestroy {
   }
 
   get canManagePreRetreatActions(): boolean {
-    return this.canManagePreRetreat();
+    return this.canManagePreRetreat() && this.requests().some(request => request.canReadDetailSection('informed') && request.canEditDetailSection('informed'));
+  }
+
+  canReadRequestSection(section: string): boolean {
+    return this.requests().some(request => request.canReadDetailSection(section));
   }
 
   async setSelectedInformed(isInformed: boolean): Promise<void> {
-    if (!this.canManagePreRetreat() || !this.selectedRequests().length) return;
+    if (!this.canManagePreRetreatActions || !this.selectedRequests().length) return;
     const requests = this.selectedRequests().filter(request => request.is_informado !== isInformed);
     if (!requests.length) {
       Ss.toastService.info({ message: `Todas las solicitudes seleccionadas ya están ${isInformed ? 'informadas' : 'sin informar'}`, title: 'Sin cambios' });

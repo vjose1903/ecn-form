@@ -20,6 +20,11 @@ export interface RetreatHomeAssignmentOverview {
   assignments: string[];
 }
 
+export interface RetreatHomeAssignmentPermissions {
+  canAssign: boolean;
+  canUnassign: boolean;
+}
+
 export interface SimilarRetreatHome {
   id: string;
   name: string;
@@ -48,6 +53,7 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   private _loadingRetreatHomeList: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   private _lastFetch: number = 0;
   private _cacheCityId = '';
+  private _retreatHomeListPermissionDenied = false;
   private readonly CACHE_DURATION = 3 * 60 * 1000; // 3 minutos
 
   // Observables públicos
@@ -65,6 +71,10 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
 
   get loadingRetreatHomes(): boolean {
     return this._loadingRetreatHomeList.value;
+  }
+
+  get retreatHomeListPermissionDenied(): boolean {
+    return this._retreatHomeListPermissionDenied;
   }
 
   constructor() {
@@ -97,6 +107,7 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   private async fetchAllRetreatHomes(): Promise<RetreatHomeClass[]> {
     try {
       this._loadingRetreatHomeList.next(true);
+      this._retreatHomeListPermissionDenied = false;
       const currentUser = this.authService.current_user();
       const cityId = this.authService.activeCityId() || currentUser?.city;
       if (!cityId) {
@@ -115,6 +126,11 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
 
       return retreatHomes;
     } catch (error) {
+      if (['permission-denied', 'firestore/permission-denied'].includes((error as {code?: string})?.code ?? '')) {
+        this._retreatHomeListPermissionDenied = true;
+        this._retreatHomes.next([]);
+        return [];
+      }
       console.error('Error al obtener casas de retiro:', error);
       Ss.toastService.error({ message: 'Error al cargar las casas de retiro', title: 'Error de carga' });
       throw error;
@@ -124,12 +140,14 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   }
 
   async getRetreatHomeAssignmentOptions(): Promise<Omit<RetreatHomeAssignmentOverview, 'assignments'>> {
-    if (!this.authService.isSuperAdmin()) throw new Error('Solo superadmin puede administrar asignaciones entre ciudades');
-    const [homesSnapshot, citiesSnapshot] = await Promise.all([
-      getDocs(collection(Ss.firestore, this._collectionName)),
-      getDocs(collection(Ss.firestore, 'city')),
-    ]);
-    const cities = citiesSnapshot.docs.map(city => ({id: city.id, label: String(city.get('label') || city.id)}));
+    const permissions = await this.getRetreatHomeAssignmentPermissions();
+    if (!permissions.canAssign && !permissions.canUnassign) throw new Error('No tienes permiso para asignar o desasignar casas de retiro.');
+    const currentUser = this.authService.current_user();
+    const activeCityId = this.authService.activeCityId() || currentUser?.city || '';
+    const homesSnapshot = await getDocs(collection(Ss.firestore, this._collectionName));
+    const cities = this.authService.isSuperAdmin()
+      ? (await getDocs(collection(Ss.firestore, 'city'))).docs.map(city => ({id: city.id, label: String(city.get('label') || city.id)}))
+      : activeCityId ? [{id: activeCityId, label: currentUser?.cityData?.label || currentUser?.cityData?.large_label || activeCityId}] : [];
     return {
       homes: await Promise.all(homesSnapshot.docs.map(async home => {
         const imageIds = this.imageIds((home.get('images') || []) as Array<FileClass | string | FileI>);
@@ -146,7 +164,11 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   }
 
   async getRetreatHomeAssignments(cityIds: string[]): Promise<string[]> {
-    if (!this.authService.isSuperAdmin()) throw new Error('Solo superadmin puede administrar asignaciones entre ciudades');
+    await this.assertAssignmentCityScope(cityIds);
+    if (!this.authService.isSuperAdmin()) {
+      const cityId = cityIds[0];
+      if (!(await this.hasPermission(cityId, 'list'))) throw new Error('No tienes permiso para consultar las casas asignadas a la ciudad.');
+    }
     const assignmentsByCity = await Promise.all(cityIds.map(cityId =>
       getDocs(collection(Ss.firestore, `city/${cityId}/retreat_homes`)),
     ));
@@ -154,7 +176,11 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
   }
 
   async updateRetreatHomeAssignments(homeIds: string[], cityIds: string[], associate: boolean): Promise<number> {
-    if (!this.authService.isSuperAdmin()) throw new Error('Solo superadmin puede administrar asignaciones entre ciudades');
+    await this.assertAssignmentCityScope(cityIds);
+    if (!this.authService.isSuperAdmin()) {
+      const action = associate ? 'assign' : 'unassign';
+      if (!(await this.hasPermission(cityIds[0], action))) throw new Error(`No tienes permiso para ${associate ? 'asignar' : 'desasignar'} casas de retiro.`);
+    }
     if (!homeIds.length || !cityIds.length) return 0;
     if (homeIds.length * cityIds.length > 500) throw new Error('Selecciona hasta 500 relaciones por operación.');
     const uid = this.authService.current_user()?.uid;
@@ -182,6 +208,47 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
     });
   }
 
+  async getRetreatHomeAssignmentPermissions(): Promise<RetreatHomeAssignmentPermissions> {
+    if (this.authService.isSuperAdmin()) return {canAssign: true, canUnassign: true};
+    const cityId = this.authService.activeCityId() || this.authService.current_user()?.city || '';
+    const uid = this.authService.current_user()?.uid;
+    if (!cityId || !uid) return {canAssign: false, canUnassign: false};
+    try {
+      const member = await getDoc(doc(Ss.firestore, `city/${cityId}/members/${uid}`));
+      const roleId = member.exists() && member.get('status') === 'active' ? member.get('role_id') : '';
+      if (typeof roleId !== 'string' || !roleId) return {canAssign: false, canUnassign: false};
+      const role = await getDoc(doc(Ss.firestore, `city/${cityId}/roles/${roleId}`));
+      if (!role.exists() || role.get('is_active') !== true) return {canAssign: false, canUnassign: false};
+      return {
+        canAssign: role.get('permissions.retreat_homes.assign') === true,
+        canUnassign: role.get('permissions.retreat_homes.unassign') === true,
+      };
+    } catch (error) {
+      if (['permission-denied', 'firestore/permission-denied'].includes((error as {code?: string})?.code ?? '')) return {canAssign: false, canUnassign: false};
+      throw error;
+    }
+  }
+
+  private async hasPermission(cityId: string, action: 'assign' | 'unassign' | 'list'): Promise<boolean> {
+    if (this.authService.isSuperAdmin()) return true;
+    const uid = this.authService.current_user()?.uid;
+    if (!uid || !cityId) return false;
+    const member = await getDoc(doc(Ss.firestore, `city/${cityId}/members/${uid}`));
+    if (!member.exists() || member.get('status') !== 'active') return false;
+    const roleId = member.get('role_id');
+    if (typeof roleId !== 'string' || !roleId) return false;
+    const role = await getDoc(doc(Ss.firestore, `city/${cityId}/roles/${roleId}`));
+    return role.exists() && role.get('is_active') === true && role.get(`permissions.retreat_homes.${action}`) === true;
+  }
+
+  private async assertAssignmentCityScope(cityIds: string[]): Promise<void> {
+    if (this.authService.isSuperAdmin()) return;
+    const activeCityId = this.authService.activeCityId() || this.authService.current_user()?.city || '';
+    if (!activeCityId || !cityIds.length || cityIds.some(cityId => cityId !== activeCityId)) {
+      throw new Error('Solo puedes administrar la asignación de casas de tu ciudad.');
+    }
+  }
+
   /**
    * Obtiene una casa de retiro por ID
    */
@@ -203,6 +270,22 @@ export class RetreatHomeService extends FirebaseRequest<RetreatHomeI> {
     if (!assignment.exists()) return null;
     const snapshot = await getDoc(doc(Ss.firestore, `${this._collectionName}/${id}`));
     return snapshot.exists() ? this.hydrateHome({ ...snapshot.data(), id, city: cityId, is_active: assignment.get('is_active') }) : null;
+  }
+
+  async getRetreatHomeReferenceById(id: string, cityId: string): Promise<RetreatHomeClass | null> {
+    if (!id || !cityId) return null;
+    const snapshot = await getDoc(doc(Ss.firestore, `${this._collectionName}/${id}`));
+    if (!snapshot.exists()) return null;
+    return new RetreatHomeClass({
+      id,
+      name: String(snapshot.get('name') ?? ''),
+      phone: '',
+      address: '',
+      location: '',
+      city: cityId,
+      images: [],
+      is_active: true,
+    });
   }
 
   /**

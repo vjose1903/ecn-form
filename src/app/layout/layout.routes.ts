@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from '../core/guards/auth.guard';
 import { loginGuard } from '@core/guards/login.guard';
+import { superAdminGuard } from '@core/guards/super-admin.guard';
 
 export const layoutRoutes: Routes = [
   {
@@ -33,8 +34,18 @@ export const layoutRoutes: Routes = [
     canActivate: [authGuard],
   },
   {
+    path: 'ciudades',
+    loadComponent: () => import('../pages/cities-management/cities-management').then(m => m.CitiesManagement),
+    canActivate: [authGuard, superAdminGuard],
+  },
+  {
     path: 'roles-y-permisos',
     loadComponent: () => import('../pages/access-management/access-management').then(m => m.AccessManagement),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'auditoria',
+    loadComponent: () => import('../pages/audit-management/audit-management').then(m => m.AuditManagement),
     canActivate: [authGuard],
   },
   {

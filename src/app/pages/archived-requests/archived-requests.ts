@@ -241,7 +241,10 @@ export class ArchivedRequests implements OnInit {
     this.loadError.set(false);
     try {
       this.loading.set(true);
-      const [retreats, archivedRequests] = await Promise.all([this.retreatService.getAll(), this.requestService.getArchivedRequests()]);
+      const archivedRequests = await this.requestService.getArchivedRequests();
+      const retreatIds = [...new Set(archivedRequests.map(request => request.relatedRetreatId).filter(Boolean))];
+      const retreats = (await Promise.all(retreatIds.map(id => this.retreatService.getRetreatById(id))))
+        .filter((retreat): retreat is RetreatClass => retreat !== null);
 
       this.retreats.set(retreats);
       this.archivedRequests.set(archivedRequests);

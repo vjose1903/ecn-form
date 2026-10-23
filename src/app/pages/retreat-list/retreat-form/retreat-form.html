@@ -18,6 +18,9 @@
               class="w-full"
               appendTo="body"
               [formControlName]="FormControlName.retreat_home" />
+            @if (retreatHomeListUnavailable()) {
+              <small class="text-slate-500 mt-1">No tienes permiso para ver el listado de casas de retiro. El valor relacionado se muestra solo como lectura.</small>
+            }
             <form-error-msg [control]="form.get(FormControlName.retreat_home)" />
           </div>
         </div>

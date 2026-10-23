@@ -1,1 +1,1 @@
-export const buildVersion = {"label":"v1.4.4","version":"1.4.4","commit":"9c523e4","builtAt":"2026-10-22T15:40:07.936Z"} as const;
+export const buildVersion = {"label":"v2.0.3","version":"2.0.3","commit":"b1deb43","builtAt":"2026-10-23T15:52:56.118Z"} as const;

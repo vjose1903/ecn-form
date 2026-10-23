@@ -3,6 +3,7 @@ import { AuthErrorCodes } from '@angular/fire/auth';
 export interface AuthPayload {
   email: string;
   password: string;
+  keepSessionActive?: boolean;
 }
 
 // Interfaz simplificada para el resultado

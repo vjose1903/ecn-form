@@ -1,12 +1,20 @@
 import {randomBytes} from "node:crypto";
-import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {onCall, HttpsError, type CallableRequest} from "firebase-functions/v2/https";
 import {admin, v2Db} from "../../core/firebase-admin";
-import {requireCityPermission} from "../../core/security/authorization";
+import {hasCityPermission, requireAuthenticated, requireCityPermission} from "../../core/security/authorization";
 import {FieldValue} from "firebase-admin/firestore";
 
 const text = (value: unknown, max = 180): string => typeof value === "string" ? value.trim().slice(0, max) : "";
 const slug = (value: string): string => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80) || "archivo";
 const bucket = () => admin.storage().bucket("ecn-platform.firebasestorage.app");
+
+const requireRetreatHomeImagePermission = async (request: CallableRequest<unknown>, cityId: string): Promise<string> => {
+  const uid = requireAuthenticated(request);
+  const canCreate = await hasCityPermission(request, cityId, "retreat_homes", "create");
+  const canUpdate = canCreate || await hasCityPermission(request, cityId, "retreat_homes", "update");
+  if (!canUpdate) throw new HttpsError("permission-denied", "No tienes permiso para modificar las imágenes de casas de retiro.");
+  return uid;
+};
 
 export const createCityFileUploadUrl = onCall(async request => {
   const data = request.data as Record<string, unknown>;
@@ -17,7 +25,7 @@ export const createCityFileUploadUrl = onCall(async request => {
   if (!cityId || !name || !/^image\/(jpeg|png|webp|heic)$/.test(contentType) || !Number.isFinite(size) || size <= 0 || size > 5 * 1024 * 1024) {
     throw new HttpsError("invalid-argument", "Selecciona una imagen válida de hasta 5 MB.");
   }
-  await requireCityPermission(request, cityId, "files", "create");
+  await requireRetreatHomeImagePermission(request, cityId);
   const fileId = `${slug(name)}_${randomBytes(4).toString("hex")}`;
   const path = `retreat_homes/${cityId}/${fileId}-${name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
   const [uploadUrl] = await bucket().file(path).getSignedUrl({
@@ -38,7 +46,7 @@ export const recordCityFileUpload = onCall(async request => {
   if (!cityId || !fileId || !name || path.split("/").length !== 3 || !path.startsWith(`retreat_homes/${cityId}/${fileId}-`)) {
     throw new HttpsError("invalid-argument", "La referencia del archivo no es válida.");
   }
-  const uid = await requireCityPermission(request, cityId, "files", "create");
+  const uid = await requireRetreatHomeImagePermission(request, cityId);
   const file = bucket().file(path);
   const [exists] = await file.exists();
   if (!exists) throw new HttpsError("failed-precondition", "No se encontró la imagen cargada.");
@@ -67,7 +75,7 @@ export const deleteCityFile = onCall(async request => {
   const cityId = text(data.cityId, 100);
   const fileId = text(data.fileId, 180);
   if (!cityId || !fileId) throw new HttpsError("invalid-argument", "La ciudad y el archivo son obligatorios.");
-  const uid = await requireCityPermission(request, cityId, "files", "delete");
+  const uid = await requireCityPermission(request, cityId, "retreat_homes", "update");
   const fileRef = v2Db.doc(`files/${fileId}`);
   const snapshot = await fileRef.get();
   if (!snapshot.exists || snapshot.get("city_id") !== cityId) throw new HttpsError("not-found", "No se encontró el archivo en esta ciudad.");

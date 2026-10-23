@@ -92,6 +92,7 @@
   align-items: center;
   gap: .5rem;
   min-width: 0;
+  padding-right: 2.3rem;
 }
 
 .request-card__informed {
@@ -131,6 +132,9 @@
 }
 
 .request-card__arrow {
+  position: absolute;
+  top: 1.05rem;
+  right: 1.05rem;
   display: grid;
   place-items: center;
   flex: 0 0 1.8rem;
@@ -205,10 +209,6 @@
     padding-inline: 1.25rem;
   }
 
-  .request-card__topline {
-    padding-right: 1.75rem;
-  }
-
   :host ::ng-deep .request-card__topline .p-tag {
     padding: .2rem .42rem;
     font-size: .65rem;
@@ -220,9 +220,6 @@
   }
 
   .request-card__arrow {
-    position: absolute;
-    top: 1.05rem;
-    right: 1.05rem;
     width: 1.5rem;
     height: 1.5rem;
     font-size: .65rem;

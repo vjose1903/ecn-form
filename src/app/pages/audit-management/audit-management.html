@@ -1,0 +1,60 @@
+<main class="audit-page">
+  <header>
+    <h1>Auditoría</h1>
+    <p-select [options]="cities()" optionLabel="label" optionValue="value" [ngModel]="cityId()" (ngModelChange)="changeCity($event)" placeholder="Seleccionar ciudad" aria-label="Ciudad" appendTo="body" />
+  </header>
+
+  <section class="audit-filters" aria-label="Filtros de auditoría">
+    <label class="audit-filter-search">
+      <span>Buscar</span>
+      <span class="audit-filter-search__input">
+        <i class="pi pi-search" aria-hidden="true"></i>
+        <input pInputText type="search" placeholder="Buscar por actor, acción o documento..." [value]="searchTerm()" (input)="onSearchChange($any($event.target).value)" />
+      </span>
+    </label>
+    @if (searchTerm().trim()) {
+      <div class="audit-active-filters" role="status">
+        <span><i class="pi pi-filter" aria-hidden="true"></i> Filtro activo: <strong>“{{ searchTerm().trim() }}”</strong></span>
+        <p-button type="button" icon="pi pi-filter-slash" severity="secondary" [text]="true" [rounded]="true" size="small" aria-label="Limpiar filtro" (onClick)="clearSearch()" />
+      </div>
+    }
+  </section>
+
+  <section class="audit-section" aria-label="Registro de auditoría">
+    @if (loading()) {
+      <div class="audit-loading" role="status" aria-live="polite">
+        <span class="audit-loading__spinner" aria-hidden="true"></span>
+        <span>Cargando auditoría...</span>
+      </div>
+    } @else {
+      <div class="audit-table-scroll">
+        <table>
+          <thead><tr><th>Fecha</th><th>Actor UID</th><th>Acción</th><th>Documento</th><th>Cambios</th></tr></thead>
+          <tbody>
+            @for (event of pagedAudit; track event.id) {
+              <tr>
+                <td data-label="Fecha">{{ formatTime(event.occurred_at) }}</td>
+                <td data-label="Actor UID">{{ event.actor_uid || 'Sin identificar' }}</td>
+                <td data-label="Acción">{{ event.action }}</td>
+                <td data-label="Documento"><code>{{ event.resource_path }}</code></td>
+                <td data-label="Cambios"><code>{{ event.changes | json }}</code></td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5" class="audit-empty-state">{{ searchTerm().trim() ? 'Ningún evento coincide con la búsqueda.' : 'No hay eventos de auditoría para esta ciudad.' }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <footer class="audit-footer" aria-label="Paginación de auditoría">
+        <div class="audit-pagination">
+          <p-button icon="pi pi-angle-double-left" [text]="true" [rounded]="true" aria-label="Primera página" [disabled]="currentPage() <= 1" (onClick)="currentPage.set(1)" />
+          <p-button icon="pi pi-angle-left" [text]="true" [rounded]="true" aria-label="Página anterior" [disabled]="currentPage() <= 1" (onClick)="previousPage()" />
+          <span class="audit-pagination__current" aria-current="page">{{ currentPage() }}</span>
+          <p-button icon="pi pi-angle-right" [text]="true" [rounded]="true" aria-label="Página siguiente" [disabled]="currentPage() >= pageCount" (onClick)="nextPage()" />
+          <p-button icon="pi pi-angle-double-right" [text]="true" [rounded]="true" aria-label="Última página" [disabled]="currentPage() >= pageCount" (onClick)="currentPage.set(pageCount)" />
+        </div>
+        <p-select class="audit-page-size" [options]="pageSizeOptions" optionLabel="label" optionValue="value" [ngModel]="pageSize()" (ngModelChange)="pageSize.set($event); currentPage.set(1)" aria-label="Cantidad de eventos por página" appendTo="body" />
+      </footer>
+    }
+  </section>
+</main>

@@ -40,7 +40,7 @@ export class UserService {
         }
       }
       const city = citySnapshot?.exists() ? { ...citySnapshot.data(), id: cityId } : profileCity;
-      return new UserC({ ...profile, city, id: snapshot.id } as UserI & {city?: any});
+      return new UserC({ ...profile, uid: profile.uid || snapshot.id, city, id: snapshot.id } as UserI & {city?: any});
     } catch (error) {
       console.error('Error al obtener el perfil del usuario:', error);
       throw error;

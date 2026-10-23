@@ -1,7 +1,7 @@
 <main class="users-page">
   <header>
     <div><h1>Usuarios</h1></div>
-    <p-button label="Crear usuario" icon="pi pi-user-plus" (onClick)="openCreate()" [disabled]="!cityId() || !roleChoices.length" />
+    <p-button label="Crear usuario" icon="pi pi-user-plus" (onClick)="openCreate()" [disabled]="!cityId() || !roleChoices.length || roleListUnavailable()" />
   </header>
 
   <section class="users-filters" aria-label="Filtros de usuarios">
@@ -91,7 +91,9 @@
       <label class="modal-field-full">Nombre<input pInputText [(ngModel)]="editName" name="editName" required></label>
       <label class="modal-field-full">Correo<input pInputText [(ngModel)]="editEmail" name="editEmail" type="email" required></label>
       <label>Teléfono<input pInputText [(ngModel)]="editPhone" name="editPhone"></label>
-      <label>Rol<p-select [options]="roleChoices" [(ngModel)]="editRoleId" name="editRole" placeholder="Seleccionar rol" required /></label>
+      <label>Rol<p-select [options]="roleChoices" [(ngModel)]="editRoleId" name="editRole" placeholder="Seleccionar rol" required [disabled]="roleListUnavailable()" />
+        @if (roleListUnavailable()) { <small class="section-hint">No tienes permiso para ver el listado de roles. El rol actual se muestra solo como lectura.</small> }
+      </label>
       @if (canManageSuperAdmins) {
         <label class="superadmin-option modal-field-full">
           <input type="checkbox" [(ngModel)]="editSuperAdmin" name="editSuperAdmin">
@@ -106,8 +108,10 @@
       <label class="modal-field-full">Nombre<input pInputText [(ngModel)]="memberName" name="memberName" placeholder="Nombre completo" required></label>
       <label class="modal-field-full">Correo<input pInputText [(ngModel)]="memberEmail" name="memberEmail" type="email" placeholder="correo@ejemplo.com" required></label>
       <label>Teléfono<input pInputText [(ngModel)]="memberPhone" name="memberPhone" placeholder="Teléfono"></label>
-      <label>Rol<p-select [options]="roleChoices" [(ngModel)]="memberRoleId" name="memberRole" placeholder="Seleccionar rol" required /></label>
-      <div class="dialog-actions"><p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" (onClick)="closeEditor()" /><p-button type="submit" label="Crear cuenta" icon="pi pi-user-plus" [loading]="saving()" [disabled]="!cityId() || !roleChoices.length" /></div>
+      <label>Rol<p-select [options]="roleChoices" [(ngModel)]="memberRoleId" name="memberRole" placeholder="Seleccionar rol" required [disabled]="roleListUnavailable()" />
+        @if (roleListUnavailable()) { <small class="section-hint">No tienes permiso para ver el listado de roles; no puedes asignar uno nuevo.</small> }
+      </label>
+      <div class="dialog-actions"><p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" (onClick)="closeEditor()" /><p-button type="submit" label="Crear cuenta" icon="pi pi-user-plus" [loading]="saving()" [disabled]="!cityId() || !roleChoices.length || roleListUnavailable()" /></div>
     </form>
   }
 </p-dialog>

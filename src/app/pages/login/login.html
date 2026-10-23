@@ -32,6 +32,11 @@
         </div>
       </div>
 
+      <label class="flex items-center gap-2 text-sm text-gray-700">
+        <input type="checkbox" name="keepSessionActive" [(ngModel)]="keepSessionActive" [ngModelOptions]="{standalone: true}" [disabled]="isLoading()" class="h-4 w-4 accent-red-700" />
+        Mantener sesión activa
+      </label>
+
       <!-- Remember me & Forgot password -->
       <!-- <div class="flex items-center justify-end">
       <div class="text-sm">

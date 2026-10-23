@@ -23,6 +23,7 @@ export class TransferRequestModal implements OnInit {
   private retreatService = inject(RetreatService);
 
   loading = signal(true);
+  retreatListUnavailable = signal(false);
   saving = signal(false);
   requests: RequestClass[] = [];
   currentRetreat!: RetreatClass;
@@ -53,9 +54,17 @@ export class TransferRequestModal implements OnInit {
     try {
       this.loading.set(true);
       const retreats = await this.retreatService.getAll();
+      if (this.retreatService.retreatListPermissionDenied) {
+        this.retreatListUnavailable.set(true);
+        return;
+      }
       const sourceIds = new Set([this.currentRetreat?.id, ...Object.values(this.requestOrigins).map(retreat => retreat.id)]);
       this.retreats.set(retreats.filter(retreat => !sourceIds.has(retreat.id)));
     } catch (error) {
+      if (['permission-denied', 'firestore/permission-denied'].includes((error as {code?: string})?.code ?? '')) {
+        this.retreatListUnavailable.set(true);
+        return;
+      }
       console.error('Error cargando retiros para transferir:', error);
       Ss.toastService.error({
         message: 'No se pudieron cargar los retiros disponibles',

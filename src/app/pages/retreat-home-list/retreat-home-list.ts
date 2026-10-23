@@ -6,7 +6,7 @@ import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { DynamicDataviewComponent, DynamicDataviewConfig, FilterConfig } from '@core/components/dynamic-dataview';
 import { RetreatHomeDataList } from './components/retreat-home-data-list/retreat-home-data-list';
 import { RetreatHomeDataGrid } from './components/retreat-home-data-grid/retreat-home-data-grid';
-import { RetreatHomeAssignmentOverview, RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
+import { RetreatHomeAssignmentOverview, RetreatHomeAssignmentPermissions, RetreatHomeService } from '@core/entities/retreat-home/retreat-home.service';
 import { RetreatHomeClass } from '@core/entities/retreat-home/retreat-home.class';
 import { Subject, takeUntil } from 'rxjs';
 import { Ss } from '@core/services/singleton.service';
@@ -29,6 +29,7 @@ export class RetreatHomeList implements OnInit, OnDestroy {
   assignmentSaving = signal(false);
   assignmentError = signal('');
   assignmentMode = signal<'associate' | 'unassociate'>('associate');
+  assignmentPermissions = signal<RetreatHomeAssignmentPermissions>({canAssign: false, canUnassign: false});
   assignmentOverview = signal<RetreatHomeAssignmentOverview>({homes: [], cities: [], assignments: []});
   selectedHomeIds = signal<string[]>([]);
   selectedCityIds = signal<string[]>([]);
@@ -37,6 +38,10 @@ export class RetreatHomeList implements OnInit, OnDestroy {
 
   get isSuperAdmin(): boolean {
     return Ss.authService.isSuperAdmin();
+  }
+
+  get canManageAssignments(): boolean {
+    return this.isSuperAdmin || this.assignmentPermissions().canAssign || this.assignmentPermissions().canUnassign;
   }
 
   get filteredAssignmentHomes(): RetreatHomeAssignmentOverview['homes'] {
@@ -150,6 +155,14 @@ export class RetreatHomeList implements OnInit, OnDestroy {
   private async initializeData(): Promise<void> {
     try {
       this.loading.set(true);
+      this.assignmentPermissions.set(await this.retreatHomeService.getRetreatHomeAssignmentPermissions());
+      this.dataviewConfig.setComponentProps({
+        showActions: true,
+        enableSelection: false,
+        canAssignHomes: this.assignmentPermissions().canAssign,
+        canUnassignHomes: this.assignmentPermissions().canUnassign,
+        onAssignmentRequest: (homeId: string) => this.showAssignmentDialog(homeId),
+      });
       await this.getRetreatHomes();
     } catch (error) {
       console.error('Error al inicializar datos:', error);
@@ -285,17 +298,19 @@ export class RetreatHomeList implements OnInit, OnDestroy {
   }
 
   async showAssignmentDialog(homeId?: string): Promise<void> {
-    if (!this.isSuperAdmin) return;
-    this.assignmentDialogVisible.set(true);
     this.assignmentLoading.set(true);
     this.assignmentLinksLoading.set(false);
     this.assignmentError.set('');
     try {
+      const permissions = await this.retreatHomeService.getRetreatHomeAssignmentPermissions();
+      if (!permissions.canAssign && !permissions.canUnassign) return;
+      this.assignmentPermissions.set(permissions);
+      this.assignmentDialogVisible.set(true);
       const options = await this.retreatHomeService.getRetreatHomeAssignmentOptions();
       this.assignmentOverview.set({...options, assignments: []});
-      this.assignmentMode.set('associate');
+      this.assignmentMode.set(permissions.canAssign ? 'associate' : 'unassociate');
       this.selectedHomeIds.set(homeId && options.homes.some(home => home.id === homeId) ? [homeId] : []);
-      this.selectedCityIds.set([]);
+      this.selectedCityIds.set(this.isSuperAdmin ? [] : options.cities.map(city => city.id));
       this.homeSearch.set('');
       this.citySearch.set('');
       void this.loadAssignmentLinks(options.cities.map(city => city.id));
