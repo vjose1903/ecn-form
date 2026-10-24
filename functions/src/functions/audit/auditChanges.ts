@@ -5,7 +5,9 @@ import {
   Change,
   DocumentSnapshot,
 } from "firebase-functions/v2/firestore";
-import {v2Db} from "../../core/firebase-admin";
+import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {admin, v2Db} from "../../core/firebase-admin";
+import {isSuperAdmin, requireAuthenticated, requireCityPermission} from "../../core/security/authorization";
 
 type ChangeEvent = FirestoreAuthEvent<Change<DocumentSnapshot> | undefined>;
 
@@ -112,6 +114,7 @@ const recordGlobalChange = async (event: ChangeEvent): Promise<void> => {
   if (!change) return;
 
   const documentPath = change.after.exists ? change.after.ref.path : change.before.ref.path;
+  if (documentPath.split("/").includes("push_tokens")) return;
   const before = change.before.exists ? change.before.data() ?? null : null;
   const after = change.after.exists ? change.after.data() ?? null : null;
   const changes = buildChanges(before, after);
@@ -145,6 +148,48 @@ const recordGlobalChange = async (event: ChangeEvent): Promise<void> => {
     source: "firestore",
   });
 };
+
+export const getAuditActorNames = onCall(async (request) => {
+  requireAuthenticated(request);
+  const data = request.data as {cityId?: unknown; auditEvents?: unknown};
+  if (typeof data.cityId !== "string" || !data.cityId.trim()) {
+    throw new HttpsError("invalid-argument", "La ciudad es obligatoria.");
+  }
+  const cityId = data.cityId.trim();
+  if (!Array.isArray(data.auditEvents) || data.auditEvents.length > 50 || data.auditEvents.some(item =>
+    !item || typeof item !== "object" || typeof (item as {id?: unknown}).id !== "string"
+      || !(item as {id: string}).id.trim() || (item as {id: string}).id.includes('/') || (item as {id: string}).id.length > 200
+      || typeof (item as {actorUid?: unknown}).actorUid !== "string" || !(item as {actorUid: string}).actorUid.trim()
+      || (item as {actorUid: string}).actorUid.length > 128
+  )) {
+    throw new HttpsError("invalid-argument", "La lista de eventos no es válida.");
+  }
+  if (!isSuperAdmin(request)) await requireCityPermission(request, cityId, "audit", "list");
+  const events = data.auditEvents as Array<{id: string; actorUid: string}>;
+  if (!events.length) return {names: {}};
+  const cityEvents = await v2Db.getAll(...events.map(event => v2Db.doc(`city/${cityId}/audit_logs/${event.id}`)));
+  const globalEvents = isSuperAdmin(request)
+    ? await v2Db.getAll(...events.map(event => v2Db.doc(`global_audit_logs/${event.id}`)))
+    : [];
+  const uids = [...new Set(events.filter((event, index) =>
+    (cityEvents[index].get("actor_uid") === event.actorUid || globalEvents[index]?.get("actor_uid") === event.actorUid)
+  ).map(event => event.actorUid))];
+  if (!uids.length) return {names: {}};
+
+  const profiles = await v2Db.getAll(...uids.map(uid => v2Db.doc(`user/${uid}`)));
+  const authUsers = await admin.auth().getUsers(uids.map(uid => ({uid})));
+  const authByUid = new Map(authUsers.users.map(user => [user.uid, user]));
+  const names = Object.fromEntries(uids.map((uid, index) => {
+    const profile = profiles[index];
+    const displayName = String(profile.get("display_name") ?? "").trim();
+    const composedName = [profile.get("first_name"), profile.get("last_name")]
+      .filter((part): part is string => typeof part === "string" && Boolean(part.trim()))
+      .join(" ")
+      .trim();
+    return [uid, displayName || composedName || authByUid.get(uid)?.displayName?.trim() || "Usuario sin nombre"];
+  }));
+  return {names};
+});
 
 export const auditCityDocumentChanges = onDocumentWrittenWithAuthContext(
   {database: "ecn-platform-v2", document: "city/{cityId}/{nestedPath=**}"},

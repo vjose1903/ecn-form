@@ -5,6 +5,7 @@ import {
   auditUserProfileChanges,
   auditUserNestedChangesV2,
   auditFileChanges,
+  getAuditActorNames,
 } from "./functions/audit/auditChanges";
 import {saveCityRole, saveCity, createCityMember, sendCityMemberInvitation, resendCityMemberInvitation, updateCityMember, deleteCityMember, updateOwnProfile, createCityRetreatHome, findSimilarCityRetreatHomes, assignExistingCityRetreatHome, updateCityRetreatHome, listCityMembers} from "./functions/access-management/accessManagement";
 import {getPublicFormData, createPublicRequest} from "./functions/public-form/publicForm";
@@ -25,6 +26,7 @@ export {
   auditUserProfileChanges,
   auditUserNestedChangesV2,
   auditFileChanges,
+  getAuditActorNames,
   saveCityRole,
   saveCity,
   createCityMember,

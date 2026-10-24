@@ -65,14 +65,13 @@ async function waitForGlobalAudit(expectedCount) {
 
   const tokenRef = userRef.collection('push_tokens').doc('web-token');
   await tokenRef.set({token: 'emulator-only'});
-  const tokenAudit = await waitForGlobalAudit(2);
-  const tokenEvent = tokenAudit.find(item => item.resource_path === tokenRef.path);
-  assert.ok(tokenEvent);
-  assert.equal(typeof tokenEvent.actor_uid, 'string');
+  await delay(750);
+  const tokenAudit = await db.collection('global_audit_logs').get();
+  assert.equal(tokenAudit.docs.some(item => item.get('resource_path') === tokenRef.path), false);
 
   const fileRef = db.doc('files/audit_smoke_file');
   await fileRef.set({name: 'emulator-only', migration_actor_uid: 'migration-agent'});
-  const fileAudit = await waitForGlobalAudit(3);
+  const fileAudit = await waitForGlobalAudit(2);
   assert.equal(typeof fileAudit.find(item => item.resource_path === fileRef.path)?.actor_uid, 'string');
   console.log('6 eventos de auditoría de documentos de ciudad, usuario y archivos confirmados');
   await admin.app().delete();

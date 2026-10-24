@@ -1,9 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.auditFileChanges = exports.auditRetreatHomeChanges = exports.auditUserNestedChangesV2 = exports.auditUserProfileChanges = exports.auditCityRootChanges = exports.auditCityDocumentChanges = exports.resolveAuditActor = void 0;
+exports.auditFileChanges = exports.auditRetreatHomeChanges = exports.auditUserNestedChangesV2 = exports.auditUserProfileChanges = exports.auditCityRootChanges = exports.auditCityDocumentChanges = exports.getAuditActorNames = exports.resolveAuditActor = void 0;
 require("../../core/function-options");
 const firestore_1 = require("firebase-functions/v2/firestore");
+const https_1 = require("firebase-functions/v2/https");
 const firebase_admin_1 = require("../../core/firebase-admin");
+const authorization_1 = require("../../core/security/authorization");
 const comparable = (value) => JSON.stringify(value, (_key, item) => {
     if (item && typeof item === "object") {
         if (typeof item.toDate === "function") {
@@ -104,6 +106,8 @@ const recordGlobalChange = async (event) => {
     if (!change)
         return;
     const documentPath = change.after.exists ? change.after.ref.path : change.before.ref.path;
+    if (documentPath.split("/").includes("push_tokens"))
+        return;
     const before = change.before.exists ? change.before.data() ?? null : null;
     const after = change.after.exists ? change.after.data() ?? null : null;
     const changes = buildChanges(before, after);
@@ -138,6 +142,45 @@ const recordGlobalChange = async (event) => {
         source: "firestore",
     });
 };
+exports.getAuditActorNames = (0, https_1.onCall)(async (request) => {
+    (0, authorization_1.requireAuthenticated)(request);
+    const data = request.data;
+    if (typeof data.cityId !== "string" || !data.cityId.trim()) {
+        throw new https_1.HttpsError("invalid-argument", "La ciudad es obligatoria.");
+    }
+    const cityId = data.cityId.trim();
+    if (!Array.isArray(data.auditEvents) || data.auditEvents.length > 50 || data.auditEvents.some(item => !item || typeof item !== "object" || typeof item.id !== "string"
+        || !item.id.trim() || item.id.includes('/') || item.id.length > 200
+        || typeof item.actorUid !== "string" || !item.actorUid.trim()
+        || item.actorUid.length > 128)) {
+        throw new https_1.HttpsError("invalid-argument", "La lista de eventos no es válida.");
+    }
+    if (!(0, authorization_1.isSuperAdmin)(request))
+        await (0, authorization_1.requireCityPermission)(request, cityId, "audit", "list");
+    const events = data.auditEvents;
+    if (!events.length)
+        return { names: {} };
+    const cityEvents = await firebase_admin_1.v2Db.getAll(...events.map(event => firebase_admin_1.v2Db.doc(`city/${cityId}/audit_logs/${event.id}`)));
+    const globalEvents = (0, authorization_1.isSuperAdmin)(request)
+        ? await firebase_admin_1.v2Db.getAll(...events.map(event => firebase_admin_1.v2Db.doc(`global_audit_logs/${event.id}`)))
+        : [];
+    const uids = [...new Set(events.filter((event, index) => (cityEvents[index].get("actor_uid") === event.actorUid || globalEvents[index]?.get("actor_uid") === event.actorUid)).map(event => event.actorUid))];
+    if (!uids.length)
+        return { names: {} };
+    const profiles = await firebase_admin_1.v2Db.getAll(...uids.map(uid => firebase_admin_1.v2Db.doc(`user/${uid}`)));
+    const authUsers = await firebase_admin_1.admin.auth().getUsers(uids.map(uid => ({ uid })));
+    const authByUid = new Map(authUsers.users.map(user => [user.uid, user]));
+    const names = Object.fromEntries(uids.map((uid, index) => {
+        const profile = profiles[index];
+        const displayName = String(profile.get("display_name") ?? "").trim();
+        const composedName = [profile.get("first_name"), profile.get("last_name")]
+            .filter((part) => typeof part === "string" && Boolean(part.trim()))
+            .join(" ")
+            .trim();
+        return [uid, displayName || composedName || authByUid.get(uid)?.displayName?.trim() || "Usuario sin nombre"];
+    }));
+    return { names };
+});
 exports.auditCityDocumentChanges = (0, firestore_1.onDocumentWrittenWithAuthContext)({ database: "ecn-platform-v2", document: "city/{cityId}/{nestedPath=**}" }, (event) => recordCityNestedChange(event, event.params.cityId));
 exports.auditCityRootChanges = (0, firestore_1.onDocumentWrittenWithAuthContext)({ database: "ecn-platform-v2", document: "city/{cityId}" }, (event) => recordCityChange(event, event.params.cityId));
 exports.auditUserProfileChanges = (0, firestore_1.onDocumentWrittenWithAuthContext)({ database: "ecn-platform-v2", document: "user/{uid}" }, recordGlobalChange);
