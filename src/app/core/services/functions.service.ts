@@ -64,10 +64,20 @@ export class fun {
       return timestamp;
     }
 
-    // Si es un objeto Timestamp de Firebase con seconds
-    if (timestamp && typeof timestamp === 'object' && timestamp.seconds) {
-      const date = new Date(timestamp.seconds * 1000);
-      return date.toISOString();
+    // Los Timestamp que regresan desde una callable pueden serializarse como
+    // {_seconds, _nanoseconds}; los leídos directamente de Firestore usan
+    // seconds/nanoseconds.
+    if (timestamp && typeof timestamp === 'object') {
+      if (typeof timestamp.toDate === 'function') {
+        return timestamp.toDate().toISOString();
+      }
+
+      const seconds = timestamp.seconds ?? timestamp._seconds;
+      const nanoseconds = timestamp.nanoseconds ?? timestamp._nanoseconds ?? 0;
+      if (Number.isFinite(seconds)) {
+        const date = new Date(seconds * 1000 + Math.floor(nanoseconds / 1_000_000));
+        if (!Number.isNaN(date.getTime())) return date.toISOString();
+      }
     }
 
     // Si es un objeto Date
@@ -78,7 +88,7 @@ export class fun {
     // Si es un número (timestamp en milisegundos)
     if (typeof timestamp === 'number') {
       const date = new Date(timestamp);
-      return date.toISOString();
+      if (!Number.isNaN(date.getTime())) return date.toISOString();
     }
 
     return '';

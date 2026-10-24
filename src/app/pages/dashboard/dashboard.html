@@ -11,7 +11,7 @@
     </div>
 
     <div class="dashboard-filters">
-      <div class="dashboard-filter-field">
+      <div class="dashboard-filter-field dashboard-filter-field--period">
         <label for="dashboard-period-filter">Periodo</label>
         <p-select
           inputId="dashboard-period-filter"
@@ -24,8 +24,26 @@
           class="dashboard-period-select" />
       </div>
 
+      <div class="dashboard-filter-field dashboard-filter-field--retreats">
+        <label for="dashboard-retreat-filter">Retiros</label>
+        <p-multiselect
+          inputId="dashboard-retreat-filter"
+          [options]="retreatOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="selectedRetreats()"
+          (ngModelChange)="onRetreatSelectionChange($event)"
+          [disabled]="loading() || retreatOptions().length <= 1"
+          [showToggleAll]="false"
+          [maxSelectedLabels]="2"
+          selectedItemsLabel="{0} retiros"
+          placeholder="Selecciona retiros"
+          appendTo="body"
+          class="dashboard-retreat-select" />
+      </div>
+
       @if (showCustomRange()) {
-      <div class="dashboard-filter-field">
+      <div class="dashboard-filter-field dashboard-filter-field--from">
         <label for="dashboard-date-from">Desde</label>
         <p-datepicker
           inputId="dashboard-date-from"
@@ -38,7 +56,7 @@
           inputStyleClass="dashboard-date-input" />
       </div>
 
-      <div class="dashboard-filter-field">
+      <div class="dashboard-filter-field dashboard-filter-field--to">
         <label for="dashboard-date-to">Hasta</label>
         <p-datepicker
           inputId="dashboard-date-to"
@@ -74,12 +92,12 @@
       }
     } @else {
       @for (kpi of kpis(); track kpi.label) {
-        <article class="dashboard-kpi dashboard-kpi--{{ kpi.tone }}">
+        <article class="dashboard-kpi dashboard-kpi--{{ kpi.tone }}" [class.dashboard-kpi--status]="kpi.permissionKey === 'request_status'">
           <div class="dashboard-kpi__body">
             <div class="dashboard-kpi__icon">
               <i class="{{ kpi.icon }}"></i>
             </div>
-            <div class="dashboard-kpi__content">
+            <div class="dashboard-kpi__content" [class.dashboard-kpi__content--status]="kpi.permissionKey === 'request_status'">
               <span>{{ kpi.label }}</span>
               <strong>{{ kpi.value }}</strong>
               @if (kpi.detail) {

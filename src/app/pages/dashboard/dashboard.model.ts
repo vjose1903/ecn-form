@@ -36,6 +36,7 @@ export interface DashboardData {
   charts: DashboardChart[];
   retreatCount: number;
   requestCount: number;
+  retreatOptions: { label: string; value: string }[];
 }
 
 export interface DashboardSkeletonLayout {

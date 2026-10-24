@@ -29,16 +29,53 @@
     } @else {
       <div class="audit-table-scroll">
         <table>
-          <thead><tr><th>Fecha</th><th>Actor UID</th><th>Acción</th><th>Documento</th><th>Cambios</th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Elemento</th><th>Detalles</th></tr></thead>
           <tbody>
             @for (event of pagedAudit; track event.id) {
-              <tr>
+              <tr [class.audit-row--expanded]="expandedEvents().has(event.id)">
                 <td data-label="Fecha">{{ formatTime(event.occurred_at) }}</td>
-                <td data-label="Actor UID">{{ event.actor_uid || 'Sin identificar' }}</td>
-                <td data-label="Acción">{{ event.action }}</td>
-                <td data-label="Documento"><code>{{ event.resource_path }}</code></td>
-                <td data-label="Cambios"><code>{{ event.changes | json }}</code></td>
+                <td data-label="Usuario"><span class="audit-actor" [title]="event.actor_uid || 'Sistema'">{{ actorLabel(event) }}</span></td>
+                <td data-label="Acción"><span class="audit-action" [attr.data-action]="event.action">{{ actionLabel(event.action) }}</span></td>
+                <td data-label="Elemento">
+                  <span class="audit-resource">{{ resourceLabel(event) }}</span>
+                  @if (resourceSummary(event)) { <small class="audit-resource-id">{{ resourceSummary(event) }}</small> }
+                </td>
+                <td data-label="Detalles">
+                  <button type="button" class="audit-details-button" [attr.aria-expanded]="expandedEvents().has(event.id)" (click)="toggleDetails(event.id)">
+                    <i class="pi" [class.pi-chevron-down]="!expandedEvents().has(event.id)" [class.pi-chevron-up]="expandedEvents().has(event.id)" aria-hidden="true"></i>
+                    {{ expandedEvents().has(event.id) ? 'Ocultar' : 'Ver cambios' }}
+                    <span class="audit-change-count">{{ changeEntries(event).length }}</span>
+                  </button>
+                </td>
               </tr>
+                @if (expandedEvents().has(event.id)) {
+                  <tr class="audit-expanded-row"><td class="audit-detail-cell" colspan="5" data-label="Cambios realizados">
+                    <div class="audit-detail-heading">
+                      <span>{{ actionLabel(event.action) }} {{ resourceLabel(event) | lowercase }}</span>
+                    </div>
+                    <details class="audit-technical-path"><summary>Ver ruta técnica</summary><code>{{ event.resource_path }}</code></details>
+                    @if (changeEntries(event).length) {
+                      <div class="audit-change-groups">
+                        @for (group of changeGroups(event); track group.key) {
+                          <section class="audit-change-group">
+                            <h3>{{ group.label }}</h3>
+                            <div class="audit-change-group__head"><span>Elemento</span><span>Antes</span><span aria-hidden="true"></span><span>Después</span></div>
+                            @for (change of group.changes; track change.field) {
+                              <div class="audit-change-row">
+                                <strong>{{ changeLabel(change) }}</strong>
+                                <span class="audit-change-state" [class.audit-change-state--inactive]="change.before === false">{{ formatValue(change.before, change.field) }}</span>
+                                <i class="pi pi-arrow-right" aria-hidden="true"></i>
+                                <span class="audit-change-state" [class.audit-change-state--active]="change.after === true">{{ formatValue(change.after, change.field) }}</span>
+                              </div>
+                            }
+                          </section>
+                        }
+                      </div>
+                    } @else {
+                      <p class="audit-no-changes">Este evento no incluye diferencias de campos.</p>
+                    }
+                  </td></tr>
+                }
             } @empty {
               <tr><td colspan="5" class="audit-empty-state">{{ searchTerm().trim() ? 'Ningún evento coincide con la búsqueda.' : 'No hay eventos de auditoría para esta ciudad.' }}</td></tr>
             }

@@ -3,6 +3,30 @@
   height: 100%;
 }
 
+.archived-requests__title {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+}
+
+.archived-count {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  min-height: 1.75rem;
+  padding: .2rem .65rem;
+  border: 1px solid #fed7aa;
+  border-radius: 999px;
+  color: #9a3412;
+  background: #fff7ed;
+  font-size: .82rem;
+  font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.archived-count i { font-size: .78rem; }
+
 .archived-bulk-actions {
   position: sticky;
   bottom: 0;

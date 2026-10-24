@@ -1,5 +1,9 @@
 <div class="grid gap-4">
   <div class="archived-requests-modal__toolbar">
+    <span class="archived-count" aria-live="polite">
+      <i class="pi pi-inbox" aria-hidden="true"></i>
+      {{ visibleArchivedCount() }} archivadas
+    </span>
     <p-button
       type="button"
       [icon]="selectionMode() ? 'pi pi-times' : 'pi pi-check-square'"

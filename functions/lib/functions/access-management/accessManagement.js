@@ -465,29 +465,36 @@ exports.updateCityMember = (0, https_1.onCall)(async (request) => {
     const current = await memberRef.get();
     if (!current.exists)
         throw new https_1.HttpsError("not-found", "El usuario no pertenece a esta ciudad.");
-    const roleId = typeof data.roleId === "string" ? data.roleId.trim() : "";
-    const status = typeof data.status === "string" ? data.status : "";
-    const hasDisplayName = typeof data.displayName === "string";
-    const hasEmail = typeof data.email === "string";
-    const hasPhone = typeof data.phone === "string";
+    const requestedRoleId = typeof data.roleId === "string" ? data.roleId.trim() : "";
+    const requestedStatus = typeof data.status === "string" ? data.status : "";
+    const hasDisplayNameInput = typeof data.displayName === "string";
+    const hasEmailInput = typeof data.email === "string";
+    const hasPhoneInput = typeof data.phone === "string";
     const hasSuperAdmin = Object.prototype.hasOwnProperty.call(data, "superAdmin");
     if (hasSuperAdmin && typeof data.superAdmin !== "boolean")
         throw new https_1.HttpsError("invalid-argument", "El estado de superadministrador no es válido.");
-    const displayName = hasDisplayName ? requireText(data.displayName, "El nombre", 120) : "";
-    const email = hasEmail ? requireText(data.email, "El correo", 254).toLowerCase() : "";
-    const phone = hasPhone ? data.phone.trim().slice(0, 40) : "";
-    if (hasEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    const displayName = hasDisplayNameInput ? requireText(data.displayName, "El nombre", 120) : "";
+    const email = hasEmailInput ? requireText(data.email, "El correo", 254).toLowerCase() : "";
+    const phone = hasPhoneInput ? data.phone.trim().slice(0, 40) : "";
+    if (hasEmailInput && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
         throw new https_1.HttpsError("invalid-argument", "El correo no es válido.");
-    if (status && !["active", "disabled"].includes(status))
+    if (requestedStatus && !["active", "disabled"].includes(requestedStatus))
         throw new https_1.HttpsError("invalid-argument", "El estado indicado no es válido.");
-    if (!roleId && !["active", "disabled"].includes(status) && !hasDisplayName && !hasEmail && !hasPhone && !hasSuperAdmin) {
+    if (!requestedRoleId && !requestedStatus && !hasDisplayNameInput && !hasEmailInput && !hasPhoneInput && !hasSuperAdmin) {
         throw new https_1.HttpsError("invalid-argument", "Indica un rol nuevo o un estado válido.");
     }
-    if (hasDisplayName || hasEmail || hasPhone)
-        await (0, authorization_1.requireCityPermission)(request, cityId, "members", "update");
     if (hasSuperAdmin && !(0, authorization_1.isSuperAdmin)(request))
         throw new https_1.HttpsError("permission-denied", "Solo un superadmin puede asignar o retirar este estatus.");
     const actorUid = (0, authorization_1.requireAuthenticated)(request);
+    const profileRef = firebase_admin_1.v2Db.doc(`user/${uid}`);
+    const profile = await profileRef.get();
+    const roleId = requestedRoleId && requestedRoleId !== current.get("role_id") ? requestedRoleId : "";
+    const status = requestedStatus && requestedStatus !== current.get("status") ? requestedStatus : "";
+    const hasDisplayName = hasDisplayNameInput && displayName !== (profile.get("display_name") ?? "");
+    const hasEmail = hasEmailInput && email !== (profile.get("email") ?? "");
+    const hasPhone = hasPhoneInput && phone !== (profile.get("phone") ?? "");
+    if (hasDisplayName || hasEmail || hasPhone)
+        await (0, authorization_1.requireCityPermission)(request, cityId, "members", "update");
     if (roleId) {
         await (0, authorization_1.requireCityPermission)(request, cityId, "members", "assign_role");
         if (roleId === "city_admin" && !(0, authorization_1.isSuperAdmin)(request))
@@ -505,16 +512,15 @@ exports.updateCityMember = (0, https_1.onCall)(async (request) => {
     if (authUser.customClaims?.super_admin === true && !(0, authorization_1.isSuperAdmin)(request)) {
         throw new https_1.HttpsError("permission-denied", "Solo un superadmin puede modificar otra cuenta superadmin.");
     }
-    const profileRef = firebase_admin_1.v2Db.doc(`user/${uid}`);
-    const profile = await profileRef.get();
     const batch = firebase_admin_1.v2Db.batch();
-    const memberChanges = {
-        ...(roleId ? { role_id: roleId } : {}),
-        ...(status ? { status } : {}),
-        updated_by: actorUid,
-        updated_at: firestore_2.FieldValue.serverTimestamp(),
-    };
-    batch.update(memberRef, memberChanges);
+    if (roleId || status) {
+        batch.update(memberRef, {
+            ...(roleId ? { role_id: roleId } : {}),
+            ...(status ? { status } : {}),
+            updated_by: actorUid,
+            updated_at: firestore_2.FieldValue.serverTimestamp(),
+        });
+    }
     if (hasDisplayName || hasEmail || hasPhone) {
         batch.set(profileRef, {
             ...(hasDisplayName ? { display_name: displayName } : {}),

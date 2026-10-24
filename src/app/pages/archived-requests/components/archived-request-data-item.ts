@@ -22,8 +22,8 @@ const archivedRequestSharedStyles = `
   }
   .archived-request-couple { margin: 0; color: #111c30; font-weight: 800; letter-spacing: -.02em; }
   .archived-request-name { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-  .archived-request-retreat { margin: 0; color: #26354c; font-size: .85rem; line-height: 1.4; overflow-wrap: anywhere; }
-  .archived-request-date { display: flex; align-items: center; gap: .7rem; color: #bc1020; font-size: .8rem; font-weight: 700; }
+  .archived-request-retreat { margin: 0; color: #26354c; font-size: .7rem; line-height: 1.4; overflow-wrap: anywhere; }
+  .archived-request-date { display: flex; align-items: center; gap: .7rem; color: #bc1020; font-size: .68rem; font-weight: 700; }
   .archived-request-selection { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; flex: 0 0 1.8rem; border-radius: 50%; background: #fff; color: #64748b; }
   .archived-request-selection--selected { color: #168044; }
   .archived-request--selected { outline: 2px solid #35c875; outline-offset: -2px; }
@@ -158,12 +158,14 @@ class ArchivedRequestItemBase implements OnDestroy {
       .archived-request-list__header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .85rem; }
       .archived-request-list__content { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 1.75rem; align-items: center; }
       .archived-request-list__section { min-width: 0; }
-      .archived-request-list__title { font-size: 1.25rem; line-height: 1.45; }
+      .archived-request-list__title { font-size: 1rem; line-height: 1.4; }
       .archived-request-list__section--retreat { border-left: 1px solid #e0e7f1; padding-left: 1.75rem; }
       @container archived-request (max-width: 650px) {
         .archived-request-list__body { padding: 1rem; }
         .archived-request-list__content { grid-template-columns: 1fr; gap: .85rem; }
-        .archived-request-list__title { font-size: 1rem; }
+        .archived-request-list__title { font-size: .85rem; }
+        .archived-request-date { font-size: .62rem; }
+        .archived-request-retreat { font-size: .62rem; }
         .archived-request-list__section--retreat { border-left: 0; border-top: 1px solid #e5eaf3; padding: .85rem 0 0; }
       }
     `,
@@ -236,7 +238,7 @@ export class ArchivedRequestListItem extends ArchivedRequestItemBase {}
       .archived-request-grid__top { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
       .archived-request-grid__glow { display: none; }
       .archived-request-grid__headline { min-width: 0; }
-      .archived-request-grid__title { font-size: 1.1rem; line-height: 1.5; }
+      .archived-request-grid__title { font-size: .9rem; line-height: 1.4; }
       .archived-request-grid__body { padding: .75rem 1rem; }
       .archived-request-grid__retreat {
         display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); align-items: center;
@@ -256,7 +258,7 @@ export class ArchivedRequestListItem extends ArchivedRequestItemBase {}
       .archived-request-button:hover .archived-request-grid__footer { background: #700917; }
       @container archived-request (max-width: 300px) {
         .archived-request-grid__hero { padding: 1rem; }
-        .archived-request-grid__title { font-size: 1rem; }
+        .archived-request-grid__title { font-size: .8rem; }
       }
     `,
   ],

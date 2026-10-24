@@ -6,6 +6,7 @@ import { Firestore, collection, doc, getDoc, getDocs } from '@angular/fire/fires
 import { Functions, httpsCallable } from '@angular/fire/functions';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
+import { InputMaskModule } from 'primeng/inputmask';
 import { SelectModule } from 'primeng/select';
 import { DialogModule } from 'primeng/dialog';
 import { Ss } from '@core/services/singleton.service';
@@ -21,7 +22,7 @@ type MemberStatusFilter = 'all' | 'active' | 'disabled';
 @Component({
   selector: 'app-users-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, ButtonModule, InputTextModule, SelectModule, DialogModule],
+  imports: [CommonModule, FormsModule, ButtonModule, InputTextModule, InputMaskModule, SelectModule, DialogModule],
   templateUrl: './users-management.html',
   styleUrl: './users-management.scss',
 })

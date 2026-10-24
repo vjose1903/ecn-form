@@ -65,6 +65,8 @@
   position: absolute;
   top: 1rem;
   left: 1rem;
+  --p-tag-font-size: 0.75rem;
+  --p-tag-padding: 0.32rem 0.6rem;
 }
 
 .retreat-home-list-card__content {
@@ -97,7 +99,7 @@
 .retreat-home-list-card__title {
   margin: 0;
   color: #0f172a;
-  font-size: clamp(1.02rem, 1.54vw, 1.42rem);
+  font-size: clamp(0.9rem, 1.1vw, 1.05rem);
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.15;
@@ -164,7 +166,7 @@
 .retreat-home-list-card__metric p {
   margin: 0;
   color: #334155;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   line-height: 1.45;
 }
 
@@ -177,7 +179,7 @@
 
 .retreat-home-list-card__metric strong {
   color: #0f172a;
-  font-size: 1.6rem;
+  font-size: 1.2rem;
   line-height: 1;
   letter-spacing: -0.04em;
 }
@@ -208,6 +210,8 @@
   .retreat-home-list-card__media-overlay {
     top: 0.75rem;
     left: 0.75rem;
+    --p-tag-font-size: 0.65rem;
+    --p-tag-padding: 0.25rem 0.5rem;
   }
 
   .retreat-home-list-card__content {
@@ -224,7 +228,7 @@
   }
 
   .retreat-home-list-card__title {
-    font-size: 1.02rem;
+    font-size: 0.84rem;
   }
 
   .retreat-home-list-card__actions {
@@ -235,6 +239,10 @@
     gap: 0.58rem;
   }
 
+  .retreat-home-list-card__detail-label { font-size: 0.56rem; }
+  .retreat-home-list-card__detail p,
+  .retreat-home-list-card__metric p { font-size: 0.62rem; }
+
   .retreat-home-list-card__detail,
   .retreat-home-list-card__metric {
     padding: 0.72rem 0.78rem;
@@ -242,7 +250,7 @@
   }
 
   .retreat-home-list-card__metric strong {
-    font-size: 1.35rem;
+    font-size: 1rem;
   }
 }
 

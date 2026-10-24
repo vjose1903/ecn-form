@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { TooltipModule } from 'primeng/tooltip';
 import { DashboardChartComponent } from './dashboard-chart.component';
 import { DashboardFullscreenCardComponent } from './dashboard-fullscreen-card.component';
@@ -13,7 +14,7 @@ import { Ss } from '@core/services/singleton.service';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, FormsModule, ButtonModule, DatePickerModule, SelectModule, TooltipModule, DashboardChartComponent, DashboardFullscreenCardComponent],
+  imports: [CommonModule, FormsModule, ButtonModule, DatePickerModule, SelectModule, MultiSelectModule, TooltipModule, DashboardChartComponent, DashboardFullscreenCardComponent],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
@@ -23,7 +24,8 @@ export class DashboardPage implements OnInit {
   loading = signal(false);
   data = signal<DashboardData | null>(null);
   loadingLayout = signal<DashboardSkeletonLayout>({kpiKeys: [], chartKeys: []});
-  selectedPeriod = signal<DashboardPeriodFilter>('all');
+  selectedPeriod = signal<DashboardPeriodFilter>('last_3_years');
+  selectedRetreats = signal<string[]>(['all']);
   customFrom = signal<Date | null>(null);
   customTo = signal<Date | null>(null);
   fullscreenChart = signal<DashboardChart | null>(null);
@@ -41,6 +43,10 @@ export class DashboardPage implements OnInit {
   skeletonRows = [0, 1, 2, 3, 4];
 
   showCustomRange = computed(() => this.selectedPeriod() === 'custom');
+  retreatOptions = computed(() => [
+    { label: 'Todos', value: 'all' },
+    ...(this.data()?.retreatOptions || []),
+  ]);
   kpis = computed(() => this.data()?.kpis || []);
   charts = computed(() => this.data()?.charts || []);
   summary = computed(() => {
@@ -59,6 +65,7 @@ export class DashboardPage implements OnInit {
 
   onPeriodChange(period: DashboardPeriodFilter): void {
     this.selectedPeriod.set(period);
+    this.selectedRetreats.set(['all']);
 
     if (period !== 'custom') {
       void this.loadDashboard();
@@ -67,8 +74,26 @@ export class DashboardPage implements OnInit {
 
   onCustomRangeChange(): void {
     if (this.customFrom() && this.customTo()) {
+      this.selectedRetreats.set(['all']);
       void this.loadDashboard();
     }
+  }
+
+  onRetreatSelectionChange(selection: string[]): void {
+    const previous = this.selectedRetreats();
+    let normalized: string[];
+
+    if (selection.includes('all')) {
+      normalized = previous.includes('all')
+        ? selection.filter(value => value !== 'all')
+        : ['all'];
+    } else {
+      normalized = selection;
+    }
+
+    if (!normalized.length) normalized = ['all'];
+    this.selectedRetreats.set(normalized);
+    this.data.set(this.dashboardService.filterDashboardData(normalized.includes('all') ? [] : normalized));
   }
 
   refresh(): void {

@@ -51,7 +51,7 @@
   align-items: center;
   gap: 0.7rem;
   color: #bc1020;
-  font-size: 1rem;
+  font-size: 0.8rem;
   font-weight: 700;
 }
 
@@ -60,13 +60,13 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 1.25rem;
-  --p-tag-font-size: 1.1rem;
-  --p-tag-padding: 0.45rem 0.85rem;
+  --p-tag-font-size: 0.78rem;
+  --p-tag-padding: 0.35rem 0.65rem;
 }
 
 .retreat-list-card__number {
   color: #870c1b;
-  font-size: 3.4rem;
+  font-size: 2.5rem;
   line-height: 1;
   font-weight: 800;
   letter-spacing: -0.04em;
@@ -112,7 +112,7 @@
 .retreat-list-card__title {
   margin: 0;
   color: #111c30;
-  font-size: 1.7rem;
+  font-size: 1.25rem;
   font-weight: 800;
   line-height: 1.2;
   letter-spacing: -0.02em;
@@ -162,7 +162,7 @@
   p {
     margin: 0;
     color: #26354c;
-    font-size: 0.95rem;
+    font-size: 0.8rem;
     line-height: 1.4;
     overflow-wrap: anywhere;
   }
@@ -170,7 +170,7 @@
 
 .retreat-list-card__metric-value {
   color: #111c30;
-  font-size: 1.8rem;
+  font-size: 1.35rem;
   line-height: 1;
   font-weight: 800;
   letter-spacing: -0.03em;
@@ -189,10 +189,14 @@
 
 @media (max-width: 600px) {
   .retreat-list-card__body { padding: 1rem; }
-  .retreat-list-card__date { font-size: 0.8rem; }
-  .retreat-list-card__number { font-size: 2.6rem; }
-  .retreat-list-card__number-row { gap: 0.65rem; --p-tag-font-size: 0.85rem; }
-  .retreat-list-card__title { font-size: 1.35rem; }
+  .retreat-list-card__date { font-size: 0.68rem; }
+  .retreat-list-card__number { font-size: 1.9rem; }
+  .retreat-list-card__number-row { gap: 0.5rem; --p-tag-font-size: 0.64rem; }
+  .retreat-list-card__title { font-size: 0.98rem; }
+  .retreat-list-card__label { font-size: 0.62rem; }
+  .retreat-list-card__detail-label { font-size: 0.56rem; }
+  .retreat-list-card__detail p { font-size: 0.72rem; }
+  .retreat-list-card__metric-value { font-size: 1.1rem; }
   .retreat-list-card__content { grid-template-columns: 1fr; gap: 0.85rem; }
   .retreat-list-card__content > * + * { padding-left: 0; border-left: 0; }
 }
