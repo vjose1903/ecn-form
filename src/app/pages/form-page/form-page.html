@@ -2,9 +2,13 @@
   @if (!initialized()) {
   <app-form-skeleton [formType]="formType" />
   } @else if (submission_success()) {
-  <request-send (close)="resetForm()" />
+  <div class="form-centered-stage" [class.form-centered-stage--page]="!isInModal()">
+    <request-send (close)="resetForm()" />
+  </div>
   } @else if (error()) {
-  <error-message (retry)="onRetry()" />
+  <div class="form-centered-stage" [class.form-centered-stage--page]="!isInModal()">
+    <error-message (retry)="onRetry()" />
+  </div>
   } @else {
   <div class="m-auto {{!isUpdate ? 'w-[95vw] md:w-3/4 lg:w-1/2 py-10' : 'w-[90%]'}}  flex flex-col gap-1">
     <div class="hidden">{{ requestRefString() }}</div>

@@ -483,24 +483,32 @@ export const updateCityMember = onCall(async (request) => {
   const current = await memberRef.get();
   if (!current.exists) throw new HttpsError("not-found", "El usuario no pertenece a esta ciudad.");
 
-  const roleId = typeof data.roleId === "string" ? data.roleId.trim() : "";
-  const status = typeof data.status === "string" ? data.status : "";
-  const hasDisplayName = typeof data.displayName === "string";
-  const hasEmail = typeof data.email === "string";
-  const hasPhone = typeof data.phone === "string";
+  const requestedRoleId = typeof data.roleId === "string" ? data.roleId.trim() : "";
+  const requestedStatus = typeof data.status === "string" ? data.status : "";
+  const hasDisplayNameInput = typeof data.displayName === "string";
+  const hasEmailInput = typeof data.email === "string";
+  const hasPhoneInput = typeof data.phone === "string";
   const hasSuperAdmin = Object.prototype.hasOwnProperty.call(data, "superAdmin");
   if (hasSuperAdmin && typeof data.superAdmin !== "boolean") throw new HttpsError("invalid-argument", "El estado de superadministrador no es válido.");
-  const displayName = hasDisplayName ? requireText(data.displayName, "El nombre", 120) : "";
-  const email = hasEmail ? requireText(data.email, "El correo", 254).toLowerCase() : "";
-  const phone = hasPhone ? (data.phone as string).trim().slice(0, 40) : "";
-  if (hasEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpsError("invalid-argument", "El correo no es válido.");
-  if (status && !["active", "disabled"].includes(status)) throw new HttpsError("invalid-argument", "El estado indicado no es válido.");
-  if (!roleId && !["active", "disabled"].includes(status) && !hasDisplayName && !hasEmail && !hasPhone && !hasSuperAdmin) {
+  const displayName = hasDisplayNameInput ? requireText(data.displayName, "El nombre", 120) : "";
+  const email = hasEmailInput ? requireText(data.email, "El correo", 254).toLowerCase() : "";
+  const phone = hasPhoneInput ? (data.phone as string).trim().slice(0, 40) : "";
+  if (hasEmailInput && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpsError("invalid-argument", "El correo no es válido.");
+  if (requestedStatus && !["active", "disabled"].includes(requestedStatus)) throw new HttpsError("invalid-argument", "El estado indicado no es válido.");
+  if (!requestedRoleId && !requestedStatus && !hasDisplayNameInput && !hasEmailInput && !hasPhoneInput && !hasSuperAdmin) {
     throw new HttpsError("invalid-argument", "Indica un rol nuevo o un estado válido.");
   }
-  if (hasDisplayName || hasEmail || hasPhone) await requireCityPermission(request, cityId, "members", "update");
   if (hasSuperAdmin && !isSuperAdmin(request)) throw new HttpsError("permission-denied", "Solo un superadmin puede asignar o retirar este estatus.");
   const actorUid = requireAuthenticated(request);
+
+  const profileRef = v2Db.doc(`user/${uid}`);
+  const profile = await profileRef.get();
+  const roleId = requestedRoleId && requestedRoleId !== current.get("role_id") ? requestedRoleId : "";
+  const status = requestedStatus && requestedStatus !== current.get("status") ? requestedStatus : "";
+  const hasDisplayName = hasDisplayNameInput && displayName !== (profile.get("display_name") ?? "");
+  const hasEmail = hasEmailInput && email !== (profile.get("email") ?? "");
+  const hasPhone = hasPhoneInput && phone !== (profile.get("phone") ?? "");
+  if (hasDisplayName || hasEmail || hasPhone) await requireCityPermission(request, cityId, "members", "update");
   if (roleId) {
     await requireCityPermission(request, cityId, "members", "assign_role");
     if (roleId === "city_admin" && !isSuperAdmin(request)) throw new HttpsError("permission-denied", "Solo un superadmin puede asignar el rol administrador de ciudad.");
@@ -515,16 +523,15 @@ export const updateCityMember = onCall(async (request) => {
   if (authUser.customClaims?.super_admin === true && !isSuperAdmin(request)) {
     throw new HttpsError("permission-denied", "Solo un superadmin puede modificar otra cuenta superadmin.");
   }
-  const profileRef = v2Db.doc(`user/${uid}`);
-  const profile = await profileRef.get();
   const batch = v2Db.batch();
-  const memberChanges = {
-    ...(roleId ? {role_id: roleId} : {}),
-    ...(status ? {status} : {}),
-    updated_by: actorUid,
-    updated_at: FieldValue.serverTimestamp(),
-  };
-  batch.update(memberRef, memberChanges);
+  if (roleId || status) {
+    batch.update(memberRef, {
+      ...(roleId ? {role_id: roleId} : {}),
+      ...(status ? {status} : {}),
+      updated_by: actorUid,
+      updated_at: FieldValue.serverTimestamp(),
+    });
+  }
   if (hasDisplayName || hasEmail || hasPhone) {
     batch.set(profileRef, {
       ...(hasDisplayName ? {display_name: displayName} : {}),

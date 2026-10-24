@@ -11,6 +11,7 @@ import { Ss } from '@core/services/singleton.service';
 
 interface Choice {label: string; value: string}
 interface AuditChange {before: unknown; after: unknown}
+interface AuditChangeGroup {key: string; label: string; changes: Array<{field: string; before: unknown; after: unknown}>}
 interface AuditRecord {
   id: string;
   actor_uid: string;
@@ -30,6 +31,12 @@ const FIELD_LABELS: Record<string, string> = {
   amount: 'Monto', description: 'Descripción', start_date: 'Fecha de inicio', end_date: 'Fecha de fin',
   deadline: 'Fecha límite', created_at: 'Fecha de creación', updated_at: 'Última actualización',
   created_by: 'Creado por', updated_by: 'Actualizado por', actor_uid: 'Usuario',
+  permissions: 'Permisos', dashboard: 'Dashboard',
+};
+const DASHBOARD_LABELS: Record<string, string> = {
+  participantschildren: 'Hijos de los participantes', datingaverage: 'Tiempo promedio de noviazgo',
+  mainsource: 'Fuente principal', weddingdate: 'Fecha de boda', totalrequests: 'Total de solicitudes',
+  requestsperretreat: 'Solicitudes por retiro', requeststatus: 'Estado de solicitudes', inviter: 'Invitador',
 };
 const RESOURCE_LABELS: Record<string, string> = {
   city: 'Ciudad', roles: 'Rol', members: 'Usuario', retreat: 'Retiro', requests: 'Solicitud',
@@ -140,7 +147,10 @@ export class AuditManagement implements OnInit {
 
   formatTime(value: any): string {
     const date = value?.toDate?.() ?? (value instanceof Date ? value : null);
-    return date ? date.toLocaleString('es-DO') : '';
+    if (!date) return '';
+    const datePart = new Intl.DateTimeFormat('es-DO', {day: '2-digit', month: '2-digit', year: 'numeric'}).format(date);
+    const timePart = new Intl.DateTimeFormat('en-US', {hour: '2-digit', minute: '2-digit', hourCycle: 'h12'}).format(date);
+    return `${datePart} ${timePart}`;
   }
 
   toggleDetails(eventId: string): void {
@@ -176,6 +186,9 @@ export class AuditManagement implements OnInit {
 
   fieldLabel(field: string): string {
     if (field.includes('.')) return field.split('.').map(part => this.fieldLabel(part)).join(' · ');
+    if (field.toLocaleLowerCase() === 'dashboard') return 'Gráficos e indicadores';
+    const dashboardLabel = DASHBOARD_LABELS[field.toLocaleLowerCase().replace(/[\s_-]/g, '')];
+    if (dashboardLabel) return dashboardLabel;
     return FIELD_LABELS[field] ?? field.replace(/_/g, ' ').replace(/\b\w/g, character => character.toLocaleUpperCase());
   }
 
@@ -187,6 +200,29 @@ export class AuditManagement implements OnInit {
       }
       return this.flattenChanges(field, null, change);
     });
+  }
+
+  changeGroups(event: AuditRecord): AuditChangeGroup[] {
+    const groups = new Map<string, AuditChangeGroup>();
+    for (const change of this.changeEntries(event)) {
+      const parts = change.field.split('.');
+      const isDashboard = parts[0]?.toLocaleLowerCase() === 'permissions' && parts[1]?.toLocaleLowerCase() === 'dashboard';
+      const key = isDashboard ? 'dashboard' : parts[0] || 'other';
+      const group = groups.get(key) ?? {
+        key,
+        label: isDashboard ? 'Gráficos e indicadores del dashboard' : this.fieldLabel(key),
+        changes: [],
+      };
+      group.changes.push(change);
+      groups.set(key, group);
+    }
+    return [...groups.values()];
+  }
+
+  changeLabel(change: {field: string}): string {
+    const parts = change.field.split('.');
+    const field = parts[0]?.toLocaleLowerCase() === 'permissions' ? parts.slice(2).join('.') : parts.slice(1).join('.') || parts[0];
+    return this.fieldLabel(field);
   }
 
   private flattenChanges(field: string, before: unknown, after: unknown): Array<{field: string; before: unknown; after: unknown}> {

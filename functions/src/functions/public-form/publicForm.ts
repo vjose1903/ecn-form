@@ -5,6 +5,12 @@ import {FieldValue, Timestamp} from "firebase-admin/firestore";
 
 const safeText = (value: unknown, max = 300): string => typeof value === "string" ? value.trim().slice(0, max) : "";
 
+const timestampToIso = (value: unknown): string | null => {
+  if (value instanceof Timestamp) return value.toDate().toISOString();
+  if (value instanceof Date) return value.toISOString();
+  return typeof value === "string" ? value : null;
+};
+
 export const getPublicFormData = onCall(async (request) => {
   const cityId = safeText((request.data as Record<string, unknown>)?.cityId, 100);
   if (!cityId) throw new HttpsError("invalid-argument", "La ciudad es obligatoria.");
@@ -29,10 +35,10 @@ export const getPublicFormData = onCall(async (request) => {
         id: doc.id,
         number: data.number,
         community_name: data.community_name,
-        start_date: data.start_date,
-        end_date: data.end_date,
-        max_request_date: data.max_request_date,
-        retreat_home: data.retreat_home,
+        start_date: timestampToIso(data.start_date),
+        end_date: timestampToIso(data.end_date),
+        max_request_date: timestampToIso(data.max_request_date),
+        retreat_home: typeof data.retreat_home === "string" ? data.retreat_home : safeText((data.retreat_home as Record<string, unknown> | undefined)?.id, 160),
         modality: data.modality,
         mixedModalityData: data.mixedModalityData,
         amount_per_person: data.amount_per_person,

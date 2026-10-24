@@ -55,16 +55,20 @@
                     </div>
                     <details class="audit-technical-path"><summary>Ver ruta técnica</summary><code>{{ event.resource_path }}</code></details>
                     @if (changeEntries(event).length) {
-                      <div class="audit-change-list">
-                        @for (change of changeEntries(event); track change.field) {
-                          <article class="audit-change-card">
-                            <h3>{{ fieldLabel(change.field) }}</h3>
-                            <div class="audit-change-values">
-                              <div><small>Antes</small><p>{{ formatValue(change.before, change.field) }}</p></div>
-                              <i class="pi pi-arrow-right" aria-hidden="true"></i>
-                              <div><small>Después</small><p>{{ formatValue(change.after, change.field) }}</p></div>
-                            </div>
-                          </article>
+                      <div class="audit-change-groups">
+                        @for (group of changeGroups(event); track group.key) {
+                          <section class="audit-change-group">
+                            <h3>{{ group.label }}</h3>
+                            <div class="audit-change-group__head"><span>Elemento</span><span>Antes</span><span aria-hidden="true"></span><span>Después</span></div>
+                            @for (change of group.changes; track change.field) {
+                              <div class="audit-change-row">
+                                <strong>{{ changeLabel(change) }}</strong>
+                                <span class="audit-change-state" [class.audit-change-state--inactive]="change.before === false">{{ formatValue(change.before, change.field) }}</span>
+                                <i class="pi pi-arrow-right" aria-hidden="true"></i>
+                                <span class="audit-change-state" [class.audit-change-state--active]="change.after === true">{{ formatValue(change.after, change.field) }}</span>
+                              </div>
+                            }
+                          </section>
                         }
                       </div>
                     } @else {

@@ -1,4 +1,12 @@
 // Estilos para controlar el ripple effect del accordion en modales
+.form-centered-stage--page {
+  box-sizing: border-box;
+  min-height: calc(100dvh - 6.5rem);
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+
 .form-in-modal {
   .accordion-modal-container {
     // Crear un contexto de stacking para el ripple

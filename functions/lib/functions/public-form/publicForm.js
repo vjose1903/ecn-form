@@ -6,6 +6,13 @@ const https_1 = require("firebase-functions/v2/https");
 const firebase_admin_1 = require("../../core/firebase-admin");
 const firestore_1 = require("firebase-admin/firestore");
 const safeText = (value, max = 300) => typeof value === "string" ? value.trim().slice(0, max) : "";
+const timestampToIso = (value) => {
+    if (value instanceof firestore_1.Timestamp)
+        return value.toDate().toISOString();
+    if (value instanceof Date)
+        return value.toISOString();
+    return typeof value === "string" ? value : null;
+};
 exports.getPublicFormData = (0, https_1.onCall)(async (request) => {
     const cityId = safeText(request.data?.cityId, 100);
     if (!cityId)
@@ -32,10 +39,10 @@ exports.getPublicFormData = (0, https_1.onCall)(async (request) => {
                 id: doc.id,
                 number: data.number,
                 community_name: data.community_name,
-                start_date: data.start_date,
-                end_date: data.end_date,
-                max_request_date: data.max_request_date,
-                retreat_home: data.retreat_home,
+                start_date: timestampToIso(data.start_date),
+                end_date: timestampToIso(data.end_date),
+                max_request_date: timestampToIso(data.max_request_date),
+                retreat_home: typeof data.retreat_home === "string" ? data.retreat_home : safeText(data.retreat_home?.id, 160),
                 modality: data.modality,
                 mixedModalityData: data.mixedModalityData,
                 amount_per_person: data.amount_per_person,
