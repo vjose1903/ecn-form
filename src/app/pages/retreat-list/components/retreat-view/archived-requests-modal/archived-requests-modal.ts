@@ -100,6 +100,8 @@ export class ArchivedRequestsModal implements OnInit {
     },
   });
 
+  visibleArchivedCount = computed(() => this.dataviewConfig.data().length);
+
   ngOnInit(): void {
     this.retreat = this.config.data.retreat;
     void this.loadArchivedRequests();

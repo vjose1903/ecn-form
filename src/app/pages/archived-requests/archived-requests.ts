@@ -89,6 +89,8 @@ export class ArchivedRequests implements OnInit {
     },
   });
 
+  visibleArchivedCount = computed(() => this.dataviewConfig.data().length);
+
   ngOnInit(): void {
     void this.loadData();
   }

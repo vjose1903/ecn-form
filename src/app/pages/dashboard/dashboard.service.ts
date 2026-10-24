@@ -19,6 +19,13 @@ interface CounterEntry {
   value: number;
 }
 
+interface DashboardSnapshot {
+  retreats: RetreatClass[];
+  entries: DashboardRequestEntry[];
+  archivedRequestCounts: Record<string, number>;
+  permissions: Record<string, boolean>;
+}
+
 const DASHBOARD_KPI_KEYS = ['total_requests', 'request_status', 'requests_per_retreat', 'wedding_date', 'inviter', 'main_source', 'dating_average', 'participants_children', 'church_marriage'];
 const DASHBOARD_CHART_KEYS = ['requests_status_chart', 'requests_per_retreat_chart', 'acquisition_source_chart', 'retreat_evolution_chart', 'dating_years_chart', 'wedding_date_chart', 'inviter_chart', 'participant_ages_chart', 'declared_religion_chart', 'residence_city_chart'];
 const DASHBOARD_PERMISSION_KEYS = [...DASHBOARD_KPI_KEYS, ...DASHBOARD_CHART_KEYS];
@@ -31,6 +38,8 @@ export class DashboardService {
   private requestService = inject(RequestService);
   private firestore = inject(Firestore);
   private readonly chartPalette = ['#a83044', '#2563eb', '#16a34a', '#f59e0b', '#7c3aed', '#0891b2', '#ef4444', '#0f766e', '#ea580c', '#475569', '#db2777', '#65a30d'];
+  private readonly requestStatusPalette = ['#94a3b8', '#16a34a', '#ef4444', '#f59e0b'];
+  private dashboardSnapshot: DashboardSnapshot | null = null;
 
   async getDashboardData(filter: DashboardPeriodFilter, customRange: DashboardDateRange, onPermissionsResolved?: (layout: DashboardSkeletonLayout) => void): Promise<DashboardData> {
     const currentUser = Ss.authService.current_user();
@@ -49,18 +58,37 @@ export class DashboardService {
     const retreats = await retreatsPromise;
     const cityRetreats = retreats.filter(retreat => retreat.is_active && this.isRetreatInUserCity(retreat, Ss.authService.activeCityId() || currentUser.city));
     const scopedRetreats = this.filterRetreatsByPeriod(cityRetreats, filter, customRange);
-    const requests = await this.requestService.getRequestsForRetreats(scopedRetreats);
+    const [requests, archivedRequestCounts] = await Promise.all([
+      this.requestService.getRequestsForRetreats(scopedRetreats),
+      this.requestService.getArchivedRequestCountsForRetreats(scopedRetreats),
+    ]);
     const retreatsById = new Map(scopedRetreats.map(retreat => [retreat.id, retreat]));
     const entries = requests.flatMap(request => {
       const retreat = retreatsById.get(request.retreat);
       return retreat ? [{retreat, request}] : [];
     });
 
+    this.dashboardSnapshot = { retreats: scopedRetreats, entries, archivedRequestCounts, permissions };
+    return this.filterDashboardData([]);
+  }
+
+  filterDashboardData(retreatIds: string[]): DashboardData {
+    const snapshot = this.dashboardSnapshot;
+    if (!snapshot) return { kpis: [], charts: [], retreatCount: 0, requestCount: 0, retreatOptions: [] };
+
+    const selectedIds = new Set(retreatIds);
+    const retreats = selectedIds.size ? snapshot.retreats.filter(retreat => selectedIds.has(retreat.id)) : snapshot.retreats;
+    const retreatIdSet = new Set(retreats.map(retreat => retreat.id));
+    const entries = snapshot.entries.filter(entry => retreatIdSet.has(entry.retreat.id));
+    const archivedRequestCount = retreats.reduce((total, retreat) => total + (snapshot.archivedRequestCounts[retreat.id] || 0), 0);
+    const { permissions } = snapshot;
+
     return {
-      kpis: this.buildKpis(entries).filter(kpi => permissions[kpi.permissionKey] === true),
-      charts: this.buildCharts(scopedRetreats, entries).filter(chart => permissions[chart.permissionKey] === true),
-      retreatCount: scopedRetreats.length,
-      requestCount: entries.length,
+      kpis: this.buildKpis(entries, archivedRequestCount).filter(kpi => permissions[kpi.permissionKey] === true),
+      charts: this.buildCharts(retreats, entries, archivedRequestCount).filter(chart => permissions[chart.permissionKey] === true),
+      retreatCount: retreats.length,
+      requestCount: entries.length + archivedRequestCount,
+      retreatOptions: snapshot.retreats.map(retreat => ({ label: `Retiro ${retreat.displayNumber}`, value: retreat.id })),
     };
   }
 
@@ -130,25 +158,26 @@ export class DashboardService {
     return retreatCity === this.extractId(userCity);
   }
 
-  private buildKpis(entries: DashboardRequestEntry[]): DashboardKpi[] {
-    const total = entries.length;
+  private buildKpis(entries: DashboardRequestEntry[], archivedRequestCount: number): DashboardKpi[] {
+    const activeTotal = entries.length;
+    const total = activeTotal + archivedRequestCount;
     const statusCounts = this.countBy(entries, entry => entry.request.status || RequestStatus.PENDING);
     const weddingCounts = this.countBy(entries, entry => (entry.request.have_wedding_date ? 'con' : 'sin'));
     const invitedCounts = this.countBy(entries, entry => (this.hasText(entry.request.who_invited_you) ? 'con' : 'sin'));
     const participants = entries.flatMap(entry => this.getParticipants(entry.request));
     const withChildren = participants.filter(participant => participant.have_children).length;
     const churchMarried = participants.filter(participant => participant.are_you_married).length;
-    const averageDatingYears = total > 0 ? entries.reduce((sum, entry) => sum + Number(entry.request.dating_period_year || 0), 0) / total : 0;
+    const averageDatingYears = activeTotal > 0 ? entries.reduce((sum, entry) => sum + Number(entry.request.dating_period_year || 0), 0) / activeTotal : 0;
     const mainSource = this.topEntry(this.countBy(entries, entry => this.getSource(entry.request)))?.name || 'Sin datos';
 
     return [
       { permissionKey: 'total_requests', label: 'Total de solicitudes', value: this.formatNumber(total), icon: 'pi pi-chart-bar', tone: 'primary' },
       {
         permissionKey: 'request_status', label: 'Estado de solicitudes',
-        value: `${statusCounts[RequestStatus.PENDING] || 0} / ${statusCounts[RequestStatus.ACCEPTED] || 0} / ${statusCounts[RequestStatus.REJECTED] || 0}`,
+        value: `${statusCounts[RequestStatus.PENDING] || 0} / ${statusCounts[RequestStatus.ACCEPTED] || 0} / ${statusCounts[RequestStatus.REJECTED] || 0} / ${archivedRequestCount}`,
         icon: 'pi pi-check-circle',
         tone: 'success',
-        detail: 'Pendientes / aceptadas / rechazadas',
+        detail: 'Pend. / Acept. / Rech. / Archiv.',
       },
       {
         permissionKey: 'requests_per_retreat', label: 'Solicitudes por retiro',
@@ -178,13 +207,14 @@ export class DashboardService {
     ];
   }
 
-  private buildCharts(retreats: RetreatClass[], entries: DashboardRequestEntry[]): DashboardChart[] {
+  private buildCharts(retreats: RetreatClass[], entries: DashboardRequestEntry[], archivedRequestCount: number): DashboardChart[] {
     const participants = entries.flatMap(entry => this.getParticipants(entry.request));
     const requestCountByRetreat = this.countBy(entries, entry => entry.retreat.id);
     const requestStatus = [
       { name: 'Pendientes', value: entries.filter(entry => entry.request.status === RequestStatus.PENDING).length },
       { name: 'Aceptadas', value: entries.filter(entry => entry.request.status === RequestStatus.ACCEPTED).length },
       { name: 'Rechazadas', value: entries.filter(entry => entry.request.status === RequestStatus.REJECTED).length },
+      { name: 'Archivadas', value: archivedRequestCount },
     ];
     const requestsByRetreat = retreats.map(retreat => ({name: `Retiro ${retreat.displayNumber}`, value: requestCountByRetreat[retreat.id] || 0}));
     const sourceData = this.toSortedEntries(this.countBy(entries, entry => this.getSource(entry.request)));
@@ -206,7 +236,7 @@ export class DashboardService {
     const cityData = this.countByNormalized(participants, participant => participant.city_of_residence).slice(0, 12);
 
     return [
-      { permissionKey: 'requests_status_chart', title: 'Estado de solicitudes', subtitle: 'Pendientes, aceptadas y rechazadas', option: this.pieOption(requestStatus), empty: entries.length === 0 },
+      { permissionKey: 'requests_status_chart', title: 'Estado de solicitudes', subtitle: 'Pendientes, aceptadas, rechazadas y archivadas', option: this.pieOption(requestStatus, this.requestStatusPalette), empty: entries.length === 0 && archivedRequestCount === 0 },
       { permissionKey: 'requests_per_retreat_chart', title: 'Solicitudes por retiro', subtitle: 'Total por retiro seleccionado', option: this.barOption(requestsByRetreat), empty: entries.length === 0 },
       { permissionKey: 'acquisition_source_chart', title: 'Fuente de captación', subtitle: 'Cómo se enteraron del retiro', option: this.horizontalBarOption(sourceData), empty: entries.length === 0 },
       { permissionKey: 'retreat_evolution_chart', title: 'Evolución por fecha de retiro', subtitle: 'Solicitudes agrupadas por fecha de inicio del retiro', option: this.barOption(evolutionData), empty: entries.length === 0 },
@@ -219,9 +249,9 @@ export class DashboardService {
     ];
   }
 
-  private pieOption(data: CounterEntry[]): EChartsOption {
+  private pieOption(data: CounterEntry[], palette = this.chartPalette): EChartsOption {
     return {
-      color: this.chartPalette,
+      color: palette,
       tooltip: {
         trigger: 'item',
         backgroundColor: '#111827',
@@ -241,13 +271,13 @@ export class DashboardService {
           radius: ['50%', '72%'],
           center: ['50%', '44%'],
           avoidLabelOverlap: true,
-          label: { formatter: '{b}: {c}', color: '#1f2937', fontWeight: 650 },
+      label: { formatter: '{b}: {c}', color: '#1f2937', fontWeight: 650, fontSize: 10 },
           itemStyle: {
             borderColor: '#ffffff',
             borderWidth: 3,
             borderRadius: 6,
           },
-          data: this.toColoredChartData(data),
+          data: this.toColoredChartData(data, palette),
         },
       ],
     };
@@ -316,19 +346,19 @@ export class DashboardService {
     };
   }
 
-  private toColoredChartData(data: CounterEntry[]): (CounterEntry & { itemStyle: { color: string } })[] {
+  private toColoredChartData(data: CounterEntry[], palette = this.chartPalette): (CounterEntry & { itemStyle: { color: string } })[] {
     return data.map((item, index) => ({
       name: item.name,
       value: item.value,
       itemStyle: {
-        color: this.getChartColor(index),
+        color: this.getChartColor(index, palette),
       },
     }));
   }
 
-  private getChartColor(index: number): string {
-    if (index < this.chartPalette.length) {
-      return this.chartPalette[index];
+  private getChartColor(index: number, palette = this.chartPalette): string {
+    if (index < palette.length) {
+      return palette[index];
     }
 
     return `hsl(${(index * 137.508) % 360}, 68%, 46%)`;

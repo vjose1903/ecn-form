@@ -97,6 +97,23 @@ export class RequestService extends FirebaseRequest<RequestI> {
     return Promise.all(requestDocs.map(requestDoc => this.hydrateV2Request(cityId, requestDoc, fieldGroups[requestDoc.id], false, DASHBOARD_DETAIL_SECTIONS)));
   }
 
+  async getArchivedRequestCountsForRetreats(retreats: RetreatClass[]): Promise<Record<string, number>> {
+    const cityId = this.authService.activeCityId() || this.authService.current_user()?.city;
+    const retreatIds = [...new Set(retreats.map(retreat => retreat.id).filter((id): id is string => Boolean(id)))];
+    if (!cityId || !retreatIds.length) return {};
+
+    const requestsRef = collection(this.firestore, `city/${cityId}/requests`);
+    const retreatIdBatches = Array.from({length: Math.ceil(retreatIds.length / 30)}, (_, index) => retreatIds.slice(index * 30, (index + 1) * 30));
+    const snapshots = await Promise.all(retreatIdBatches.map(ids =>
+      getDocs(query(requestsRef, where('retreat_id', 'in', ids), where('is_archived', '==', true)))
+    ));
+    return snapshots.flatMap(snapshot => snapshot.docs).reduce<Record<string, number>>((counts, requestDoc) => {
+      const retreatId = requestDoc.get('retreat_id');
+      if (typeof retreatId === 'string') counts[retreatId] = (counts[retreatId] || 0) + 1;
+      return counts;
+    }, {});
+  }
+
   private async getRequestFieldGroups(cityId: string, requestIds: string[], includeDashboardDetails = false): Promise<Record<string, RequestFieldGroups>> {
     if (!requestIds.length) return {};
     const getGroups = httpsCallable<{cityId: string; requestIds: string[]; includeDashboardDetails?: boolean}, Record<string, RequestFieldGroups>>(this.functions, 'getRequestFieldGroups');
