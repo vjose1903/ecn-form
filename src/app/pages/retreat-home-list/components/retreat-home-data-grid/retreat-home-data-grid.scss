@@ -77,6 +77,8 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
+  --p-tag-font-size: 0.75rem;
+  --p-tag-padding: 0.32rem 0.6rem;
 }
 
 .retreat-home-grid-card__actions {
@@ -118,7 +120,7 @@
 .retreat-home-grid-card__title {
   margin: -0.15rem 0 0;
   color: #0f172a;
-  font-size: clamp(0.96rem, 1.5vw, 1.28rem);
+  font-size: clamp(0.86rem, 1.1vw, 1rem);
   font-weight: 800;
   line-height: 1.18;
   letter-spacing: -0.03em;
@@ -139,7 +141,7 @@
   background: #fcfdff;
   border: 1px solid #e9edf5;
   color: #172033;
-  font-size: .75rem;
+  font-size: .66rem;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
@@ -176,7 +178,7 @@
 
 .retreat-home-grid-card__metric strong {
   color: #0f172a;
-  font-size: 1.36rem;
+  font-size: 1.1rem;
   line-height: 1;
   letter-spacing: -0.04em;
 }
@@ -190,7 +192,7 @@
   border-radius: .8rem;
   background: #870c1b;
   color: #fff;
-  font-size: .8rem;
+  font-size: .7rem;
 }
 
 .retreat-home-grid-card__cta i {
@@ -222,6 +224,8 @@
     top: 0.75rem;
     left: 0.75rem;
     right: 0.75rem;
+    --p-tag-font-size: 0.65rem;
+    --p-tag-padding: 0.25rem 0.5rem;
   }
 
   .retreat-home-grid-card__actions {
@@ -234,7 +238,7 @@
   }
 
   .retreat-home-grid-card__title {
-    font-size: 1rem;
+    font-size: 0.84rem;
   }
 
   .retreat-home-grid-card__detail-list {
@@ -244,16 +248,16 @@
   .retreat-home-grid-card__detail {
     padding: 0.7rem 0.76rem;
     border-radius: 0.82rem;
-    font-size: 0.78rem;
+    font-size: 0.65rem;
   }
 
   .retreat-home-grid-card__metric strong {
-    font-size: 1.28rem;
+    font-size: 1rem;
   }
 
   .retreat-home-grid-card__cta {
     gap: 0.5rem;
-    font-size: 0.68rem;
+    font-size: 0.62rem;
   }
 
   .retreat-home-grid-card__cta i {

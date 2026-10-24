@@ -41,6 +41,8 @@
 }
 
 .retreat-grid-card__status {
+  --p-tag-font-size: 0.8rem;
+  --p-tag-padding: 0.35rem 0.65rem;
   --p-tag-success-background: #dcfce7;
   --p-tag-success-color: #15803d;
   --p-tag-gap: 0.6rem;
@@ -95,7 +97,7 @@
 .retreat-grid-card__number {
   display: block;
   color: #870c1b;
-  font-size: 3.6rem;
+  font-size: 2.55rem;
   line-height: 1;
   letter-spacing: -0.04em;
   overflow-wrap: anywhere;
@@ -104,7 +106,7 @@
 .retreat-grid-card__title {
   margin: 0.35rem 0 0;
   color: #111c30;
-  font-size: 1.5rem;
+  font-size: 1.1rem;
   font-weight: 800;
   line-height: 1.2;
   letter-spacing: -0.03em;
@@ -117,7 +119,7 @@
   gap: 0.8rem;
   margin-top: 0.7rem;
   color: #566174;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   line-height: 1.4;
 
   i {
@@ -146,7 +148,7 @@
   border-radius: 0.95rem;
   background: #fcfdff;
   color: #172033;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   line-height: 1.4;
   overflow-wrap: anywhere;
 
@@ -187,7 +189,7 @@
   display: block;
   margin-top: 0.25rem;
   color: #111c30;
-  font-size: 1.65rem;
+  font-size: 1.25rem;
   line-height: 1;
   letter-spacing: -0.03em;
 }
@@ -214,4 +216,13 @@
 
 @media (prefers-reduced-motion: reduce) {
   .retreat-grid-card { transition: none; }
+}
+
+@media (max-width: 640px) {
+  .retreat-grid-card__status { --p-tag-font-size: 0.68rem; --p-tag-padding: 0.28rem 0.5rem; }
+  .retreat-grid-card__number { font-size: 1.95rem; }
+  .retreat-grid-card__title { font-size: 0.98rem; }
+  .retreat-grid-card__dates { font-size: 0.68rem; }
+  .retreat-grid-card__detail { font-size: 0.66rem; }
+  .retreat-grid-card__metric-value { font-size: 1.1rem; }
 }
