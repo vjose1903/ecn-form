@@ -3,6 +3,7 @@ import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {v2Db} from "../../core/firebase-admin";
 import {hasCityFieldPermission, requireCityPermission} from "../../core/security/authorization";
 import {FieldValue} from "firebase-admin/firestore";
+import {requestIdentityKeys, requestIdentityLock} from "../../core/helpers/request-identity";
 
 const allowedFields: Record<string, string[]> = {
   couple_basic: ["full_name", "nickname"],
@@ -68,6 +69,51 @@ export const updateRequestDetails = onCall(async request => {
         ? transaction.get(rootRef.collection("details").doc("status"))
         : Promise.resolve(null),
     ]);
+    if (sections.contact || sections.identity) {
+      const contactIndex = entries.findIndex(([group]) => group === "contact");
+      const identityIndex = entries.findIndex(([group]) => group === "identity");
+      const [contactSnapshot, identitySnapshot] = await Promise.all([
+        contactIndex >= 0 ? Promise.resolve(snapshots[contactIndex]) : transaction.get(rootRef.collection("details").doc("contact")),
+        identityIndex >= 0 ? Promise.resolve(snapshots[identityIndex]) : transaction.get(rootRef.collection("details").doc("identity")),
+      ]);
+      const previousContact = contactSnapshot.data() ?? {};
+      const previousIdentity = identitySnapshot.data() ?? {};
+      const mergePeople = (previous: Record<string, unknown>, patch: Record<string, unknown> | undefined) => ({
+        ...previous,
+        ...Object.fromEntries(["she", "he"].flatMap(person => {
+          const patchPerson = patch?.[person];
+          if (!patchPerson || typeof patchPerson !== "object") return [];
+          const previousPerson = previous[person] && typeof previous[person] === "object" ? previous[person] as Record<string, unknown> : {};
+          return [[person, {...previousPerson, ...(patchPerson as Record<string, unknown>)}]];
+        })),
+      });
+      const nextContact = mergePeople(previousContact, sections.contact);
+      const nextIdentity = mergePeople(previousIdentity, sections.identity);
+      const retreatId = String(root.get("retreat_id") ?? "");
+      const active = root.get("is_archived") !== true;
+      const previousKeys = requestIdentityKeys(previousContact, previousIdentity);
+      const nextKeys = active ? requestIdentityKeys(nextContact, nextIdentity) : [];
+      const lockRefs = [...new Set([...previousKeys, ...nextKeys])].map(key => requestIdentityLock(cityId, retreatId, key));
+      const locks = await Promise.all(lockRefs.map(ref => transaction.get(ref)));
+      const locksByPath = new Map(lockRefs.map((ref, index) => [ref.path, locks[index]]));
+      const nextRefs = nextKeys.map(key => requestIdentityLock(cityId, retreatId, key));
+      for (const ref of nextRefs) {
+        const lock = locksByPath.get(ref.path);
+        if (lock?.exists && lock.get("request_id") !== requestId) {
+          throw new HttpsError("already-exists", "Ya existe otra solicitud activa con uno de estos datos de contacto o identificación.");
+        }
+      }
+      for (const key of previousKeys) {
+        if (nextKeys.includes(key)) continue;
+        const ref = requestIdentityLock(cityId, retreatId, key);
+        if (locksByPath.get(ref.path)?.get("request_id") === requestId) transaction.delete(ref);
+      }
+      for (const ref of nextRefs) {
+        if (locksByPath.get(ref.path)?.get("request_id") !== requestId) {
+          transaction.create(ref, {request_id: requestId, retreat_id: retreatId, created_at: FieldValue.serverTimestamp()});
+        }
+      }
+    }
     const eventAt = FieldValue.serverTimestamp();
     for (let index = 0; index < entries.length; index++) {
       const [group, next] = entries[index];

@@ -5,7 +5,7 @@ import {
   assertSucceeds,
   initializeTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, setDoc, Timestamp, updateDoc } from 'firebase/firestore';
 
 const projectId = 'demo-ecn-platform-v2';
 const cityId = 'city-test';
@@ -69,6 +69,12 @@ const seed = async () => {
       }),
       setDoc(doc(db, `${requestPath}/details/contact_private`), {
         phone: '8090000000',
+      }),
+      setDoc(doc(db, `${requestPath}/payments/pago_existente`), {
+        amount: 4000,
+        payment_date: Timestamp.fromDate(new Date('2026-10-22T12:00:00Z')),
+        created_at: Timestamp.fromDate(new Date('2026-10-22T12:00:00Z')),
+        created_by: 'payments-uid',
       }),
       setDoc(doc(db, `city/${cityId}/audit_logs/aud_test`), { action: 'update' }),
       setDoc(doc(db, 'files/global-image'), {name: 'Casa', is_global: true}),
@@ -152,13 +158,13 @@ testCase('el perfil y los tokens privados solo se pueden consultar desde la cuen
   await assertSucceeds(getDoc(doc(ownDb, 'files/global-image')));
 });
 
-testCase('superadmin puede ver y modificar datos de cualquier ciudad', async () => {
+testCase('superadmin lee las ciudades, pero los cambios administrativos pasan por callable', async () => {
   await seed();
   const db = testEnv.authenticatedContext('superadmin-uid', {super_admin: true}).firestore();
   await assertSucceeds(getDocs(collection(db, 'city')));
   await assertSucceeds(getDoc(doc(db, `city/other-city/requests/${requestId}`)));
   await assertSucceeds(getDoc(doc(db, `city/other-city/requests/${requestId}/details/couple_basic`)));
-  await assertSucceeds(updateDoc(doc(db, 'city/other-city'), {label: 'Ciudad cambiada'}));
+  await assertFails(updateDoc(doc(db, 'city/other-city'), {label: 'Ciudad cambiada'}));
   await assertFails(setDoc(doc(db, 'city/other-city/audit_logs/forged'), {action: 'create'}));
 });
 
@@ -168,8 +174,8 @@ testCase('un permiso de pagos no otorga acceso a datos privados de la pareja', a
     const db = context.firestore();
     await Promise.all([
       setDoc(doc(db, `city/${cityId}/roles/payments`), role({
-        requests: { read: true, list: true },
-        payments: { create: true },
+        requests: { read: true, list: true, update: true },
+        payments: { create: true, update: true, delete: true },
       })),
       setDoc(doc(db, `city/${cityId}/members/payments-uid`), {
         role_id: 'payments',
@@ -181,7 +187,7 @@ testCase('un permiso de pagos no otorga acceso a datos privados de la pareja', a
   const db = testEnv.authenticatedContext('payments-uid').firestore();
   const summary = await assertSucceeds(getDoc(doc(db, requestPath)));
   assert.deepEqual(Object.keys(summary.data()).sort(), ['retreat_id']);
-  await assertSucceeds(setDoc(doc(db, `${requestPath}/payments/pago_20261022_4000_a1b2c3`), {
+  await assertFails(setDoc(doc(db, `${requestPath}/payments/pago_20261022_4000_a1b2c3`), {
     amount: 4000,
     payment_date: Timestamp.fromDate(new Date('2026-10-22T12:00:00Z')),
     created_at: serverTimestamp(),
@@ -193,6 +199,10 @@ testCase('un permiso de pagos no otorga acceso a datos privados de la pareja', a
     created_at: serverTimestamp(),
     created_by: 'payments-uid',
   }));
+  const paymentRef = doc(db, `${requestPath}/payments/pago_existente`);
+  await assertFails(updateDoc(doc(db, requestPath), {is_archived: true}));
+  await assertFails(updateDoc(paymentRef, {amount: 1}));
+  await assertFails(deleteDoc(paymentRef));
   await assertFails(getDoc(doc(db, `${requestPath}/details/contact_private`)));
   await assertFails(updateDoc(doc(db, requestPath), {
     status: 'rejected',

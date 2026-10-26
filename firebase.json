@@ -80,10 +80,6 @@
   },
   "firestore": [
     {
-      "database": "(default)",
-      "rules": "firestore.rules"
-    },
-    {
       "database": "ecn-platform-v2",
       "rules": "firestore.v2.rules",
       "indexes": "firestore.v2.indexes.json"

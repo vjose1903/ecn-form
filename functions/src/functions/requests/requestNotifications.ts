@@ -107,9 +107,10 @@ export const closeRetreatRequestsDailyV2 = onSchedule(
   async () => {
     const today = dateInSantoDomingo(new Date());
     const retreats = await v2Db.collectionGroup("retreat").get();
-    const dueRetreats = retreats.docs.filter(doc =>
-      doc.get("is_active") === true && doc.get("accept_requests") === true && dateInSantoDomingo(doc.get("max_request_date")) === today
-    );
+    const dueRetreats = retreats.docs.filter(doc => {
+      const deadline = dateInSantoDomingo(doc.get("max_request_date"));
+      return doc.get("is_active") === true && doc.get("accept_requests") === true && deadline !== "" && deadline < today;
+    });
     for (const retreat of dueRetreats) {
       await retreat.ref.update({accept_requests: false, updated_at: FieldValue.serverTimestamp()});
     }

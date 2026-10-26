@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const {createHash} = require('node:crypto');
 const admin = require('firebase-admin');
 const {getFirestore} = require('firebase-admin/firestore');
 
@@ -6,6 +7,7 @@ const projectId = 'demo-ecn-platform-v2';
 const databaseId = 'ecn-platform-v2';
 const cityId = 'request_permissions_smoke_city';
 const requestId = 'sol_84_20301022_smoke001';
+const retreatId = '84_2030-10-30_2030-11-01';
 const db = getFirestore(admin.initializeApp({projectId}), databaseId);
 
 async function getIdToken() {
@@ -36,13 +38,15 @@ async function callUpdate(token, city, patch) {
     permissions: {requests: {update: true, fields: {contact: {update: true}, identity: {update: false}}}},
   });
   const root = db.doc(`city/${cityId}/requests/${requestId}`);
-  await root.set({retreat_id: '84_2030-10-30_2030-11-01', is_archived: false});
+  await root.set({retreat_id: retreatId, is_archived: false});
   await root.collection('details').doc('contact').set({she: {email: 'old@example.test'}});
   await root.collection('details').doc('identity').set({she: {identity_number: 'ID-OLD'}});
 
   const allowed = await callUpdate(token, cityId, {she: {email: 'new@example.test'}});
   assert.equal(allowed.status, 200, JSON.stringify(allowed.body));
   assert.equal((await root.collection('details').doc('contact').get()).get('she.email'), 'new@example.test');
+  const identityLockId = createHash('sha256').update(`${retreatId}:email:new@example.test`).digest('hex');
+  assert.equal((await db.doc(`city/${cityId}/request_identity_keys/${identityLockId}`).get()).get('request_id'), requestId);
   assert.equal((await root.collection('history').get()).size, 1);
 
   const deniedField = await callUpdate(token, cityId, {she: {identity_number: 'ID-NEW'}});

@@ -40,8 +40,9 @@ export class DashboardService {
   private readonly chartPalette = ['#a83044', '#2563eb', '#16a34a', '#f59e0b', '#7c3aed', '#0891b2', '#ef4444', '#0f766e', '#ea580c', '#475569', '#db2777', '#65a30d'];
   private readonly requestStatusPalette = ['#94a3b8', '#16a34a', '#ef4444', '#f59e0b'];
   private dashboardSnapshot: DashboardSnapshot | null = null;
+  private readonly snapshots = new Map<string, {snapshot: DashboardSnapshot; expiresAt: number}>();
 
-  async getDashboardData(filter: DashboardPeriodFilter, customRange: DashboardDateRange, onPermissionsResolved?: (layout: DashboardSkeletonLayout) => void): Promise<DashboardData> {
+  async getDashboardData(filter: DashboardPeriodFilter, customRange: DashboardDateRange, onPermissionsResolved?: (layout: DashboardSkeletonLayout) => void, forceRefresh = false): Promise<DashboardData> {
     const currentUser = Ss.authService.current_user();
 
     if (!currentUser?.id) {
@@ -49,13 +50,25 @@ export class DashboardService {
     }
 
     const permissionsPromise = this.getDashboardPermissions(currentUser.uid || currentUser.id, Ss.authService.activeCityId() || currentUser.city);
-    const retreatsPromise = this.retreatService.getForDashboard();
     const permissions = await permissionsPromise;
     onPermissionsResolved?.({
       kpiKeys: DASHBOARD_KPI_KEYS.filter(key => permissions[key] === true),
       chartKeys: DASHBOARD_CHART_KEYS.filter(key => permissions[key] === true),
     });
-    const retreats = await retreatsPromise;
+    const cacheKey = JSON.stringify({
+      city: this.extractId(Ss.authService.activeCityId() || currentUser.city),
+      uid: currentUser.uid || currentUser.id,
+      filter,
+      from: customRange.from?.toISOString() ?? null,
+      to: customRange.to?.toISOString() ?? null,
+      permissions,
+    });
+    const cached = this.snapshots.get(cacheKey);
+    if (!forceRefresh && cached && cached.expiresAt > Date.now()) {
+      this.dashboardSnapshot = cached.snapshot;
+      return this.filterDashboardData([]);
+    }
+    const retreats = await this.retreatService.getForDashboard();
     const cityRetreats = retreats.filter(retreat => retreat.is_active && this.isRetreatInUserCity(retreat, Ss.authService.activeCityId() || currentUser.city));
     const scopedRetreats = this.filterRetreatsByPeriod(cityRetreats, filter, customRange);
     const [requests, archivedRequestCounts] = await Promise.all([
@@ -69,6 +82,8 @@ export class DashboardService {
     });
 
     this.dashboardSnapshot = { retreats: scopedRetreats, entries, archivedRequestCounts, permissions };
+    this.snapshots.set(cacheKey, {snapshot: this.dashboardSnapshot, expiresAt: Date.now() + 60_000});
+    while (this.snapshots.size > 5) this.snapshots.delete(this.snapshots.keys().next().value!);
     return this.filterDashboardData([]);
   }
 

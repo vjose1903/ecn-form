@@ -6,6 +6,7 @@ const https_1 = require("firebase-functions/v2/https");
 const firebase_admin_1 = require("../../core/firebase-admin");
 const authorization_1 = require("../../core/security/authorization");
 const firestore_1 = require("firebase-admin/firestore");
+const request_identity_1 = require("../../core/helpers/request-identity");
 const allowedFields = {
     couple_basic: ["full_name", "nickname"],
     contact: ["city_of_residence", "address", "home_phone", "email", "cell_phone", "work_phone"],
@@ -75,6 +76,54 @@ exports.updateRequestDetails = (0, https_1.onCall)(async (request) => {
                 ? transaction.get(rootRef.collection("details").doc("status"))
                 : Promise.resolve(null),
         ]);
+        if (sections.contact || sections.identity) {
+            const contactIndex = entries.findIndex(([group]) => group === "contact");
+            const identityIndex = entries.findIndex(([group]) => group === "identity");
+            const [contactSnapshot, identitySnapshot] = await Promise.all([
+                contactIndex >= 0 ? Promise.resolve(snapshots[contactIndex]) : transaction.get(rootRef.collection("details").doc("contact")),
+                identityIndex >= 0 ? Promise.resolve(snapshots[identityIndex]) : transaction.get(rootRef.collection("details").doc("identity")),
+            ]);
+            const previousContact = contactSnapshot.data() ?? {};
+            const previousIdentity = identitySnapshot.data() ?? {};
+            const mergePeople = (previous, patch) => ({
+                ...previous,
+                ...Object.fromEntries(["she", "he"].flatMap(person => {
+                    const patchPerson = patch?.[person];
+                    if (!patchPerson || typeof patchPerson !== "object")
+                        return [];
+                    const previousPerson = previous[person] && typeof previous[person] === "object" ? previous[person] : {};
+                    return [[person, { ...previousPerson, ...patchPerson }]];
+                })),
+            });
+            const nextContact = mergePeople(previousContact, sections.contact);
+            const nextIdentity = mergePeople(previousIdentity, sections.identity);
+            const retreatId = String(root.get("retreat_id") ?? "");
+            const active = root.get("is_archived") !== true;
+            const previousKeys = (0, request_identity_1.requestIdentityKeys)(previousContact, previousIdentity);
+            const nextKeys = active ? (0, request_identity_1.requestIdentityKeys)(nextContact, nextIdentity) : [];
+            const lockRefs = [...new Set([...previousKeys, ...nextKeys])].map(key => (0, request_identity_1.requestIdentityLock)(cityId, retreatId, key));
+            const locks = await Promise.all(lockRefs.map(ref => transaction.get(ref)));
+            const locksByPath = new Map(lockRefs.map((ref, index) => [ref.path, locks[index]]));
+            const nextRefs = nextKeys.map(key => (0, request_identity_1.requestIdentityLock)(cityId, retreatId, key));
+            for (const ref of nextRefs) {
+                const lock = locksByPath.get(ref.path);
+                if (lock?.exists && lock.get("request_id") !== requestId) {
+                    throw new https_1.HttpsError("already-exists", "Ya existe otra solicitud activa con uno de estos datos de contacto o identificación.");
+                }
+            }
+            for (const key of previousKeys) {
+                if (nextKeys.includes(key))
+                    continue;
+                const ref = (0, request_identity_1.requestIdentityLock)(cityId, retreatId, key);
+                if (locksByPath.get(ref.path)?.get("request_id") === requestId)
+                    transaction.delete(ref);
+            }
+            for (const ref of nextRefs) {
+                if (locksByPath.get(ref.path)?.get("request_id") !== requestId) {
+                    transaction.create(ref, { request_id: requestId, retreat_id: retreatId, created_at: firestore_1.FieldValue.serverTimestamp() });
+                }
+            }
+        }
         const eventAt = firestore_1.FieldValue.serverTimestamp();
         for (let index = 0; index < entries.length; index++) {
             const [group, next] = entries[index];

@@ -6,6 +6,7 @@ const https_1 = require("firebase-functions/v2/https");
 const firebase_admin_1 = require("../../core/firebase-admin");
 const authorization_1 = require("../../core/security/authorization");
 const firestore_1 = require("firebase-admin/firestore");
+const request_identity_1 = require("../../core/helpers/request-identity");
 exports.changeRequestLocation = (0, https_1.onCall)(async (request) => {
     const data = request.data;
     const cityId = typeof data.cityId === "string" ? data.cityId.trim() : "";
@@ -27,9 +28,11 @@ exports.changeRequestLocation = (0, https_1.onCall)(async (request) => {
         throw new https_1.HttpsError("not-found", "No se encontró el retiro de destino.");
     }
     await firebase_admin_1.v2Db.runTransaction(async (transaction) => {
-        const [root, statusRef] = await Promise.all([
+        const [root, statusRef, contactRef, identityRef] = await Promise.all([
             transaction.get(rootRef),
             transaction.get(rootRef.collection("details").doc("status")),
+            transaction.get(rootRef.collection("details").doc("contact")),
+            transaction.get(rootRef.collection("details").doc("identity")),
         ]);
         if (!root.exists)
             throw new https_1.HttpsError("not-found", "No se encontró la solicitud.");
@@ -44,6 +47,27 @@ exports.changeRequestLocation = (0, https_1.onCall)(async (request) => {
             throw new https_1.HttpsError("failed-precondition", "El estado de la solicitud cambió.");
         }
         const nextArchived = action === "archive" ? true : action === "unarchive" ? false : currentlyArchived;
+        const identityKeys = (0, request_identity_1.requestIdentityKeys)(contactRef.data() ?? {}, identityRef.data() ?? {});
+        const sourceLocks = identityKeys.map(key => (0, request_identity_1.requestIdentityLock)(cityId, sourceRetreatId, key));
+        const targetLocks = nextArchived ? [] : identityKeys.map(key => (0, request_identity_1.requestIdentityLock)(cityId, targetRetreatId, key));
+        const allLockRefs = [...new Map([...sourceLocks, ...targetLocks].map(ref => [ref.path, ref])).values()];
+        const lockSnapshots = await Promise.all(allLockRefs.map(ref => transaction.get(ref)));
+        const locksByPath = new Map(allLockRefs.map((ref, index) => [ref.path, lockSnapshots[index]]));
+        for (const ref of targetLocks) {
+            const targetLock = locksByPath.get(ref.path);
+            if (targetLock?.exists && targetLock.get("request_id") !== requestId) {
+                throw new https_1.HttpsError("already-exists", "No se puede restaurar o transferir la solicitud porque ya existe otra activa con los mismos datos.");
+            }
+        }
+        if (nextArchived || sourceRetreatId !== targetRetreatId) {
+            for (const ref of sourceLocks) {
+                if (locksByPath.get(ref.path)?.get("request_id") === requestId)
+                    transaction.delete(ref);
+            }
+        }
+        for (const ref of targetLocks) {
+            transaction.set(ref, { request_id: requestId, retreat_id: targetRetreatId, created_at: firestore_1.FieldValue.serverTimestamp() });
+        }
         const eventAction = action === "archive" ? "archived" : action === "unarchive" ? "desarchived" : "transferred";
         transaction.update(rootRef, { retreat_id: targetRetreatId, is_archived: nextArchived, updated_by: actorUid });
         const statusPatch = {

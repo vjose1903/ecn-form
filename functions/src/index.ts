@@ -9,7 +9,7 @@ import {
 } from "./functions/audit/auditChanges";
 import {saveCityRole, saveCity, createCityMember, sendCityMemberInvitation, resendCityMemberInvitation, updateCityMember, deleteCityMember, updateOwnProfile, createCityRetreatHome, findSimilarCityRetreatHomes, assignExistingCityRetreatHome, updateCityRetreatHome, listCityMembers} from "./functions/access-management/accessManagement";
 import {getPublicFormData, createPublicRequest} from "./functions/public-form/publicForm";
-import {createPaymentUploadUrl, recordPayment, getPaymentReceiptUrl} from "./functions/payments/payments";
+import {createPaymentUploadUrl, recordPayment, getPaymentReceiptUrl, discardPaymentUpload, recoverPendingPaymentDeletions} from "./functions/payments/payments";
 import {updateRequestDetails} from "./functions/requests/updateRequestDetails";
 import {getRequestFieldGroups} from "./functions/requests/getRequestFieldGroups";
 import {changeRequestLocation} from "./functions/requests/changeRequestLocation";
@@ -45,6 +45,8 @@ export {
   createPaymentUploadUrl,
   recordPayment,
   getPaymentReceiptUrl,
+  discardPaymentUpload,
+  recoverPendingPaymentDeletions,
   updateRequestDetails,
   getRequestFieldGroups,
   changeRequestLocation,

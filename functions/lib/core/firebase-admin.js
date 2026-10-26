@@ -41,7 +41,6 @@ const firestore_1 = require("firebase-admin/firestore");
 if (!admin.apps.length) {
     admin.initializeApp();
 }
-// La base nueva nunca debe resolverse por defecto: las funciones existentes
-// siguen operando sobre (default) hasta que cada flujo nuevo se migre.
+// La aplicación opera únicamente sobre la base de datos v2.
 exports.v2Db = (0, firestore_1.getFirestore)(admin.app(), "ecn-platform-v2");
 //# sourceMappingURL=firebase-admin.js.map

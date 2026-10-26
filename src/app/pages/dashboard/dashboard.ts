@@ -97,7 +97,7 @@ export class DashboardPage implements OnInit {
   }
 
   refresh(): void {
-    void this.loadDashboard();
+    void this.loadDashboard(true);
   }
 
   openChartFullscreen(chart: DashboardChart, cardElement: HTMLElement, event: Event): void {
@@ -152,7 +152,7 @@ export class DashboardPage implements OnInit {
     return [78, 92, 64, 85, 54][index] ?? 70;
   }
 
-  private async loadDashboard(): Promise<void> {
+  private async loadDashboard(forceRefresh = false): Promise<void> {
     try {
       this.loading.set(true);
       const range: DashboardDateRange = {
@@ -160,7 +160,7 @@ export class DashboardPage implements OnInit {
         to: this.customTo(),
       };
 
-      this.data.set(await this.dashboardService.getDashboardData(this.selectedPeriod(), range, layout => this.loadingLayout.set(layout)));
+      this.data.set(await this.dashboardService.getDashboardData(this.selectedPeriod(), range, layout => this.loadingLayout.set(layout), forceRefresh));
     } catch (error) {
       console.error('Error al cargar el dashboard:', error);
       Ss.toastService.error({ title: 'Error', message: 'No se pudo cargar el dashboard' });

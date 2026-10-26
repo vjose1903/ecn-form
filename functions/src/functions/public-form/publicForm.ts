@@ -2,6 +2,7 @@ import {createHash, randomBytes} from "node:crypto";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {v2Db} from "../../core/firebase-admin";
 import {FieldValue, Timestamp} from "firebase-admin/firestore";
+import {requestIdentityLock} from "../../core/helpers/request-identity";
 
 const safeText = (value: unknown, max = 300): string => typeof value === "string" ? value.trim().slice(0, max) : "";
 
@@ -9,6 +10,61 @@ const timestampToIso = (value: unknown): string | null => {
   if (value instanceof Timestamp) return value.toDate().toISOString();
   if (value instanceof Date) return value.toISOString();
   return typeof value === "string" ? value : null;
+};
+
+const invalid = (field: string): never => {
+  throw new HttpsError("invalid-argument", `El campo ${field} no tiene un formato válido.`);
+};
+
+const publicTextFields = (source: Record<string, unknown>, fields: string[]): Record<string, unknown> =>
+  Object.fromEntries(fields.flatMap(field => {
+    if (!(field in source)) return [];
+    if (typeof source[field] !== "string") invalid(field);
+    return [[field, safeText(source[field], field === "address" ? 500 : 240)]];
+  }));
+
+const publicDate = (value: unknown, field: string): Timestamp | null => {
+  if (value === undefined || value === null || value === "") return null;
+  if (value instanceof Timestamp) return value;
+  if (value instanceof Date) return Number.isFinite(value.getTime()) ? Timestamp.fromDate(value) : invalid(field);
+  if (typeof value === "string") {
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? Timestamp.fromDate(date) : invalid(field);
+  }
+  if (typeof value === "object" && "seconds" in value) {
+    const seconds = Number((value as {seconds: unknown}).seconds);
+    return Number.isFinite(seconds) ? Timestamp.fromMillis(seconds * 1000) : invalid(field);
+  }
+  return invalid(field);
+};
+
+const publicPersonDetails = (person: Record<string, unknown>, label: string) => {
+  const identity: Record<string, unknown> = publicTextFields(person, ["identity_type", "identity_number", "birth_date_display", "religion", "religion_other", "church_name"]);
+  if ("age" in person) {
+    if (typeof person.age !== "number" || !Number.isFinite(person.age) || person.age < 0 || person.age > 120) invalid(`${label}.age`);
+    identity.age = person.age;
+  }
+  if ("birth_date" in person) identity.birth_date = publicDate(person.birth_date, `${label}.birth_date`);
+  if ("are_you_married" in person) {
+    if (typeof person.are_you_married !== "boolean") invalid(`${label}.are_you_married`);
+    identity.are_you_married = person.are_you_married;
+  }
+
+  const family = publicTextFields(person, ["emergency_full_name", "emergency_relationship", "emergency_phone"]);
+  if ("have_children" in person) {
+    if (typeof person.have_children !== "boolean") invalid(`${label}.have_children`);
+    family.have_children = person.have_children;
+  }
+  if ("family_information" in person) {
+    const familyInformation = person.family_information;
+    if (!Array.isArray(familyInformation) || familyInformation.length > 50) return invalid(`${label}.family_information`);
+    const validFamilyInformation = familyInformation as unknown[];
+    family.family_information = validFamilyInformation.map((item: unknown, index: number) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) invalid(`${label}.family_information[${index}]`);
+      return publicTextFields(item as Record<string, unknown>, ["familiar_full_name", "familiar_phone", "familiar_relationship"]);
+    });
+  }
+  return {identity, family};
 };
 
 export const getPublicFormData = onCall(async (request) => {
@@ -87,22 +143,56 @@ export const createPublicRequest = onCall(async (request) => {
       if (value) uniqueCandidates.add(`${kind}:${value}`);
     }
   }
+  const personDetails = {she: publicPersonDetails(she, "she"), he: publicPersonDetails(he, "he")};
+  const relationship: Record<string, unknown> = publicTextFields(source, ["how_find_us", "how_find_us_other"]);
+  if (!relationship.how_find_us) invalid("how_find_us");
+  if ("have_wedding_date" in source) {
+    if (typeof source.have_wedding_date !== "boolean") invalid("have_wedding_date");
+    relationship.have_wedding_date = source.have_wedding_date;
+  }
+  for (const field of ["dating_period_year", "dating_period_month"] as const) {
+    if (typeof source[field] !== "number" || !Number.isInteger(source[field])) invalid(field);
+    const max = field === "dating_period_year" ? 80 : 11;
+    if ((source[field] as number) < 0 || (source[field] as number) > max) invalid(field);
+    relationship[field] = source[field];
+  }
+  if ("wedding_date" in source) relationship.wedding_date = publicDate(source.wedding_date, "wedding_date");
+  if (relationship.have_wedding_date === true && !relationship.wedding_date) invalid("wedding_date");
+  const requestId = `sol_${retreat.get("number") || retreatId.split("_")[0]}_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}_${createHash("sha256").update(randomBytes(16)).digest("hex").slice(0, 8)}`;
+  const requestRef = v2Db.doc(`city/${cityId}/requests/${requestId}`);
+  const timestamp = FieldValue.serverTimestamp();
+  const details: Record<string, Record<string, unknown>> = {
+    couple_basic: {
+      she: publicTextFields(she, ["full_name", "nickname"]),
+      he: publicTextFields(he, ["full_name", "nickname"]),
+    },
+    contact: {
+      she: publicTextFields(she, ["city_of_residence", "address", "home_phone", "email", "cell_phone", "work_phone"]),
+      he: publicTextFields(he, ["city_of_residence", "address", "home_phone", "email", "cell_phone", "work_phone"]),
+    },
+    identity: {she: personDetails.she.identity, he: personDetails.he.identity},
+    family: {she: personDetails.she.family, he: personDetails.he.family},
+    relationship,
+    invitation: publicTextFields(source, ["who_invited_you", "who_invited_you_phone"]),
+    status: {status: "pending", action: "new", is_active: true, is_informado: false, created_at: timestamp},
+  };
+  const requestsRef = v2Db.collection(`city/${cityId}/requests`);
   if (uniqueCandidates.size) {
-    const existingRequests = await v2Db.collection(`city/${cityId}/requests`)
-      .where("retreat_id", "==", retreatId)
-      .where("is_archived", "==", false)
-      .get();
-    for (const existing of existingRequests.docs) {
-      const [contact, identity] = await Promise.all([
-        existing.ref.collection("details").doc("contact").get(),
-        existing.ref.collection("details").doc("identity").get(),
-      ]);
+    const existing = await requestsRef.where("retreat_id", "==", retreatId).where("is_archived", "==", false).get();
+    const refs = existing.docs.flatMap(doc => [
+      doc.ref.collection("details").doc("contact"),
+      doc.ref.collection("details").doc("identity"),
+    ]);
+    const snapshots = refs.length ? await v2Db.getAll(...refs) : [];
+    for (let index = 0; index < existing.docs.length; index++) {
+      const contactData = snapshots[index * 2].data() ?? {};
+      const identityData = snapshots[index * 2 + 1].data() ?? {};
       for (const person of ["she", "he"]) {
-        const contactData = contact.get(person) ?? {};
-        const identityData = identity.get(person) ?? {};
         for (const kind of ["email", "phone", "identity"] as const) {
           const field = kind === "email" ? "email" : kind === "phone" ? "cell_phone" : "identity_number";
-          const value = normalize(kind === "identity" ? identityData[field] : contactData[field], kind);
+          const source = kind === "identity" ? identityData : contactData;
+          const personData = source[person] && typeof source[person] === "object" ? source[person] as Record<string, unknown> : {};
+          const value = normalize(personData[field], kind);
           if (value && uniqueCandidates.has(`${kind}:${value}`)) {
             throw new HttpsError("already-exists", `Ya existe una solicitud con este ${kind === "email" ? "correo electrónico" : kind === "phone" ? "teléfono celular" : "número de identificación"}.`);
           }
@@ -110,46 +200,25 @@ export const createPublicRequest = onCall(async (request) => {
       }
     }
   }
-  const requestId = `sol_${retreat.get("number") || retreatId.split("_")[0]}_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}_${createHash("sha256").update(randomBytes(16)).digest("hex").slice(0, 8)}`;
-  const requestRef = v2Db.doc(`city/${cityId}/requests/${requestId}`);
-  const timestamp = FieldValue.serverTimestamp();
-  const dateFields = (value: unknown) => value && typeof value === "object" && "seconds" in value
-    ? Timestamp.fromMillis(Number((value as {seconds: number}).seconds) * 1000)
-    : value;
-  const details: Record<string, Record<string, unknown>> = {
-    couple_basic: {
-      she: {full_name: safeText(she.full_name, 160), nickname: safeText(she.nickname, 80)},
-      he: {full_name: safeText(he.full_name, 160), nickname: safeText(he.nickname, 80)},
-    },
-    contact: {
-      she: Object.fromEntries(["city_of_residence", "address", "home_phone", "email", "cell_phone", "work_phone"].map(key => [key, safeText(she[key], 240)])),
-      he: Object.fromEntries(["city_of_residence", "address", "home_phone", "email", "cell_phone", "work_phone"].map(key => [key, safeText(he[key], 240)])),
-    },
-    identity: {
-      she: Object.fromEntries(["age", "identity_type", "identity_number", "birth_date", "birth_date_display", "religion", "religion_other", "church_name", "are_you_married"].filter(key => key in she).map(key => [key, key === "birth_date" ? dateFields(she[key]) : she[key]])),
-      he: Object.fromEntries(["age", "identity_type", "identity_number", "birth_date", "birth_date_display", "religion", "religion_other", "church_name", "are_you_married"].filter(key => key in he).map(key => [key, key === "birth_date" ? dateFields(he[key]) : he[key]])),
-    },
-    family: {
-      she: Object.fromEntries(["emergency_full_name", "emergency_relationship", "emergency_phone", "have_children", "family_information"].filter(key => key in she).map(key => [key, she[key]])),
-      he: Object.fromEntries(["emergency_full_name", "emergency_relationship", "emergency_phone", "have_children", "family_information"].filter(key => key in he).map(key => [key, he[key]])),
-    },
-    relationship: Object.fromEntries(["how_find_us", "how_find_us_other", "have_wedding_date", "wedding_date", "dating_period_year", "dating_period_month"].filter(key => key in source).map(key => [key, key === "wedding_date" ? dateFields(source[key]) : source[key]])),
-    invitation: Object.fromEntries(["who_invited_you", "who_invited_you_phone"].filter(key => key in source).map(key => [key, safeText(source[key], 240)])),
-    status: {status: "pending", action: "new", is_active: true, is_informado: false, created_at: timestamp},
-  };
-  const batch = v2Db.batch();
-  batch.create(requestRef, {retreat_id: retreatId, is_archived: false, created_at: timestamp, created_by: request.auth?.uid ?? null});
-  for (const [section, data] of Object.entries(details)) batch.create(requestRef.collection("details").doc(section), {...data, created_by: request.auth?.uid ?? null});
-  batch.create(requestRef.collection("details").doc("payments_summary"), {legacy_field_present: true, has_payments: false, payments_count: 0, total_paid: 0, created_by: request.auth?.uid ?? null});
-  batch.create(requestRef.collection("history").doc(`hist_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}_created_${requestId.slice(-8)}`), {
-    request_id: requestId,
-    retreat_id: retreatId,
-    action: "new",
-    collection_state: "request",
-    message: "Solicitud creada",
-    happened_at: timestamp,
-    actor_uid: request.auth?.uid ?? null,
+  const identityLockRefs = [...uniqueCandidates].map(key => requestIdentityLock(cityId, retreatId, key));
+  await v2Db.runTransaction(async transaction => {
+    const identityLocks = await Promise.all(identityLockRefs.map(ref => transaction.get(ref)));
+    if (identityLocks.some(lock => lock.exists)) {
+      throw new HttpsError("already-exists", "Ya existe una solicitud con uno de estos datos de contacto o identificación.");
+    }
+    identityLockRefs.forEach(ref => transaction.create(ref, {request_id: requestId, retreat_id: retreatId, created_at: timestamp}));
+    transaction.create(requestRef, {retreat_id: retreatId, is_archived: false, created_at: timestamp, created_by: request.auth?.uid ?? null});
+    for (const [section, data] of Object.entries(details)) transaction.create(requestRef.collection("details").doc(section), {...data, created_by: request.auth?.uid ?? null});
+    transaction.create(requestRef.collection("details").doc("payments_summary"), {legacy_field_present: true, has_payments: false, payments_count: 0, total_paid: 0, created_by: request.auth?.uid ?? null});
+    transaction.create(requestRef.collection("history").doc(`hist_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}_created_${requestId.slice(-8)}`), {
+      request_id: requestId,
+      retreat_id: retreatId,
+      action: "new",
+      collection_state: "request",
+      message: "Solicitud creada",
+      happened_at: timestamp,
+      actor_uid: request.auth?.uid ?? null,
+    });
   });
-  await batch.commit();
   return {requestId};
 });
