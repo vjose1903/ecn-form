@@ -5,6 +5,7 @@ const https_1 = require("firebase-functions/v2/https");
 const firebase_admin_1 = require("../../core/firebase-admin");
 const authorization_1 = require("../../core/security/authorization");
 const firestore_1 = require("firebase-admin/firestore");
+const payments_1 = require("../payments/payments");
 const text = (value, max = 180) => typeof value === "string" ? value.trim().slice(0, max) : "";
 exports.deleteRequestHistoryEvent = (0, https_1.onCall)(async (request) => {
     const data = request.data;
@@ -65,7 +66,6 @@ exports.deleteRequestHistoryEvent = (0, https_1.onCall)(async (request) => {
     if (receiptPath && !receiptPath.startsWith(`receipts/${cityId}/`)) {
         throw new https_1.HttpsError("failed-precondition", "La ruta del recibo no coincide con la ciudad.");
     }
-    const bucket = firebase_admin_1.admin.storage().bucket("ecn-platform.firebasestorage.app");
     await firebase_admin_1.v2Db.runTransaction(async (transaction) => {
         const [currentEvent, currentPayment] = await Promise.all([transaction.get(historyRef), transaction.get(paymentRef)]);
         if (!currentEvent.exists || !currentPayment.exists)
@@ -73,37 +73,7 @@ exports.deleteRequestHistoryEvent = (0, https_1.onCall)(async (request) => {
         transaction.update(historyRef, { deletion_pending: true, updated_by: uid });
         transaction.update(paymentRef, { deletion_pending: true, updated_by: uid });
     });
-    if (receiptPath) {
-        try {
-            await bucket.file(receiptPath).delete({ ignoreNotFound: true });
-        }
-        catch (error) {
-            console.error("No se pudo borrar el recibo:", JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
-            return { deleted: false, kind: "payment" };
-        }
-    }
-    await firebase_admin_1.v2Db.runTransaction(async (transaction) => {
-        const summaryRef = rootRef.collection("details").doc("payments_summary");
-        const [currentEvent, currentPayment, summary] = await Promise.all([
-            transaction.get(historyRef), transaction.get(paymentRef), transaction.get(summaryRef),
-        ]);
-        if (!currentEvent.exists)
-            return;
-        if (!currentPayment.exists || currentEvent.get("deletion_pending") !== true || currentPayment.get("deletion_pending") !== true) {
-            throw new https_1.HttpsError("failed-precondition", "El pago cambió durante su eliminación.");
-        }
-        const summaryData = summary.data() ?? {};
-        const amount = Number(currentPayment.get("amount") ?? 0);
-        transaction.set(summaryRef, {
-            has_payments: Number(summaryData.payments_count ?? 0) > 1,
-            payments_count: Math.max(0, Number(summaryData.payments_count ?? 1) - 1),
-            total_paid: Math.max(0, Number(summaryData.total_paid ?? amount) - amount),
-            updated_by: uid,
-            updated_at: firestore_1.FieldValue.serverTimestamp(),
-        }, { merge: true });
-        transaction.delete(paymentRef);
-        transaction.delete(historyRef);
-    });
-    return { deleted: true, kind: "payment", paymentId };
+    const deleted = await (0, payments_1.finalizePendingPaymentDeletion)({ cityId, requestId, paymentId, eventId, actorUid: uid });
+    return { deleted, kind: "payment", paymentId };
 });
 //# sourceMappingURL=deleteRequestHistoryEvent.js.map

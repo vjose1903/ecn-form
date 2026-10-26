@@ -1,5 +1,6 @@
 import {createHash, randomBytes} from "node:crypto";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {onSchedule} from "firebase-functions/v2/scheduler";
 import {admin, v2Db} from "../../core/firebase-admin";
 import {requireAuthenticated, requireCityPermission} from "../../core/security/authorization";
 import {FieldValue, Timestamp} from "firebase-admin/firestore";
@@ -8,6 +9,46 @@ const text = (value: unknown, max = 200): string => typeof value === "string" ? 
 const dateSlug = (date: Date): string => date.toISOString().slice(0, 10).replace(/-/g, "");
 const requestRef = (cityId: string, requestId: string) => v2Db.doc(`city/${cityId}/requests/${requestId}`);
 const paymentBucket = () => admin.storage().bucket("ecn-platform.firebasestorage.app");
+
+export const finalizePendingPaymentDeletion = async (args: {cityId: string; requestId: string; paymentId: string; eventId: string; actorUid: string}): Promise<boolean> => {
+  const {cityId, requestId, paymentId, eventId, actorUid} = args;
+  const rootRef = requestRef(cityId, requestId);
+  const paymentRef = rootRef.collection("payments").doc(paymentId);
+  const historyRef = rootRef.collection("history").doc(eventId);
+  const payment = await paymentRef.get();
+  if (!payment.exists) return true;
+  const receiptPath = text(payment.get("receipt_path"), 500);
+  if (receiptPath) {
+    try {
+      await paymentBucket().file(receiptPath).delete({ignoreNotFound: true});
+    } catch (error) {
+      console.error("No se pudo borrar el recibo:", JSON.stringify(error instanceof Error ? {name: error.name, message: error.message} : error));
+      return false;
+    }
+  }
+  await v2Db.runTransaction(async transaction => {
+    const summaryRef = rootRef.collection("details").doc("payments_summary");
+    const [currentEvent, currentPayment, summary] = await Promise.all([
+      transaction.get(historyRef), transaction.get(paymentRef), transaction.get(summaryRef),
+    ]);
+    if (!currentPayment.exists) return;
+    if (!currentEvent.exists || currentEvent.get("deletion_pending") !== true || currentPayment.get("deletion_pending") !== true) {
+      throw new HttpsError("failed-precondition", "El pago cambió durante su eliminación.");
+    }
+    const summaryData = summary.data() ?? {};
+    const amount = Number(currentPayment.get("amount") ?? 0);
+    transaction.set(summaryRef, {
+      has_payments: Number(summaryData.payments_count ?? 0) > 1,
+      payments_count: Math.max(0, Number(summaryData.payments_count ?? 1) - 1),
+      total_paid: Math.max(0, Number(summaryData.total_paid ?? amount) - amount),
+      updated_by: actorUid,
+      updated_at: FieldValue.serverTimestamp(),
+    }, {merge: true});
+    transaction.delete(paymentRef);
+    transaction.delete(historyRef);
+  });
+  return true;
+};
 
 export const createPaymentUploadUrl = onCall(async request => {
   const data = request.data as Record<string, unknown>;
@@ -72,44 +113,92 @@ export const recordPayment = onCall(async request => {
     await file.delete().catch(() => undefined);
     throw new HttpsError("failed-precondition", "El recibo cargado no cumple el formato permitido.");
   }
-  await v2Db.runTransaction(async transaction => {
-    const [parent, payment, summary] = await Promise.all([transaction.get(parentRef), transaction.get(paymentRef), transaction.get(summaryRef)]);
-    if (!parent.exists) throw new HttpsError("not-found", "No se encontró la solicitud.");
-    if (payment.exists) throw new HttpsError("already-exists", "Este pago ya fue registrado.");
-    const previous = summary.data() ?? {};
-    transaction.create(paymentRef, {
-      payment_date: Timestamp.fromDate(paymentDate),
-      amount,
-      receipt_path: receiptPath,
-      receipt_name: receiptName,
-      created_at: FieldValue.serverTimestamp(),
-      created_by: uid,
+  try {
+    await v2Db.runTransaction(async transaction => {
+      const [parent, payment, summary] = await Promise.all([transaction.get(parentRef), transaction.get(paymentRef), transaction.get(summaryRef)]);
+      if (!parent.exists) throw new HttpsError("not-found", "No se encontró la solicitud.");
+      if (payment.exists) throw new HttpsError("already-exists", "Este pago ya fue registrado.");
+      const previous = summary.data() ?? {};
+      transaction.create(paymentRef, {
+        payment_date: Timestamp.fromDate(paymentDate),
+        amount,
+        receipt_path: receiptPath,
+        receipt_name: receiptName,
+        created_at: FieldValue.serverTimestamp(),
+        created_by: uid,
+      });
+      transaction.set(summaryRef, {
+        legacy_field_present: true,
+        has_payments: true,
+        payments_count: Number(previous.payments_count ?? 0) + 1,
+        total_paid: Number(previous.total_paid ?? 0) + amount,
+        updated_by: uid,
+        updated_at: FieldValue.serverTimestamp(),
+      }, {merge: true});
+      const eventId = `hist_${dateSlug(paymentDate)}_payment_${createHash("sha256").update(paymentId).digest("hex").slice(0, 8)}`;
+      transaction.create(parentRef.collection("history").doc(eventId), {
+        request_id: requestId,
+        retreat_id: parent.get("retreat_id"),
+        action: "updated",
+        collection_state: "request",
+        message: "Pago de pre retiro registrado",
+        payment_id: paymentId,
+        receipt_path: receiptPath,
+        receipt_name: receiptName,
+        changes: [{label: "Monto", previous_value: "", next_value: String(amount)}],
+        happened_at: FieldValue.serverTimestamp(),
+        actor_uid: uid,
+      });
     });
-    transaction.set(summaryRef, {
-      legacy_field_present: true,
-      has_payments: true,
-      payments_count: Number(previous.payments_count ?? 0) + 1,
-      total_paid: Number(previous.total_paid ?? 0) + amount,
-      updated_by: uid,
-      updated_at: FieldValue.serverTimestamp(),
-    }, {merge: true});
-    const eventId = `hist_${dateSlug(paymentDate)}_payment_${createHash("sha256").update(paymentId).digest("hex").slice(0, 8)}`;
-    transaction.create(parentRef.collection("history").doc(eventId), {
-      request_id: requestId,
-      retreat_id: parent.get("retreat_id"),
-      action: "updated",
-      collection_state: "request",
-      message: "Pago de pre retiro registrado",
-      payment_id: paymentId,
-      receipt_path: receiptPath,
-      receipt_name: receiptName,
-      changes: [{label: "Monto", previous_value: "", next_value: String(amount)}],
-      happened_at: FieldValue.serverTimestamp(),
-      actor_uid: uid,
-    });
-  });
+  } catch (error) {
+    const paymentExists = await paymentRef.get().then(snapshot => snapshot.exists).catch(() => true);
+    if (!paymentExists) await file.delete({ignoreNotFound: true}).catch(() => undefined);
+    throw error;
+  }
   return {paymentId};
 });
+
+export const discardPaymentUpload = onCall(async request => {
+  const data = request.data as Record<string, unknown>;
+  const cityId = text(data.cityId, 100);
+  const requestId = text(data.requestId, 160);
+  const paymentId = text(data.paymentId, 180);
+  const receiptPath = text(data.receiptPath, 500);
+  await requireCityPermission(request, cityId, "payments", "create");
+  const parent = await requestRef(cityId, requestId).get();
+  if (!parent.exists) throw new HttpsError("not-found", "No se encontró la solicitud.");
+  const expectedPrefix = `receipts/${cityId}/${parent.get("retreat_id")}/${requestId}/${paymentId}/`;
+  if (!paymentId || !receiptPath.startsWith(expectedPrefix) || receiptPath.slice(expectedPrefix.length).includes("/")) {
+    throw new HttpsError("invalid-argument", "La ruta del recibo no corresponde con este pago.");
+  }
+  const payment = await requestRef(cityId, requestId).collection("payments").doc(paymentId).get();
+  if (payment.exists) return {deleted: false};
+  await paymentBucket().file(receiptPath).delete({ignoreNotFound: true});
+  return {deleted: true};
+});
+
+export const recoverPendingPaymentDeletions = onSchedule(
+  {schedule: "0 * * * *", timeZone: "America/Santo_Domingo"},
+  async () => {
+    const pendingPayments = await v2Db.collectionGroup("payments").where("deletion_pending", "==", true).limit(100).get();
+    for (const payment of pendingPayments.docs) {
+      const [citySegment, cityId, requestsSegment, requestId] = payment.ref.path.split("/");
+      if (citySegment !== "city" || requestsSegment !== "requests" || !cityId || !requestId) continue;
+      const history = await payment.ref.parent.parent!.collection("history")
+        .where("payment_id", "==", payment.id)
+        .where("deletion_pending", "==", true)
+        .limit(1)
+        .get();
+      if (history.empty) continue;
+      const actorUid = text(payment.get("updated_by"), 180) || "system";
+      try {
+        await finalizePendingPaymentDeletion({cityId, requestId, paymentId: payment.id, eventId: history.docs[0].id, actorUid});
+      } catch (error) {
+        console.error("No se pudo recuperar la eliminación pendiente del pago:", JSON.stringify(error instanceof Error ? {name: error.name, message: error.message} : error));
+      }
+    }
+  },
+);
 
 export const getPaymentReceiptUrl = onCall(async request => {
   const data = request.data as Record<string, unknown>;

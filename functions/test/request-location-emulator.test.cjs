@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const {createHash} = require('node:crypto');
 const admin = require('firebase-admin');
 const {getFirestore} = require('firebase-admin/firestore');
 
@@ -58,6 +59,10 @@ async function countRequests(retreatId, archived) {
   const requestId = 'sol_84_20301022_a1b2c3d4';
   const root = db.doc(`city/${cityId}/requests/${requestId}`);
   await root.set({retreat_id: sourceRetreatId, is_archived: false});
+  await root.collection('details').doc('contact').set({she: {email: 'novia@example.test'}});
+  const identityLockId = createHash('sha256').update(`${sourceRetreatId}:email:novia@example.test`).digest('hex');
+  const identityLock = db.doc(`city/${cityId}/request_identity_keys/${identityLockId}`);
+  await identityLock.set({request_id: requestId, retreat_id: sourceRetreatId});
   await root.collection('details').doc('couple_basic').set({she: {full_name: 'Novia de prueba'}});
   await root.collection('payments').doc('pago_20301022_4000_a1b2c3d4').set({amount: 4000});
   assert.equal(await countRequests(sourceRetreatId, false), 1);
@@ -65,6 +70,7 @@ async function countRequests(retreatId, archived) {
   const archived = await changeLocation(token, {requestId, sourceRetreatId, action: 'archive'});
   assert.equal(archived.status, 200, JSON.stringify(archived.body));
   assert.equal((await root.get()).get('is_archived'), true);
+  assert.equal((await identityLock.get()).exists, false);
   assert.equal(await countRequests(sourceRetreatId, false), 0);
   assert.equal(await countRequests(sourceRetreatId, true), 1);
 
@@ -81,6 +87,8 @@ async function countRequests(retreatId, archived) {
   });
   assert.equal(unarchived.status, 200, JSON.stringify(unarchived.body));
   assert.equal((await root.get()).get('is_archived'), false);
+  const targetIdentityLockId = createHash('sha256').update(`${targetRetreatId}:email:novia@example.test`).digest('hex');
+  assert.equal((await db.doc(`city/${cityId}/request_identity_keys/${targetIdentityLockId}`).get()).get('request_id'), requestId);
   assert.equal(await countRequests(targetRetreatId, false), 1);
   assert.equal((await root.collection('details').doc('couple_basic').get()).get('she.full_name'), 'Novia de prueba');
   assert.equal((await root.collection('payments').get()).size, 1);

@@ -9,19 +9,11 @@
       ]
     },
     {
-      "collectionGroup": "members",
+      "collectionGroup": "history",
       "queryScope": "COLLECTION",
       "fields": [
-        {"fieldPath": "status", "order": "ASCENDING"},
-        {"fieldPath": "__name__", "order": "ASCENDING"}
-      ]
-    },
-    {
-      "collectionGroup": "members",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {"fieldPath": "status", "order": "DESCENDING"},
-        {"fieldPath": "__name__", "order": "DESCENDING"}
+        {"fieldPath": "payment_id", "order": "ASCENDING"},
+        {"fieldPath": "deletion_pending", "order": "ASCENDING"}
       ]
     }
   ],

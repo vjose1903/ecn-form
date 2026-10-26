@@ -129,8 +129,7 @@ service cloud.firestore {
         allow get: if hasPermission(cityId, 'requests', 'read');
         allow list: if hasPermission(cityId, 'requests', 'list');
         allow create: if false;
-        allow update: if hasPermission(cityId, 'requests', 'update')
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['retreat_id', 'is_archived']);
+        allow update: if false;
         allow delete: if hasPermission(cityId, 'requests', 'delete');
 
         match /details/{sectionId} {
@@ -153,19 +152,7 @@ service cloud.firestore {
         match /payments/{paymentId} {
           allow get: if exists(requestPath(cityId, requestId)) && hasPermission(cityId, 'payments', 'read');
           allow list: if exists(requestPath(cityId, requestId)) && hasPermission(cityId, 'payments', 'list');
-          allow create: if exists(requestPath(cityId, requestId))
-            && hasPermission(cityId, 'payments', 'create')
-            && request.resource.data.keys().hasAll(['payment_date', 'amount', 'created_at', 'created_by'])
-            && request.resource.data.keys().hasOnly(['payment_date', 'amount', 'receipt_path', 'receipt_name', 'created_at', 'created_by'])
-            && request.resource.data.amount is number
-            && request.resource.data.amount > 0
-            && request.resource.data.payment_date is timestamp
-            && request.resource.data.created_at == request.time
-            && request.resource.data.created_by == request.auth.uid
-            && (!('receipt_path' in request.resource.data) || request.resource.data.receipt_path is string)
-            && (!('receipt_name' in request.resource.data) || request.resource.data.receipt_name is string);
-          allow update: if exists(requestPath(cityId, requestId)) && hasPermission(cityId, 'payments', 'update');
-          allow delete: if exists(requestPath(cityId, requestId)) && hasPermission(cityId, 'payments', 'delete');
+          allow create, update, delete: if false;
         }
 
         match /history/{eventId} {

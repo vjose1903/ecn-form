@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const {createHash} = require('node:crypto');
 const admin = require('firebase-admin');
 const {getFirestore} = require('firebase-admin/firestore');
 
@@ -28,11 +29,16 @@ const call = async data => {
     she: {full_name: 'Novia de prueba', nickname: 'N', email: 'novia@example.test', cell_phone: '8095550101', identity_number: 'ID-101', extra_private_field: 'no debe guardarse'},
     he: {full_name: 'Novio de prueba', email: 'novio@example.test', cell_phone: '8095550102', identity_number: 'ID-102'},
     how_find_us: 'Prueba',
+    have_wedding_date: false,
+    dating_period_year: 3,
+    dating_period_month: 2,
   };
   const created = await call({cityId, retreatId, payload});
   assert.equal(created.status, 200, JSON.stringify(created.body));
   const requestId = created.body.result?.requestId ?? created.body.data?.requestId;
   assert.match(requestId, /^sol_84_\d{8}_[a-f0-9]{8}$/);
+  const identityLockId = createHash('sha256').update(`${retreatId}:email:novia@example.test`).digest('hex');
+  assert.equal((await db.doc(`city/${cityId}/request_identity_keys/${identityLockId}`).get()).get('request_id'), requestId);
   const rootRef = db.doc(`city/${cityId}/requests/${requestId}`);
   const [root, basic, contact, identity, payments, history] = await Promise.all([
     rootRef.get(),
@@ -53,6 +59,22 @@ const call = async data => {
   const duplicate = await call({cityId, retreatId, payload});
   assert.notEqual(duplicate.status, 200);
   assert.match(String(duplicate.body.error?.message ?? duplicate.body.message), /Ya existe/);
+
+  const concurrentPayload = {
+    ...payload,
+    she: {...payload.she, full_name: 'Novia concurrente', email: 'concurrente@example.test', cell_phone: '8095550191', identity_number: 'ID-191'},
+    he: {...payload.he, full_name: 'Novio concurrente', email: 'concurrente-he@example.test', cell_phone: '8095550192', identity_number: 'ID-192'},
+  };
+  const concurrent = await Promise.all([
+    call({cityId, retreatId, payload: concurrentPayload}),
+    call({cityId, retreatId, payload: concurrentPayload}),
+  ]);
+  assert.equal(concurrent.filter(result => result.status === 200).length, 1, JSON.stringify(concurrent));
+
+  const malformed = await call({cityId, retreatId, payload: {...payload, how_find_us: {unexpected: true}}});
+  assert.notEqual(malformed.status, 200);
+  const malformedContact = await call({cityId, retreatId, payload: {...payload, she: {...payload.she, email: {unexpected: true}}}});
+  assert.notEqual(malformedContact.status, 200);
   console.log('Flujo público crea solicitud segmentada, minimiza el documento raíz y rechaza duplicados');
   await admin.app().delete();
 })().catch(async error => {

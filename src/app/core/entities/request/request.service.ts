@@ -6,7 +6,7 @@ import { AuthService } from '@core/services/auth.service';
 import { Ss } from '@core/services/singleton.service';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { RetreatClass } from '../retreat/retreat.class';
-import { Timestamp, Firestore, collection, doc, getDoc, getDocs, onSnapshot, query, where } from '@angular/fire/firestore';
+import { Timestamp, Firestore, collection, doc, getCountFromServer, getDoc, getDocs, onSnapshot, query, where } from '@angular/fire/firestore';
 import { fun } from '@core/services/functions.service';
 import { createRequestDocumentId } from './request-document-id';
 import { Functions, httpsCallable } from '@angular/fire/functions';
@@ -103,15 +103,20 @@ export class RequestService extends FirebaseRequest<RequestI> {
     if (!cityId || !retreatIds.length) return {};
 
     const requestsRef = collection(this.firestore, `city/${cityId}/requests`);
-    const retreatIdBatches = Array.from({length: Math.ceil(retreatIds.length / 30)}, (_, index) => retreatIds.slice(index * 30, (index + 1) * 30));
-    const snapshots = await Promise.all(retreatIdBatches.map(ids =>
-      getDocs(query(requestsRef, where('retreat_id', 'in', ids), where('is_archived', '==', true)))
-    ));
-    return snapshots.flatMap(snapshot => snapshot.docs).reduce<Record<string, number>>((counts, requestDoc) => {
-      const retreatId = requestDoc.get('retreat_id');
-      if (typeof retreatId === 'string') counts[retreatId] = (counts[retreatId] || 0) + 1;
-      return counts;
-    }, {});
+    const counts: Record<string, number> = {};
+    for (let index = 0; index < retreatIds.length; index += 20) {
+      const batch = retreatIds.slice(index, index + 20);
+      const results = await Promise.all(batch.map(async retreatId => {
+        const result = await getCountFromServer(query(
+          requestsRef,
+          where('retreat_id', '==', retreatId),
+          where('is_archived', '==', true),
+        ));
+        return [retreatId, result.data().count] as const;
+      }));
+      for (const [retreatId, count] of results) counts[retreatId] = count;
+    }
+    return counts;
   }
 
   private async getRequestFieldGroups(cityId: string, requestIds: string[], includeDashboardDetails = false): Promise<Record<string, RequestFieldGroups>> {
@@ -205,18 +210,26 @@ export class RequestService extends FirebaseRequest<RequestI> {
       fileSize: payment.receipt.size,
     });
     const {uploadUrl, receiptPath, paymentId} = uploadResult.data as {uploadUrl: string; receiptPath: string; paymentId: string};
-    const response = await fetch(uploadUrl, {method: 'PUT', headers: {'Content-Type': payment.receipt.type}, body: payment.receipt});
-    if (!response.ok) throw new Error('No se pudo cargar el recibo del pago');
-    const record = httpsCallable(this.functions, 'recordPayment');
-    await record({
-      cityId: retreat.city_id,
-      requestId: request.id,
-      paymentId,
-      receiptPath,
-      receiptName: payment.receipt.name,
-      paymentDate: paymentDate.toISOString(),
-      amount: payment.amount,
-    });
+    try {
+      const response = await fetch(uploadUrl, {method: 'PUT', headers: {'Content-Type': payment.receipt.type}, body: payment.receipt});
+      if (!response.ok) throw new Error('No se pudo cargar el recibo del pago');
+      const record = httpsCallable(this.functions, 'recordPayment');
+      await record({
+        cityId: retreat.city_id,
+        requestId: request.id,
+        paymentId,
+        receiptPath,
+        receiptName: payment.receipt.name,
+        paymentDate: paymentDate.toISOString(),
+        amount: payment.amount,
+      });
+    } catch (error) {
+      const discard = httpsCallable(this.functions, 'discardPaymentUpload');
+      await discard({cityId: retreat.city_id, requestId: request.id, paymentId, receiptPath}).catch(cleanupError => {
+        console.error('No se pudo limpiar el recibo de un pago no registrado:', JSON.stringify(cleanupError instanceof Error ? {name: cleanupError.name, message: cleanupError.message} : cleanupError));
+      });
+      throw error;
+    }
     const paymentRecord: PreRetreatPaymentI = {id: paymentId, payment_date: paymentDate, amount: payment.amount, receipt_path: receiptPath, receipt_name: payment.receipt.name};
     const updated = {...request, pre_retreat_payments: [...request.pre_retreat_payments, paymentRecord]};
     this.updateRequestInCache(updated, 'update');
