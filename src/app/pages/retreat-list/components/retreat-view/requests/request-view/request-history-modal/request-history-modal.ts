@@ -54,6 +54,7 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
     try {
       this.loading.set(true);
       const history = (await this.requestService.getRequestHistory(request.id)).map(item => this.hydratePaymentReceipt(item, request.pre_retreat_payments ?? []));
+      history.sort((left, right) => this.historyTime(right.happened_at) - this.historyTime(left.happened_at));
       this.history.set(history);
       void this.loadReceiptPreviews(history);
     } catch (error) {
@@ -67,10 +68,17 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
     }
   }
 
+  private historyTime(value: RequestHistoryI['happened_at']): number {
+    if (!value) return 0;
+    const date = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+  }
+
   getActionLabel(item: RequestHistoryI): string {
     if (item.message === 'Pago de pre retiro registrado') return 'Pago';
     if (item.message === 'Pareja marcada como informada') return 'Informada';
     if (item.message === 'Pareja marcada como no informada') return 'No informada';
+    if (item.action === RequestAction.INFORMATION_CONFIRMED) return 'Datos confirmados';
 
     const labels: Record<RequestAction, string> = {
       [RequestAction.NEW]: 'Nueva',
@@ -78,6 +86,7 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
       [RequestAction.ARCHIVED]: 'Archivada',
       [RequestAction.DESARCHIVED]: 'Desarchivada',
       [RequestAction.TRANSFERRED]: 'Transferida',
+      [RequestAction.INFORMATION_CONFIRMED]: 'Datos confirmados',
     };
 
     return labels[item.action];
@@ -86,6 +95,7 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
   getActionSeverity(item: RequestHistoryI): 'secondary' | 'info' | 'warn' | 'success' {
     if (item.message === 'Pago de pre retiro registrado') return 'warn';
     if (this.isInformationStatusChange(item)) return 'info';
+    if (item.action === RequestAction.INFORMATION_CONFIRMED) return 'success';
 
     const severities: Record<RequestAction, 'secondary' | 'info' | 'warn' | 'success'> = {
       [RequestAction.NEW]: 'success',
@@ -93,6 +103,7 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
       [RequestAction.ARCHIVED]: 'warn',
       [RequestAction.DESARCHIVED]: 'success',
       [RequestAction.TRANSFERRED]: 'secondary',
+      [RequestAction.INFORMATION_CONFIRMED]: 'success',
     };
 
     return severities[item.action];
@@ -102,6 +113,7 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
     if (item.message === 'Pago de pre retiro registrado') return 'history-card--payment';
     if (item.message === 'Pareja marcada como informada') return 'history-card--informed';
     if (item.message === 'Pareja marcada como no informada') return 'history-card--not-informed';
+    if (item.action === RequestAction.INFORMATION_CONFIRMED) return 'history-card--confirmed';
 
     const classes: Record<RequestAction, string> = {
       [RequestAction.NEW]: 'history-card--new',
@@ -109,6 +121,7 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
       [RequestAction.ARCHIVED]: 'history-card--archived',
       [RequestAction.DESARCHIVED]: 'history-card--desarchived',
       [RequestAction.TRANSFERRED]: 'history-card--transferred',
+      [RequestAction.INFORMATION_CONFIRMED]: 'history-card--confirmed',
     };
 
     return classes[item.action];
@@ -182,6 +195,11 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
 
   getChangeValue(item: RequestHistoryI, label: string): string {
     const change = item.changes?.find((entry): entry is RequestHistoryChangeI => typeof entry !== 'string' && entry.label === label);
+    if (label === 'Fecha del pago' && this.isPaymentEvent(item)) {
+      const request = this.config.data.request as RequestClass;
+      const payment = request.pre_retreat_payments?.find(payment => payment.id === item.payment_id);
+      if (payment) return this.formatPaymentDate(payment.payment_date) || change?.next_value || 'No disponible';
+    }
     return change?.next_value || 'No disponible';
   }
 

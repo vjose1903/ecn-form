@@ -479,13 +479,21 @@ export class FormPage implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    this.initialized.set(false);
     if (this.ref && this.config) {
       this.formType = this.config.data.formType;
       this.request = this.config.data.request;
-      this.user_id = this.config.data.user_id;
+      this.user_id = this.config.data.cityId ?? this.config.data.user_id ?? this.user_id;
     }
 
-    await this.getUser();
+    const editRetreat = this.config?.data?.retreat as RetreatClass | undefined;
+    if (this.formType === 'update' && editRetreat && this.user_id) {
+      this.userSelected.set(new UserC({id: this.user_id, uid: '', email: '', phone: '', city: this.user_id} as any));
+      this.retreats.set([editRetreat]);
+    } else {
+      await this.getUser();
+    }
+    if (this.error()) return;
 
     this.subscribeToFormChanges();
     this.processInitComponent();
@@ -644,29 +652,28 @@ export class FormPage implements OnInit {
     });
   }
 
-  getUser() {
-    this.userService.getPublicFormUser(this.user_id).then(user => {
+  async getUser(): Promise<void> {
+    try {
+      const user = await this.userService.getPublicFormUser(this.user_id);
+      if (!user) throw new Error('No se encontró la ciudad del formulario.');
       this.userSelected.set(user);
-      this.getRetreats();
-    });
+      await this.getRetreats();
+    } catch (error) {
+      console.error('Error al cargar los datos del formulario:', JSON.stringify(error instanceof Error ? {name: error.name, message: error.message} : error));
+      this.error.set(true);
+      this.initialized.set(true);
+    }
   }
 
-  getRetreats() {
+  async getRetreats(): Promise<void> {
     const user = this.userSelected();
-    if (user == null) return;
+    if (user == null) throw new Error('No se encontró la ciudad del formulario.');
 
-    this.retreatService
-      .getRetreatByUser(user)
-      .then(retreats => {
-        this.retreats.set(retreats);
-
-        if (retreats?.length === 0) {
-          Ss.toastService.warning({ message: 'No hay retiros disponibles para solicitar', title: 'Error' });
-        }
-      })
-      .catch(error => {
-        Ss.toastService.error({ message: 'Error al obtener los retiros, disponibles para solicitar', title: 'Error' });
-      });
+    const retreats = await this.retreatService.getRetreatByUser(user);
+    this.retreats.set(retreats);
+    if (retreats?.length === 0) {
+      Ss.toastService.warning({ message: 'No hay retiros disponibles para solicitar', title: 'Error' });
+    }
   }
 
   subscribeToFormChanges() {

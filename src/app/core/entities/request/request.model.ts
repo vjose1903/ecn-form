@@ -15,6 +15,7 @@ export interface RequestI {
   is_active?: boolean;
   created_at?: Date | string | null;
   is_informado?: boolean;
+  isConfirmed?: boolean;
   pre_retreat_payments?: PreRetreatPaymentI[];
   status: RequestStatus;
   action: RequestAction;
@@ -43,6 +44,7 @@ export enum RequestAction {
   ARCHIVED = 'archived',
   DESARCHIVED = 'desarchived',
   TRANSFERRED = 'transferred',
+  INFORMATION_CONFIRMED = 'information_confirmed',
 }
 
 export enum CoupleType {
@@ -123,6 +125,8 @@ export interface RequestHistoryI {
   collection_state: 'request' | 'requests-archived';
   changes?: Array<string | RequestHistoryChangeI>;
   message?: string;
+  actor_uid?: string;
+  actor_name?: string;
   receipt_url?: string;
   receipt_path?: string;
   receipt_name?: string;

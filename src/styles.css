@@ -5,6 +5,61 @@
 
 @import "tailwindcss";
 
+.confirm-request-information-dialog.p-dialog {
+  overflow: hidden;
+  border-radius: 1.1rem;
+  box-shadow: 0 24px 64px rgb(15 23 42 / 18%);
+}
+
+.confirm-request-information-dialog .p-dialog-header {
+  align-items: center;
+  padding: 1.35rem 1.5rem .9rem;
+  border-bottom: 0;
+  background: #fff;
+}
+
+.confirm-request-information-dialog .p-dialog-title {
+  color: #24334a;
+  font-size: 1.18rem;
+  font-weight: 750;
+  letter-spacing: -.02em;
+}
+
+.confirm-request-information-dialog .p-dialog-header-icons {
+  gap: .25rem;
+}
+
+.confirm-request-information-dialog .p-dialog-header-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: .7rem;
+  color: #718096;
+}
+
+.confirm-request-information-dialog .p-dialog-header-icon:hover {
+  background: #f1f5f9;
+  color: #24334a;
+}
+
+.confirm-request-information-dialog .p-dialog-content {
+  padding: .2rem 1.5rem 1.5rem;
+  background: #fff;
+}
+
+@media (max-width: 640px) {
+  .confirm-request-information-dialog .p-dialog-header {
+    padding: 1.1rem 1rem .7rem;
+  }
+
+  .confirm-request-information-dialog .p-dialog-title {
+    font-size: 1.05rem;
+  }
+
+  .confirm-request-information-dialog .p-dialog-content {
+    padding: .15rem 1rem 1rem;
+  }
+}
+
 @media (max-width: 640px) {
   .retreat-stats-popover.p-popover {
     right: .5rem !important;

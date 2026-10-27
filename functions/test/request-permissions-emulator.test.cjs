@@ -30,17 +30,39 @@ async function callUpdate(token, city, patch) {
   return {status: response.status, body: await response.json()};
 }
 
+async function callFieldGroups(token, city) {
+  const response = await fetch(`http://127.0.0.1:5001/${projectId}/us-east1/getRequestFieldGroups`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', Authorization: `Bearer ${token}`},
+    body: JSON.stringify({data: {cityId: city, requestIds: [requestId], includeRequestDetails: true}}),
+  });
+  return {status: response.status, body: await response.json()};
+}
+
 (async () => {
   const {uid, token} = await getIdToken();
   await db.doc(`city/${cityId}/members/${uid}`).set({uid, role_id: 'payment_operator', status: 'active'});
   await db.doc(`city/${cityId}/roles/payment_operator`).set({
     is_active: true,
-    permissions: {requests: {update: true, fields: {contact: {update: true}, identity: {update: false}}}},
+    permissions: {requests: {read: true, list: true, update: true, fields: {
+      couple_basic: {read: true}, contact: {read: true, update: true}, identity: {read: false, update: false},
+    }}},
   });
   const root = db.doc(`city/${cityId}/requests/${requestId}`);
   await root.set({retreat_id: retreatId, is_archived: false});
+  await root.collection('details').doc('couple_basic').set({she: {full_name: 'Novia de prueba'}});
   await root.collection('details').doc('contact').set({she: {email: 'old@example.test'}});
   await root.collection('details').doc('identity').set({she: {identity_number: 'ID-OLD'}});
+
+  const fieldGroups = await callFieldGroups(token, cityId);
+  assert.equal(fieldGroups.status, 200, JSON.stringify(fieldGroups.body));
+  const groupedDetails = fieldGroups.body.result?.[requestId]?.details ?? fieldGroups.body.data?.[requestId]?.details;
+  assert.equal(groupedDetails.couple_basic.she.full_name, 'Novia de prueba');
+  assert.equal(groupedDetails.contact.she.email, 'old@example.test');
+  assert.equal('identity' in groupedDetails, false, 'No debe incluir secciones sin permiso de lectura');
+  const editableSections = fieldGroups.body.result?.[requestId]?.editableSections ?? fieldGroups.body.data?.[requestId]?.editableSections;
+  assert.equal(editableSections.includes('contact'), true);
+  assert.equal(editableSections.includes('couple_basic'), false);
 
   const allowed = await callUpdate(token, cityId, {she: {email: 'new@example.test'}});
   assert.equal(allowed.status, 200, JSON.stringify(allowed.body));

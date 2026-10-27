@@ -217,7 +217,6 @@ export const createPublicRequest = onCall(async (request) => {
       collection_state: "request",
       message: "Solicitud creada",
       happened_at: timestamp,
-      actor_uid: request.auth?.uid ?? null,
     });
   });
   return {requestId};

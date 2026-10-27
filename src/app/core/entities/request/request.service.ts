@@ -6,7 +6,7 @@ import { AuthService } from '@core/services/auth.service';
 import { Ss } from '@core/services/singleton.service';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { RetreatClass } from '../retreat/retreat.class';
-import { Timestamp, Firestore, collection, doc, getCountFromServer, getDoc, getDocs, onSnapshot, query, where } from '@angular/fire/firestore';
+import { Timestamp, Firestore, collection, doc, getCountFromServer, getDoc, getDocs, onSnapshot, orderBy, query, where } from '@angular/fire/firestore';
 import { fun } from '@core/services/functions.service';
 import { createRequestDocumentId } from './request-document-id';
 import { Functions, httpsCallable } from '@angular/fire/functions';
@@ -19,7 +19,6 @@ interface UpdateRequestOptions {
 
 const REQUEST_DETAIL_SECTIONS = ['couple_basic', 'contact', 'identity', 'family', 'relationship', 'invitation', 'legacy_extra'] as const;
 const DASHBOARD_DETAIL_SECTIONS = ['contact', 'identity', 'family', 'relationship', 'invitation'] as const;
-
 interface RequestFieldGroups {
   status?: Record<string, unknown>;
   is_informado?: boolean;
@@ -77,9 +76,24 @@ export class RequestService extends FirebaseRequest<RequestI> {
     if (!retreat.city_id || !retreat.id) throw new Error('El retiro no tiene ciudad o identificador válido');
     if (!this.authService.current_user()) return [];
     const requestsRef = collection(this.firestore, `city/${retreat.city_id}/requests`);
-    const snapshot = await getDocs(query(requestsRef, where('retreat_id', '==', retreat.id), where('is_archived', '==', false)));
-    const fieldGroups = await this.getRequestFieldGroups(retreat.city_id, snapshot.docs.map(requestDoc => requestDoc.id));
-    return Promise.all(snapshot.docs.map(requestDoc => this.hydrateV2Request(retreat.city_id, requestDoc, fieldGroups[requestDoc.id])));
+    const snapshot = await getDocs(query(
+      requestsRef,
+      where('retreat_id', '==', retreat.id),
+      where('is_archived', '==', false),
+      orderBy('created_at', 'desc'),
+    ));
+    const requestIds = snapshot.docs.map(requestDoc => requestDoc.id);
+    const [fieldGroups, sectionDetails, paymentRecords] = await Promise.all([
+      this.getRequestFieldGroups(retreat.city_id, requestIds),
+      Promise.all(snapshot.docs.map(requestDoc => this.getRequestDetails(retreat.city_id, requestDoc.id))),
+      Promise.all(snapshot.docs.map(async requestDoc => {
+        const payments = await getDocs(collection(this.firestore, `city/${retreat.city_id}/requests/${requestDoc.id}/payments`));
+        return payments.docs.map(payment => ({...payment.data(), id: payment.id} as PreRetreatPaymentI));
+      })),
+    ]);
+    return Promise.all(snapshot.docs.map((requestDoc, index) =>
+      this.hydrateV2Request(retreat.city_id, requestDoc, fieldGroups[requestDoc.id], true, REQUEST_DETAIL_SECTIONS, paymentRecords[index], sectionDetails[index])
+    ));
   }
 
   async getRequestsForRetreats(retreats: RetreatClass[]): Promise<RequestClass[]> {
@@ -119,21 +133,34 @@ export class RequestService extends FirebaseRequest<RequestI> {
     return counts;
   }
 
-  private async getRequestFieldGroups(cityId: string, requestIds: string[], includeDashboardDetails = false): Promise<Record<string, RequestFieldGroups>> {
+  private async getRequestFieldGroups(cityId: string, requestIds: string[], includeDashboardDetails = false, includeRequestDetails = false): Promise<Record<string, RequestFieldGroups>> {
     if (!requestIds.length) return {};
-    const getGroups = httpsCallable<{cityId: string; requestIds: string[]; includeDashboardDetails?: boolean}, Record<string, RequestFieldGroups>>(this.functions, 'getRequestFieldGroups');
-    const batchSize = includeDashboardDetails ? 50 : 200;
+    const getGroups = httpsCallable<{cityId: string; requestIds: string[]; includeDashboardDetails?: boolean; includeRequestDetails?: boolean}, Record<string, RequestFieldGroups>>(this.functions, 'getRequestFieldGroups');
+    const batchSize = includeDashboardDetails || includeRequestDetails ? 50 : 200;
     const batches = Array.from({length: Math.ceil(requestIds.length / batchSize)}, (_, index) => requestIds.slice(index * batchSize, (index + 1) * batchSize));
-    const results = await Promise.all(batches.map(requestIds => getGroups({cityId, requestIds, includeDashboardDetails})));
+    const results = await Promise.all(batches.map(requestIds => getGroups({cityId, requestIds, includeDashboardDetails, includeRequestDetails})));
     return Object.assign({}, ...results.map(result => result.data));
   }
 
-  private async hydrateV2Request(cityId: string, requestDoc: {id: string; data: () => Record<string, any>}, fieldGroups: RequestFieldGroups, includePayments = true, sections: readonly string[] = REQUEST_DETAIL_SECTIONS): Promise<RequestClass> {
+  private async getRequestDetails(cityId: string, requestId: string): Promise<Record<string, Record<string, unknown>>> {
+    const requestPath = `city/${cityId}/requests/${requestId}`;
+    const snapshots = await Promise.all(REQUEST_DETAIL_SECTIONS.map(async section => {
+      try {
+        return await getDoc(doc(this.firestore, `${requestPath}/details/${section}`));
+      } catch (error) {
+        if ((error as {code?: string})?.code === 'permission-denied') return null;
+        throw error;
+      }
+    }));
+    return Object.fromEntries(snapshots.flatMap(snapshot => snapshot?.exists() ? [[snapshot.id, snapshot.data()!]] : []));
+  }
+
+  private async hydrateV2Request(cityId: string, requestDoc: {id: string; data: () => Record<string, any>}, fieldGroups: RequestFieldGroups, includePayments = true, sections: readonly string[] = REQUEST_DETAIL_SECTIONS, preloadedPayments?: PreRetreatPaymentI[], preloadedDetails?: Record<string, Record<string, unknown>>): Promise<RequestClass> {
       const requestPath = `city/${cityId}/requests/${requestDoc.id}`;
       const root = requestDoc.data();
       const retreatId = root['retreat_id'] as string;
       const [sectionResults, paymentsSnapshot] = await Promise.all([
-        fieldGroups.details ? Promise.resolve([]) : Promise.all(sections
+        fieldGroups.details || preloadedDetails ? Promise.resolve([]) : Promise.all(sections
           .map(async section => {
             try {
               return await getDoc(doc(this.firestore, `${requestPath}/details/${section}`));
@@ -142,11 +169,12 @@ export class RequestService extends FirebaseRequest<RequestI> {
               throw error;
             }
           })),
-        includePayments ? getDocs(collection(this.firestore, `${requestPath}/payments`)) : Promise.resolve(null),
+        includePayments && !preloadedPayments ? getDocs(collection(this.firestore, `${requestPath}/payments`)) : Promise.resolve(null),
       ]);
       const reconstructed: Record<string, any> = { id: requestDoc.id, retreat: retreatId };
+      reconstructed['isConfirmed'] = root['isConfirmed'] === true;
       reconstructed['readableSections'] = [
-        ...(fieldGroups.details ? Object.keys(fieldGroups.details) : sections.filter((_, index) => sectionResults[index] !== null)),
+        ...(fieldGroups.details ? Object.keys(fieldGroups.details) : preloadedDetails ? Object.keys(preloadedDetails) : sections.filter((_, index) => sectionResults[index] !== null)),
         ...fieldGroups.readableSections,
       ];
       reconstructed['editableSections'] = fieldGroups.editableSections;
@@ -154,25 +182,45 @@ export class RequestService extends FirebaseRequest<RequestI> {
       if (fieldGroups.is_informado !== undefined) reconstructed['is_informado'] = fieldGroups.is_informado;
       if (fieldGroups.details) {
         for (const [section, detail] of Object.entries(fieldGroups.details)) mergeRequestDetail(reconstructed, section, detail);
+      } else if (preloadedDetails) {
+        for (const [section, detail] of Object.entries(preloadedDetails)) mergeRequestDetail(reconstructed, section, detail);
       } else {
         for (const detail of sectionResults) {
           if (!detail?.exists()) continue;
           mergeRequestDetail(reconstructed, detail.id, detail.data()!);
         }
       }
+      reconstructed['created_at'] = root['created_at'] ?? reconstructed['created_at'] ?? null;
       reconstructed['retreat'] = retreatId;
       if (root['is_archived']) {
         reconstructed['action'] = RequestAction.ARCHIVED;
         reconstructed['status'] = RequestStatus.ARCHIVED;
         reconstructed['archived_retreat_id'] = retreatId;
       }
-      reconstructed['pre_retreat_payments'] = paymentsSnapshot?.docs.map(payment => ({ ...payment.data(), id: payment.id })) ?? [];
+      reconstructed['pre_retreat_payments'] = preloadedPayments ?? paymentsSnapshot?.docs.map(payment => ({ ...payment.data(), id: payment.id })) ?? [];
       return new RequestClass(reconstructed as RequestI);
   }
 
   async updatePreRetreatRequest(request: Partial<RequestI>, retreat: RetreatClass, isArchived = false): Promise<RequestI> {
     if (!request.id) throw new Error('Solicitud no disponible');
     return this.updateRequest(request, retreat, {trackAsEdited: true, previousRequest: this._requests.value.find(item => item.id === request.id)});
+  }
+
+  async confirmRequestInformation(request: RequestClass, retreat: RetreatClass, values: {
+    she: {full_name: string; cell_phone: string};
+    he: {full_name: string; cell_phone: string};
+  }): Promise<RequestI> {
+    if (!request.id || !retreat.city_id) throw new Error('No se encontró la información necesaria para confirmar la solicitud');
+    const confirm = httpsCallable(this.functions, 'updateRequestDetails');
+    await confirm({cityId: retreat.city_id, requestId: request.id, confirmInformation: true, patch: values});
+    const result: RequestI = {
+      ...request.asJson(),
+      she: {...request.she, ...values.she},
+      he: {...request.he, ...values.he},
+      isConfirmed: true,
+    };
+    this.updateRequestInCache(result, 'update');
+    return result;
   }
 
   async addPreRetreatPayment(args: {
@@ -597,31 +645,6 @@ export class RequestService extends FirebaseRequest<RequestI> {
       });
       throw error;
     }
-  }
-
-  async getRequestCreationDates(requestIds: string[]): Promise<Map<string, number>> {
-    const cityId = this.authService.activeCityId() || this.authService.current_user()?.city;
-    if (!cityId || requestIds.length === 0) return new Map();
-
-    const snapshots = await Promise.all(requestIds.map(requestId =>
-      getDocs(collection(this.firestore, `city/${cityId}/requests/${requestId}/history`))
-    ));
-    const creationDates = new Map<string, number>();
-
-    for (let index = 0; index < snapshots.length; index++) {
-      for (const history of snapshots[index].docs) {
-        const data = history.data();
-        if (data['message'] !== 'Solicitud creada' || data['collection_state'] !== 'request') continue;
-
-        const requestId = requestIds[index];
-        const happenedAt = this.historyTime(data['happened_at'] as Timestamp | Date | string | null);
-        if (happenedAt && (!creationDates.has(requestId) || happenedAt < creationDates.get(requestId)!)) {
-          creationDates.set(requestId, happenedAt);
-        }
-      }
-    }
-
-    return creationDates;
   }
 
   /**

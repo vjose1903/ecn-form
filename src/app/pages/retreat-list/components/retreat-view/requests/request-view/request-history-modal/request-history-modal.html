@@ -77,7 +77,6 @@
         @if (item.message) {
         <p class="history-card__message">{{ item.message }}</p>
         }
-
         <div class="history-card__details">
           @if (shouldShowRetreat(item)) {
           <div class="history-detail-chip">
@@ -129,6 +128,10 @@
           </div>
         </div>
         }
+        }
+
+        @if (item.action !== RequestAction.NEW && (item.actor_name || item.actor_uid)) {
+        <p class="history-card__actor"><i class="pi pi-user" aria-hidden="true"></i> Realizado por: {{ item.actor_name || item.actor_uid }}</p>
         }
 
       </div>

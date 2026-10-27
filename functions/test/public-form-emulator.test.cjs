@@ -49,12 +49,14 @@ const call = async data => {
     rootRef.collection('history').get(),
   ]);
   assert.deepEqual(Object.keys(root.data()).sort(), ['created_at', 'created_by', 'is_archived', 'retreat_id'].sort());
+  assert.equal(typeof root.get('created_at')?.toDate, 'function');
   assert.equal(basic.get('she.full_name'), 'Novia de prueba');
   assert.equal(contact.get('she.email'), 'novia@example.test');
   assert.equal(identity.get('she.identity_number'), 'ID-101');
   assert.equal('extra_private_field' in basic.get('she'), false);
   assert.equal(payments.get('has_payments'), false);
   assert.equal(history.size, 1);
+  assert.equal(root.get('created_at').toMillis(), history.docs[0].get('happened_at').toMillis());
 
   const duplicate = await call({cityId, retreatId, payload});
   assert.notEqual(duplicate.status, 200);

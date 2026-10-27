@@ -1,4 +1,16 @@
 // Estilos para controlar el ripple effect del accordion en modales
+:host ::ng-deep p-inputmask {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+:host ::ng-deep p-inputmask > input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+
 .form-centered-stage--page {
   box-sizing: border-box;
   min-height: calc(100dvh - 6.5rem);
