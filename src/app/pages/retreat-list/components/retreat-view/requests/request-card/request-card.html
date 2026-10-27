@@ -32,7 +32,7 @@
               <i class="pi pi-wallet" aria-hidden="true"></i>
             </span>
           }
-          @if (request()?.canReadDetailSection('informed')) {
+          @if (showInformedStatus() && request()?.canReadDetailSection('informed')) {
           <span
             class="request-card__informed"
             [class.request-card__informed--yes]="request()?.is_informado"
@@ -42,6 +42,16 @@
             {{ request()?.is_informado ? 'Informada' : 'Sin informar' }}
           </span>
           }
+        }
+        @if (confirmationStatus(); as confirmation) {
+          <span
+            class="request-card__informed"
+            [class.request-card__informed--yes]="confirmation === 'confirmed'"
+            [class.request-card__informed--no]="confirmation === 'unconfirmed'"
+            [attr.aria-label]="confirmation === 'confirmed' ? 'Datos confirmados' : 'Sin confirmar'">
+            <i [class]="confirmation === 'confirmed' ? 'pi pi-check-circle' : 'pi pi-circle'" aria-hidden="true"></i>
+            {{ confirmation === 'confirmed' ? 'Datos confirmados' : 'Sin confirmar' }}
+          </span>
         }
         @if (selectionMode()) {
           <span class="request-card__selection" [attr.aria-label]="selected() ? 'Solicitud seleccionada' : 'Solicitud no seleccionada'">

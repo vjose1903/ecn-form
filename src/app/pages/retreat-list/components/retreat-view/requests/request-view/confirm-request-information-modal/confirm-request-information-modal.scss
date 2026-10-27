@@ -1,0 +1,239 @@
+:host {
+  display: block;
+}
+
+.confirm-information {
+  display: grid;
+  gap: 1.15rem;
+}
+
+.confirm-information__intro {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  margin: 0;
+  color: #52627b;
+  font-size: .9rem;
+  line-height: 1.5;
+}
+
+.confirm-information__intro p,
+.confirm-information__note p {
+  margin: 0;
+}
+
+.confirm-information__intro-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 2.65rem;
+  width: 2.65rem;
+  height: 2.65rem;
+  border-radius: .85rem;
+  background: #fff0f2;
+  color: #a83044;
+  font-size: 1.05rem;
+}
+
+.confirm-information__people {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .9rem;
+}
+
+.confirm-information__person {
+  display: grid;
+  align-content: start;
+  gap: .95rem;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid #e1e7ef;
+  border-radius: .95rem;
+  background: #fbfcfe;
+  transition: border-color .18s ease, background-color .18s ease;
+}
+
+.confirm-information__person:focus-within {
+  border-color: #d6a0aa;
+  background: #fff;
+}
+
+.confirm-information__person-heading {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding-bottom: .75rem;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.confirm-information__person-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 2.2rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: .7rem;
+}
+
+.confirm-information__person-icon svg-icon {
+  display: block;
+}
+
+.confirm-information__person h2 {
+  margin: 0;
+  color: #253249;
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.confirm-information__field {
+  display: grid;
+  align-content: start;
+  gap: .4rem;
+  min-width: 0;
+}
+
+.confirm-information__field label {
+  color: #43516a;
+  font-size: .78rem;
+  font-weight: 650;
+}
+
+.confirm-information__input-wrap {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+.confirm-information__input-wrap > i {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: .8rem;
+  color: #93a0b3;
+  font-size: .85rem;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: color .18s ease;
+}
+
+.confirm-information__input-wrap:focus-within > i {
+  color: #a83044;
+}
+
+.confirm-information__field input {
+  width: 100%;
+  min-height: 2.85rem;
+  padding-left: 2.35rem;
+  border-color: #d6deea;
+  border-radius: .7rem;
+  color: #24334a;
+  font-size: .9rem;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.confirm-information__input-wrap p-inputmask {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+:host ::ng-deep .confirm-information__masked-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 2.85rem;
+  padding-left: 2.35rem;
+  border-color: #d6deea;
+  border-radius: .7rem;
+  color: #24334a;
+  font-size: .9rem;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+:host ::ng-deep .confirm-information__masked-input:hover {
+  border-color: #aebbd0;
+}
+
+:host ::ng-deep .confirm-information__masked-input:focus {
+  border-color: #a83044;
+  box-shadow: 0 0 0 3px rgb(168 48 68 / 12%);
+}
+
+.confirm-information__field input:hover {
+  border-color: #aebbd0;
+}
+
+.confirm-information__field input:focus {
+  border-color: #a83044;
+  box-shadow: 0 0 0 3px rgb(168 48 68 / 12%);
+}
+
+.confirm-information__field small {
+  color: #b42338;
+  font-size: .74rem;
+}
+
+.confirm-information__note {
+  display: flex;
+  align-items: flex-start;
+  gap: .6rem;
+  padding: .8rem .9rem;
+  border: 1px solid #f1d8dc;
+  border-radius: .8rem;
+  background: #fff8f9;
+  color: #62515a;
+  font-size: .8rem;
+  line-height: 1.45;
+}
+
+.confirm-information__note > i {
+  margin-top: .1rem;
+  color: #a83044;
+}
+
+.confirm-information__footer {
+  padding-top: .95rem;
+  border-top: 1px solid #edf0f5;
+}
+
+.confirm-information__actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .65rem;
+}
+
+:host ::ng-deep .confirm-information__actions > p-button {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+@media (max-width: 640px) {
+  .confirm-information {
+    gap: .9rem;
+  }
+
+  .confirm-information__people {
+    grid-template-columns: 1fr;
+    gap: .7rem;
+  }
+
+  .confirm-information__person {
+    gap: .8rem;
+    padding: .85rem;
+  }
+
+  .confirm-information__actions {
+    gap: .5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm-information__person,
+  .confirm-information__input-wrap > i,
+  .confirm-information__field input,
+  :host ::ng-deep .confirm-information__masked-input {
+    transition: none;
+  }
+}

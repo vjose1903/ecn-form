@@ -38,7 +38,6 @@ export class RetreatView implements OnInit, OnDestroy {
   selectionMode = signal(false);
   selectedRequestIds = signal<string[]>([]);
   selectedRequests = computed(() => this.requests().filter(request => this.selectedRequestIds().includes(request.id)));
-  private requestCreationDates = new Map<string, number>();
   batchLoading = signal(false);
   requestsService = inject(RequestService);
   pdfService = inject(PdfService);
@@ -69,7 +68,7 @@ export class RetreatView implements OnInit, OnDestroy {
         ? this.getPaymentStatus(request) !== 'none'
         : this.getPaymentStatus(request) === payments)) &&
       (!request.canReadDetailSection('informed') || informed === 'all' || (informed === 'yes') === !!request.is_informado)
-    ).sort((left, right) => this.getRequestCreationTime(right) - this.getRequestCreationTime(left));
+    );
   });
 
   fetchingRequests = signal(true);
@@ -191,26 +190,17 @@ export class RetreatView implements OnInit, OnDestroy {
     try {
       this.fetchingRequests.set(true);
       const requests = await this.retreat.getRequests();
-      try {
-        this.requestCreationDates = await this.requestsService.getRequestCreationDates(requests.map(request => request.id));
-      } catch (error) {
-        console.warn('No se pudieron cargar las fechas originales de las solicitudes:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
-      }
-
       this.requestsService.requests$.pipe(takeUntil(this.destroy$)).subscribe(requests => {
         this.requests.set(requests);
         this.updateRequestStats(requests);
         this.fetchingRequests.set(false);
         this.tryAutoOpenRequest(requests);
       });
+
     } catch (error) {
+      this.fetchingRequests.set(false);
       Ss.toastService.error({ message: 'Error al obtener las solicitudes', title: 'Error' });
     }
-  }
-
-  private getRequestCreationTime(request: RequestClass): number {
-    const createdAt = request.created_at ? new Date(request.created_at).getTime() : Number.NaN;
-    return Number.isFinite(createdAt) ? createdAt : this.requestCreationDates.get(request.id) ?? 0;
   }
 
   private tryAutoOpenRequest(requests: RequestClass[]): void {

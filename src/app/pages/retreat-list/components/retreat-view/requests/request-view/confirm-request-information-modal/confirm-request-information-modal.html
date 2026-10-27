@@ -1,0 +1,53 @@
+<form class="confirm-information" [formGroup]="form" (ngSubmit)="save()">
+  <div class="confirm-information__intro">
+    <span class="confirm-information__intro-icon" aria-hidden="true"><i class="pi pi-user-edit"></i></span>
+    <p>Verifica que los nombres y teléfonos de contacto de ambas personas estén correctos.</p>
+  </div>
+
+  <div class="confirm-information__people">
+    @for (person of [
+      {key: 'she', label: 'Novia', icon: 'icons/woman.svg', iconName: 'woman-icon', iconBg: 'bg-pink-100/80', iconColor: 'deeppink'},
+      {key: 'he', label: 'Novio', icon: 'icons/man.svg', iconName: 'man-icon', iconBg: 'bg-blue-100/60', iconColor: 'dodgerblue'}
+    ]; track person.key) {
+      <section class="confirm-information__person" [formGroupName]="person.key">
+        <div class="confirm-information__person-heading">
+          <span class="confirm-information__person-icon {{ person.iconBg }}" aria-hidden="true">
+            <svg-icon [src]="person.icon" [name]="person.iconName" [svgStyle]="{ 'width.px': 24, 'height.px': 24, fill: person.iconColor }" />
+          </span>
+          <h2>{{ person.label }}</h2>
+        </div>
+        <div class="confirm-information__field">
+          <label [for]="person.key + '-confirmed-name'">Nombre completo</label>
+          <span class="confirm-information__input-wrap">
+            <i class="pi pi-id-card" aria-hidden="true"></i>
+            <input pInputText [id]="person.key + '-confirmed-name'" formControlName="full_name" autocomplete="name" maxlength="180" />
+          </span>
+          @if (form.get(person.key + '.full_name')?.touched && form.get(person.key + '.full_name')?.invalid) {
+            <small>Escribe el nombre completo.</small>
+          }
+        </div>
+        <div class="confirm-information__field">
+          <label [for]="person.key + '-confirmed-phone'">Teléfono celular</label>
+          <span class="confirm-information__input-wrap">
+            <i class="pi pi-phone" aria-hidden="true"></i>
+            <p-inputmask [inputId]="person.key + '-confirmed-phone'" formControlName="cell_phone" type="tel" mask="(999) 999-9999" placeholder="(###) ###-####" autocomplete="tel" class="w-full" styleClass="confirm-information__masked-input" />
+          </span>
+          @if (form.get(person.key + '.cell_phone')?.touched && form.get(person.key + '.cell_phone')?.invalid) {
+            <small>Escribe el teléfono de contacto.</small>
+          }
+        </div>
+      </section>
+    }
+  </div>
+
+  <div class="confirm-information__note">
+    <i class="pi pi-info-circle" aria-hidden="true"></i>
+    <p>Al confirmar, estos datos reemplazarán los actuales y quedarán marcados como verificados.</p>
+  </div>
+  <footer class="confirm-information__footer">
+    <div class="confirm-information__actions">
+      <p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" [disabled]="loading()" (onClick)="ref.close()" />
+      <p-button type="submit" label="Confirmar información" icon="pi pi-check" [loading]="loading()" [disabled]="loading()" />
+    </div>
+  </footer>
+</form>

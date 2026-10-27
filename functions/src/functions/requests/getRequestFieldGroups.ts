@@ -10,11 +10,13 @@ const dashboardFields: Record<string, string[]> = {
   relationship: ["how_find_us", "how_find_us_other", "have_wedding_date", "dating_period_year"],
   invitation: ["who_invited_you"],
 };
+const requestDetailSections = ["couple_basic", "contact", "identity", "family", "relationship", "invitation", "legacy_extra"];
 
-export const getRequestFieldGroups = onCall({minInstances: 1}, async request => {
+export const getRequestFieldGroups = onCall(async request => {
   const data = request.data as Record<string, unknown>;
   const cityId = typeof data.cityId === "string" ? data.cityId.trim() : "";
   const includeDashboardDetails = data.includeDashboardDetails === true;
+  const includeRequestDetails = data.includeRequestDetails === true;
   const requestIds = Array.isArray(data.requestIds) ? [...new Set(data.requestIds.filter((id): id is string => typeof id === "string" && /^[^/]{1,180}$/.test(id)))] : [];
   if (!cityId || requestIds.length > 200) throw new HttpsError("invalid-argument", "La ciudad o lista de solicitudes no es válida.");
   requireAuthenticated(request);
@@ -45,12 +47,19 @@ export const getRequestFieldGroups = onCall({minInstances: 1}, async request => 
   const readableDashboardSections = Object.keys(dashboardFields).filter(section =>
     isSuperAdmin(request) || (requestPermissions.read === true && requestPermissions.fields?.[section]?.read === true)
   );
+  const readableRequestDetailSections = requestDetailSections.filter(section =>
+    isSuperAdmin(request) || (requestPermissions.read === true && requestPermissions.fields?.[section]?.read === true)
+  );
+  const editableRequestSections = requestDetailSections.filter(section =>
+    isSuperAdmin(request) || (canUpdateRequests && requestPermissions.fields?.[section]?.update === true)
+  );
 
   const readableSections = [
     ...(canReadStatus ? ["status"] : []),
     ...(canReadInformed ? ["informed"] : []),
   ];
   const editableSections = [
+    ...editableRequestSections,
     ...(canUpdateRequests && canUpdateStatus ? ["status"] : []),
     ...(canUpdateRequests && canUpdateInformed ? ["informed"] : []),
   ];
@@ -63,8 +72,11 @@ export const getRequestFieldGroups = onCall({minInstances: 1}, async request => 
   const dashboardRefs = includeDashboardDetails
     ? readableDashboardSections.flatMap(section => requestIds.map(id => v2Db.doc(`city/${cityId}/requests/${id}/details/${section}`)))
     : [];
-  const snapshots = statusRefs.length + informedRefs.length + dashboardRefs.length
-    ? await v2Db.getAll(...statusRefs, ...informedRefs, ...dashboardRefs)
+  const requestDetailRefs = includeRequestDetails
+    ? readableRequestDetailSections.flatMap(section => requestIds.map(id => v2Db.doc(`city/${cityId}/requests/${id}/details/${section}`)))
+    : [];
+  const snapshots = statusRefs.length + informedRefs.length + dashboardRefs.length + requestDetailRefs.length
+    ? await v2Db.getAll(...statusRefs, ...informedRefs, ...dashboardRefs, ...requestDetailRefs)
     : [];
   const statusSnapshots = snapshots.slice(0, statusRefs.length);
   const informedSnapshots = snapshots.slice(statusRefs.length, statusRefs.length + informedRefs.length);
@@ -72,28 +84,39 @@ export const getRequestFieldGroups = onCall({minInstances: 1}, async request => 
   const dashboardSnapshots = readableDashboardSections.map((_, sectionIndex) =>
     snapshots.slice(dashboardStart + sectionIndex * requestIds.length, dashboardStart + (sectionIndex + 1) * requestIds.length)
   );
+  const requestDetailStart = dashboardStart + dashboardRefs.length;
+  const requestDetailSnapshots = readableRequestDetailSections.map((_, sectionIndex) =>
+    snapshots.slice(requestDetailStart + sectionIndex * requestIds.length, requestDetailStart + (sectionIndex + 1) * requestIds.length)
+  );
 
   return Object.fromEntries(requestIds.map((requestId, index) => {
     const result: Record<string, unknown> = {readableSections, editableSections};
-    if (includeDashboardDetails) {
+    if (includeDashboardDetails || includeRequestDetails) {
       const details: Record<string, unknown> = {};
-      readableDashboardSections.forEach((section, sectionIndex) => {
-        const snapshot = dashboardSnapshots[sectionIndex]?.[index];
-        if (!snapshot?.exists) return;
-        const source = snapshot.data() ?? {};
-        const fields = dashboardFields[section];
-        if (["contact", "identity", "family"].includes(section)) {
-          const people = Object.fromEntries(["she", "he"].flatMap(person => {
-            const personData = source[person];
-            if (!personData || typeof personData !== "object") return [];
-            const picked = Object.fromEntries(fields.filter(field => field in personData).map(field => [field, personData[field]]));
-            return Object.keys(picked).length ? [[person, picked]] : [];
-          }));
-          if (Object.keys(people).length) details[section] = people;
-        } else {
-          details[section] = Object.fromEntries(fields.filter(field => field in source).map(field => [field, source[field]]));
-        }
-      });
+      if (includeRequestDetails) {
+        readableRequestDetailSections.forEach((section, sectionIndex) => {
+          const snapshot = requestDetailSnapshots[sectionIndex]?.[index];
+          if (snapshot?.exists) details[section] = snapshot.data();
+        });
+      } else {
+        readableDashboardSections.forEach((section, sectionIndex) => {
+          const snapshot = dashboardSnapshots[sectionIndex]?.[index];
+          if (!snapshot?.exists) return;
+          const source = snapshot.data() ?? {};
+          const fields = dashboardFields[section];
+          if (["contact", "identity", "family"].includes(section)) {
+            const people = Object.fromEntries(["she", "he"].flatMap(person => {
+              const personData = source[person];
+              if (!personData || typeof personData !== "object") return [];
+              const picked = Object.fromEntries(fields.filter(field => field in personData).map(field => [field, personData[field]]));
+              return Object.keys(picked).length ? [[person, picked]] : [];
+            }));
+            if (Object.keys(people).length) details[section] = people;
+          } else {
+            details[section] = Object.fromEntries(fields.filter(field => field in source).map(field => [field, source[field]]));
+          }
+        });
+      }
       result.details = details;
       result.readableSections = [...readableSections, ...Object.keys(details)];
     }

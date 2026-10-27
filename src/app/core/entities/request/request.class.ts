@@ -30,6 +30,7 @@ export class RequestClass {
   action: RequestAction = RequestAction.NEW;
   created_at: Date | string | null = null;
   is_informado = false;
+  isConfirmed = false;
   pre_retreat_payments: PreRetreatPaymentI[] = [];
 
   // Propiedades computadas para optimizar el rendimiento
@@ -212,6 +213,7 @@ export class RequestClass {
     this.action = request.action || RequestAction.NEW;
     this.created_at = request.created_at ? fun.convertFirebaseTimestamp(request.created_at) : null;
     this.is_informado = request.is_informado ?? false;
+    this.isConfirmed = request.isConfirmed ?? false;
     this.pre_retreat_payments = (request.pre_retreat_payments ?? []).map(payment => ({
       ...payment,
       payment_date: fun.convertFirebaseTimestamp(payment.payment_date) || payment.payment_date,
@@ -277,6 +279,7 @@ export class RequestClass {
       action: this.action,
       ...(this.created_at ? { created_at: new Date(this.created_at) } : {}),
       is_informado: this.is_informado,
+      isConfirmed: this.isConfirmed,
       pre_retreat_payments: this.pre_retreat_payments.map(payment => ({
         ...payment,
         payment_date: new Date(payment.payment_date),
@@ -423,6 +426,7 @@ export class RequestClass {
     this.status = other.status;
     this.action = other.action;
     this.is_informado = other.is_informado;
+    this.isConfirmed = other.isConfirmed;
     this.pre_retreat_payments = other.pre_retreat_payments;
     this.archived_retreat_id = other.archived_retreat_id;
     this.archived_at = other.archived_at;

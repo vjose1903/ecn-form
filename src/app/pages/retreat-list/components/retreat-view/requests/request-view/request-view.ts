@@ -24,6 +24,7 @@ import { ExportType, ReportType } from '@pages/retreat-list/utils/export.utils';
 import { RequestHistoryModal } from './request-history-modal/request-history-modal';
 import { TransferRequestModal } from './transfer-request-modal/transfer-request-modal';
 import { PreRetreatPaymentModal } from './pre-retreat-payment-modal/pre-retreat-payment-modal';
+import { ConfirmRequestInformationModal } from './confirm-request-information-modal/confirm-request-information-modal';
 
 @Component({
   selector: 'app-request-view',
@@ -81,6 +82,10 @@ export class RequestView implements OnInit, AfterViewInit {
 
   closeActionsMenu(): void {
     if (this.actionsOnly) setTimeout(() => this.ref.close(), 0);
+  }
+
+  refreshActions(): void {
+    this.actions = this.buildActions();
   }
 
   private buildActions(): MenuItem[] {
@@ -142,6 +147,12 @@ export class RequestView implements OnInit, AfterViewInit {
         label: 'Acciones',
         items: [
           {
+            label: 'Confirmar información',
+            icon: 'pi pi-id-card',
+            visible: this.canShowConfirmInformation(),
+            command: () => this.openConfirmInformationModal(),
+          },
+          {
             label: 'Editar solicitud',
             icon: 'pi pi-pencil',
             command: () => this.editRequest(),
@@ -178,6 +189,54 @@ export class RequestView implements OnInit, AfterViewInit {
     startDate.setHours(0, 0, 0, 0);
     today.setHours(0, 0, 0, 0);
     return today <= startDate;
+  }
+
+  private canShowConfirmInformation(): boolean {
+    const request = this.request();
+    if (this.isArchivedView() || !request || !this.retreat?.start_date
+      || !request.canReadDetailSection('couple_basic') || !request.canEditDetailSection('couple_basic')
+      || !request.canReadDetailSection('contact') || !request.canEditDetailSection('contact')) return false;
+    const startDate = this.dateInSantoDomingo(this.retreat.start_date);
+    const today = this.dateInSantoDomingo(new Date());
+    return Boolean(startDate && today && today <= startDate);
+  }
+
+  private dateInSantoDomingo(value: Date | string): string {
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Santo_Domingo', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(date);
+    return `${parts.find(part => part.type === 'year')?.value}-${parts.find(part => part.type === 'month')?.value}-${parts.find(part => part.type === 'day')?.value}`;
+  }
+
+  openConfirmInformationModal(): void {
+    if (!this.canShowConfirmInformation()) return;
+    const dialogService = Ss.dialogService;
+    const request = this.request();
+    if (!dialogService || !request || !this.retreat) return;
+    const dialogRef = dialogService.open(ConfirmRequestInformationModal, {
+      header: 'Confirmar información de la pareja',
+      width: '48rem',
+      styleClass: 'confirm-request-information-dialog',
+      modal: true,
+      appendTo: 'body',
+      draggable: false,
+      resizable: false,
+      closable: true,
+      focusOnShow: false,
+      data: {request, retreat: this.retreat},
+      breakpoints: {'768px': '95vw'},
+    });
+    dialogRef?.onClose.subscribe((updated?: RequestI) => {
+      if (!updated) return;
+      const current = this.request();
+      const confirmed = new RequestClass({...updated, readableSections: current?.readableSections ?? null, editableSections: current?.editableSections ?? null});
+      this._request.set(confirmed);
+      this.config.data.request = confirmed;
+      this.actions = this.buildActions();
+    });
   }
 
   async togglePreRetreatInformed(): Promise<void> {

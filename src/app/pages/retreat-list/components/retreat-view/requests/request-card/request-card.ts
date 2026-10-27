@@ -42,9 +42,36 @@ export class RequestCard implements OnDestroy {
   showPreRetreatIndicators(): boolean {
     const startDate = this.retreat()?.start_date?.slice(0, 10);
     if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return false;
-    const today = new Date();
-    const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const todayDate = this.todayInSantoDomingo();
     return todayDate <= startDate;
+  }
+
+  showInformedStatus(): boolean {
+    const startDate = this.retreat()?.start_date?.slice(0, 10);
+    if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return false;
+    return this.todayInSantoDomingo() < startDate;
+  }
+
+  confirmationStatus(): 'confirmed' | 'unconfirmed' | null {
+    const retreat = this.retreat();
+    const startDate = retreat?.start_date?.slice(0, 10);
+    const endDate = retreat?.end_date?.slice(0, 10);
+    if (!startDate || !endDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) return null;
+
+    const today = this.todayInSantoDomingo();
+    const lastVisibleDate = new Date(`${endDate}T00:00:00Z`);
+    lastVisibleDate.setUTCDate(lastVisibleDate.getUTCDate() + 7);
+    const lastVisibleDateText = lastVisibleDate.toISOString().slice(0, 10);
+    if (today < startDate || today > lastVisibleDateText) return null;
+
+    return this.request()?.isConfirmed === true ? 'confirmed' : 'unconfirmed';
+  }
+
+  private todayInSantoDomingo(): string {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Santo_Domingo', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(new Date());
+    return `${parts.find(part => part.type === 'year')?.value}-${parts.find(part => part.type === 'month')?.value}-${parts.find(part => part.type === 'day')?.value}`;
   }
 
   onPointerDown(event: PointerEvent): void {

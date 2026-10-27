@@ -15,6 +15,7 @@ export interface RequestI {
   is_active?: boolean;
   created_at?: Date | string | null;
   is_informado?: boolean;
+  isConfirmed?: boolean;
   pre_retreat_payments?: PreRetreatPaymentI[];
   status: RequestStatus;
   action: RequestAction;
