@@ -191,6 +191,16 @@
   color: #a83044;
 }
 
+.confirm-information__note--confirmed {
+  border-color: #c8ead5;
+  background: #f2fbf5;
+  color: #315b40;
+}
+
+.confirm-information__note--confirmed > i {
+  color: #21834a;
+}
+
 .confirm-information__footer {
   padding-top: .95rem;
   border-top: 1px solid #edf0f5;

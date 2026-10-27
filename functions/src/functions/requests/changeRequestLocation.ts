@@ -4,6 +4,7 @@ import {v2Db} from "../../core/firebase-admin";
 import {hasCityFieldPermission, requireCityPermission} from "../../core/security/authorization";
 import {FieldValue} from "firebase-admin/firestore";
 import {requestIdentityKeys, requestIdentityLock} from "../../core/helpers/request-identity";
+import {getActorName} from "../../core/helpers/actor-name";
 
 export const changeRequestLocation = onCall(async request => {
   const data = request.data as Record<string, unknown>;
@@ -17,6 +18,7 @@ export const changeRequestLocation = onCall(async request => {
   }
   const permissionAction = action === "archive" ? "archive" : action === "unarchive" ? "unarchive" : "transfer";
   const actorUid = await requireCityPermission(request, cityId, "requests", permissionAction);
+  const actorName = await getActorName(actorUid, request.auth?.token.name);
   if (!await hasCityFieldPermission(request, cityId, "requests", "status", "update")) {
     throw new HttpsError("permission-denied", "No tienes permiso para modificar el estado de la solicitud.");
   }
@@ -84,6 +86,7 @@ export const changeRequestLocation = onCall(async request => {
       message: action === "archive" ? "Solicitud archivada" : action === "unarchive" ? "Solicitud desarchivada" : "Solicitud transferida a otro retiro",
       happened_at: FieldValue.serverTimestamp(),
       actor_uid: actorUid,
+      actor_name: actorName,
     });
   });
   return {requestId, retreatId: targetRetreatId, isArchived: action === "archive" ? true : action === "unarchive" ? false : data.isArchived === true};

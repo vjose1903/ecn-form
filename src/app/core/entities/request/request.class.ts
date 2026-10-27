@@ -91,6 +91,7 @@ export class RequestClass {
       [RequestAction.ARCHIVED]: 'Archivada',
       [RequestAction.DESARCHIVED]: 'Desarchivada',
       [RequestAction.TRANSFERRED]: 'Transferida',
+      [RequestAction.INFORMATION_CONFIRMED]: 'Datos confirmados',
     };
 
     return labels[this.action] ?? 'Sin acción';

@@ -147,7 +147,7 @@ export class RequestView implements OnInit, AfterViewInit {
         label: 'Acciones',
         items: [
           {
-            label: 'Confirmar información',
+            label: this.request()?.isConfirmed ? 'Editar información confirmada' : 'Confirmar información',
             icon: 'pi pi-id-card',
             visible: this.canShowConfirmInformation(),
             command: () => this.openConfirmInformationModal(),

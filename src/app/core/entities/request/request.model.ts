@@ -44,6 +44,7 @@ export enum RequestAction {
   ARCHIVED = 'archived',
   DESARCHIVED = 'desarchived',
   TRANSFERRED = 'transferred',
+  INFORMATION_CONFIRMED = 'information_confirmed',
 }
 
 export enum CoupleType {
@@ -124,6 +125,8 @@ export interface RequestHistoryI {
   collection_state: 'request' | 'requests-archived';
   changes?: Array<string | RequestHistoryChangeI>;
   message?: string;
+  actor_uid?: string;
+  actor_name?: string;
   receipt_url?: string;
   receipt_path?: string;
   receipt_name?: string;

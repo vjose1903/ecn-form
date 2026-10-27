@@ -4,6 +4,7 @@ import {v2Db} from "../../core/firebase-admin";
 import {hasCityFieldPermission, requireCityPermission} from "../../core/security/authorization";
 import {FieldValue} from "firebase-admin/firestore";
 import {requestIdentityKeys, requestIdentityLock} from "../../core/helpers/request-identity";
+import {getActorName} from "../../core/helpers/actor-name";
 
 const dateInSantoDomingo = (value: unknown): string => {
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
@@ -82,6 +83,7 @@ export const updateRequestDetails = onCall(async request => {
   }
   const rootRef = v2Db.doc(`city/${cityId}/requests/${requestId}`);
   const uid = request.auth?.uid ?? actorUid;
+  const actorName = await getActorName(uid, request.auth?.token.name);
   const changed: Record<string, {before: unknown; after: unknown}> = {};
   await v2Db.runTransaction(async transaction => {
     const root = await transaction.get(rootRef);
@@ -165,8 +167,20 @@ export const updateRequestDetails = onCall(async request => {
         updated_at: eventAt,
       }, {merge: true});
     }
-    if (confirmInformation && root.get("isConfirmed") !== true) {
-      transaction.update(rootRef, {isConfirmed: true});
+    if (confirmInformation) {
+      const wasConfirmed = root.get("isConfirmed") === true;
+      transaction.update(rootRef, {isConfirmed: true, updated_by: uid, updated_at: eventAt});
+      const eventId = `hist_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}_information_confirmed_${createHash("sha256").update(`${requestId}:${Date.now()}`).digest("hex").slice(0, 8)}`;
+      transaction.create(rootRef.collection("history").doc(eventId), {
+        request_id: requestId,
+        retreat_id: root.get("retreat_id"),
+        action: "information_confirmed",
+        collection_state: root.get("is_archived") ? "requests-archived" : "request",
+        message: wasConfirmed ? "Información confirmada nuevamente" : "Información de la pareja confirmada",
+        happened_at: eventAt,
+        actor_uid: uid,
+        actor_name: actorName,
+      });
     }
     if (Object.keys(changed).length && !confirmInformation) {
       const eventId = `hist_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}_updated_${createHash("sha256").update(`${requestId}:${Date.now()}`).digest("hex").slice(0, 8)}`;
@@ -178,6 +192,7 @@ export const updateRequestDetails = onCall(async request => {
         message: "Solicitud actualizada",
         happened_at: eventAt,
         actor_uid: uid,
+        actor_name: actorName,
         changes: Object.entries(changed).map(([label, values]) => ({
           label,
           previous_value: values.before == null ? "" : String(values.before),

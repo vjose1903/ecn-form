@@ -40,14 +40,18 @@
     }
   </div>
 
-  <div class="confirm-information__note">
-    <i class="pi pi-info-circle" aria-hidden="true"></i>
-    <p>Al confirmar, estos datos reemplazarán los actuales y quedarán marcados como verificados.</p>
+  <div class="confirm-information__note" [class.confirm-information__note--confirmed]="isConfirmed">
+    <i [class]="isConfirmed ? 'pi pi-check-circle' : 'pi pi-info-circle'" aria-hidden="true"></i>
+    @if (isConfirmed) {
+      <p>La información ya está confirmada. Puedes corregir cualquier dato y guardar nuevamente si detectaste un error.</p>
+    } @else {
+      <p>Al confirmar, estos datos reemplazarán los actuales y quedarán marcados como verificados.</p>
+    }
   </div>
   <footer class="confirm-information__footer">
     <div class="confirm-information__actions">
       <p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" [disabled]="loading()" (onClick)="ref.close()" />
-      <p-button type="submit" label="Confirmar información" icon="pi pi-check" [loading]="loading()" [disabled]="loading()" />
+      <p-button type="submit" [label]="isConfirmed ? 'Guardar cambios confirmados' : 'Confirmar información'" icon="pi pi-check" [loading]="loading()" [disabled]="loading()" />
     </div>
   </footer>
 </form>

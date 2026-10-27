@@ -49,8 +49,19 @@ async function call(token, id, values) {
   assert.equal((await root.get()).get('isConfirmed'), true);
   assert.equal((await root.collection('details').doc('couple_basic').get()).get('she.full_name'), values.she.full_name);
   assert.equal((await root.collection('details').doc('contact').get()).get('he.cell_phone'), values.he.cell_phone);
-  const history = await root.collection('history').get();
-  assert.equal(history.size, 0, 'La confirmación no debe crear un evento que active el trigger de correo');
+  let history = await root.collection('history').get();
+  assert.equal(history.size, 1, 'La confirmación debe quedar registrada en el trazo');
+  assert.equal(history.docs[0].get('action'), 'information_confirmed');
+  assert.equal(history.docs[0].get('actor_uid'), uid);
+  assert.ok(history.docs[0].get('actor_name'));
+  assert.ok(history.docs[0].get('happened_at'));
+
+  const correctedValues = {...values, she: {...values.she, full_name: 'Nombre corregido'}};
+  const corrected = await call(token, requestId, correctedValues);
+  assert.equal(corrected.status, 200, JSON.stringify(corrected.body));
+  history = await root.collection('history').get();
+  assert.equal(history.size, 2, 'Cada corrección confirmada debe quedar en el trazo');
+  assert.ok(history.docs.some(event => event.get('message') === 'Información confirmada nuevamente'));
 
   await db.doc(`city/${cityId}/retreat/expired_retreat`).set({start_date: Timestamp.fromDate(new Date('2020-10-30T16:00:00.000Z'))});
   const expiredRoot = db.doc(`city/${cityId}/requests/${expiredRequestId}`);

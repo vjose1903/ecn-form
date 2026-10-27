@@ -26,6 +26,7 @@ export class ConfirmRequestInformationModal {
   private readonly requestService = inject(RequestService);
   readonly request = this.config.data.request as RequestClass;
   readonly retreat = this.config.data.retreat as RetreatClass;
+  readonly isConfirmed = this.request.isConfirmed;
   readonly loading = signal(false);
 
   readonly form = this.fb.group({

@@ -4,6 +4,7 @@ import {onSchedule} from "firebase-functions/v2/scheduler";
 import {admin, v2Db} from "../../core/firebase-admin";
 import {requireAuthenticated, requireCityPermission} from "../../core/security/authorization";
 import {FieldValue, Timestamp} from "firebase-admin/firestore";
+import {getActorName} from "../../core/helpers/actor-name";
 
 const text = (value: unknown, max = 200): string => typeof value === "string" ? value.trim().slice(0, max) : "";
 const dateSlug = (date: Date): string => date.toISOString().slice(0, 10).replace(/-/g, "");
@@ -82,6 +83,7 @@ export const createPaymentUploadUrl = onCall(async request => {
 
 export const recordPayment = onCall(async request => {
   const uid = requireAuthenticated(request);
+  const actorName = await getActorName(uid, request.auth?.token.name);
   const data = request.data as Record<string, unknown>;
   const cityId = text(data.cityId, 100);
   const requestId = text(data.requestId, 160);
@@ -148,6 +150,7 @@ export const recordPayment = onCall(async request => {
         changes: [{label: "Monto", previous_value: "", next_value: String(amount)}],
         happened_at: FieldValue.serverTimestamp(),
         actor_uid: uid,
+        actor_name: actorName,
       });
     });
   } catch (error) {
