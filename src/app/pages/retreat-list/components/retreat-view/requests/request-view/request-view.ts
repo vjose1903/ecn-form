@@ -465,9 +465,14 @@ export class RequestView implements OnInit, AfterViewInit {
 
   editRequest() {
     const dialogService = Ss.dialogService;
+    const cityId = this.retreat?.city_id;
 
     if (!dialogService) {
       console.error('DialogService no disponible');
+      return;
+    }
+    if (!cityId) {
+      Ss.toastService.error({ message: 'No se encontró la ciudad de la solicitud', title: 'Error' });
       return;
     }
 
@@ -484,7 +489,8 @@ export class RequestView implements OnInit, AfterViewInit {
       data: {
         request: this.request(),
         formType: 'update',
-        user_id: Ss.authService.current_user()?.id,
+        cityId,
+        retreat: this.retreat,
       },
       breakpoints: { '960px': '80vw', '640px': '90vw' },
     });

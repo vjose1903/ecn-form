@@ -12,7 +12,7 @@ import { BadgeModule } from 'primeng/badge';
 import { RequestClass } from '@core/entities/request/request.class';
 import { RequestStats, RequestStatus, RequestStatusInfo } from '@core/entities/request/request.model';
 import { RequestCard } from './requests/request-card/request-card';
-import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { FormsModule } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { RequestService } from '@core/entities/request/request.service';
@@ -29,7 +29,7 @@ import { RetreatStats } from './retreat-stats/retreat-stats';
 
 @Component({
   selector: 'app-retreat-view',
-  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, BadgeModule, RequestCard, SelectModule, FormsModule, InputTextModule, ViewItem, MenuModule, PopoverModule, RetreatStats],
+  imports: [CommonModule, ButtonModule, CardModule, TooltipModule, TagModule, BadgeModule, RequestCard, MultiSelectModule, FormsModule, InputTextModule, ViewItem, MenuModule, PopoverModule, RetreatStats],
   templateUrl: './retreat-view.html',
   styleUrl: './retreat-view.scss',
 })
@@ -63,23 +63,23 @@ export class RetreatView implements OnInit, OnDestroy {
     }
 
     return filteredRequests.filter(request =>
-      (!request.canReadDetailSection('status') || status === RequestStatus.ALL || request.status === status) &&
-      (payments === 'all' || (payments === 'paid'
+      (!request.canReadDetailSection('status') || status.includes(RequestStatus.ALL) || status.includes(request.status)) &&
+      (payments.includes('all') || payments.some(payment => payment === 'paid'
         ? this.getPaymentStatus(request) !== 'none'
-        : this.getPaymentStatus(request) === payments)) &&
-      (!request.canReadDetailSection('informed') || informed === 'all' || (informed === 'yes') === !!request.is_informado)
+        : this.getPaymentStatus(request) === payment)) &&
+      (!request.canReadDetailSection('informed') || informed.includes('all') || informed.includes(request.is_informado ? 'yes' : 'no'))
     );
   });
 
   fetchingRequests = signal(true);
 
-  selectedRequestStatus = signal<RequestStatus>(RequestStatus.ALL);
-  selectedPaymentFilter = signal<'all' | 'none' | 'paid' | 'partial' | 'complete'>('all');
-  selectedInformedFilter = signal<'all' | 'yes' | 'no'>('all');
+  selectedRequestStatus = signal<RequestStatus[]>([RequestStatus.ALL]);
+  selectedPaymentFilter = signal<Array<'all' | 'none' | 'paid' | 'partial' | 'complete'>>(['all']);
+  selectedInformedFilter = signal<Array<'all' | 'yes' | 'no'>>(['all']);
   activeFilterCount = computed(() =>
-    Number(this.canReadRequestSection('status') && this.selectedRequestStatus() !== RequestStatus.ALL) +
-    Number(this.selectedPaymentFilter() !== 'all') +
-    Number(this.canReadRequestSection('informed') && this.selectedInformedFilter() !== 'all')
+    Number(this.canReadRequestSection('status') && !this.selectedRequestStatus().includes(RequestStatus.ALL)) +
+    Number(!this.selectedPaymentFilter().includes('all')) +
+    Number(this.canReadRequestSection('informed') && !this.selectedInformedFilter().includes('all'))
   );
   filterWord = signal<string>('');
   requestStatusOptions = [
@@ -106,10 +106,15 @@ export class RetreatView implements OnInit, OnDestroy {
     { label: 'Sin informar', value: 'no' },
   ];
 
+  normalizeFilterSelection<T extends string>(values: T[], previous: T[], all: T): T[] {
+    if (!values.length || (values.includes(all) && !previous.includes(all))) return [all];
+    return values.filter(value => value !== all);
+  }
+
   clearFilters(): void {
-    this.selectedRequestStatus.set(RequestStatus.ALL);
-    this.selectedPaymentFilter.set('all');
-    this.selectedInformedFilter.set('all');
+    this.selectedRequestStatus.set([RequestStatus.ALL]);
+    this.selectedPaymentFilter.set(['all']);
+    this.selectedInformedFilter.set(['all']);
   }
 
   getPaymentStatus(request: RequestClass): 'none' | 'paid' | 'partial' | 'complete' {
