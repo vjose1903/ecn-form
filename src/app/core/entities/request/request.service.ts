@@ -626,7 +626,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
       const cityId = this.authService.activeCityId() || currentUser.city;
       const historySnapshot = await getDocs(collection(this.firestore, `city/${cityId}/requests/${requestId}/history`));
 
-      return historySnapshot.docs
+      const history = historySnapshot.docs
         .map(historyDoc => {
           const data = historyDoc.data() as Omit<RequestHistoryI, 'id' | 'happened_at'> & { happened_at?: any };
 
@@ -635,8 +635,18 @@ export class RequestService extends FirebaseRequest<RequestI> {
             ...data,
             happened_at: data.happened_at ? fun.convertFirebaseTimestamp(data.happened_at) : null,
           } as RequestHistoryI;
-        })
-        .sort((a, b) => new Date(b.happened_at || 0).getTime() - new Date(a.happened_at || 0).getTime());
+        });
+      const currentUid = currentUser.uid;
+      if (history.some(event => event.actor_uid === currentUid && event.actor_name === currentUid)) {
+        const profile = await getDoc(doc(this.firestore, `user/${currentUid}`));
+        const actorName = String(profile.data()?.['display_name'] ?? this.authService.firebaseUser()?.displayName ?? '').trim();
+        if (actorName && actorName !== currentUid) {
+          for (const event of history) {
+            if (event.actor_uid === currentUid && event.actor_name === currentUid) event.actor_name = actorName;
+          }
+        }
+      }
+      return history.sort((a, b) => new Date(b.happened_at || 0).getTime() - new Date(a.happened_at || 0).getTime());
     } catch (error) {
       console.error('Error al obtener historial de la solicitud:', error);
       Ss.toastService.error({
