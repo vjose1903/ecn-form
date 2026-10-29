@@ -190,6 +190,32 @@
           </div>
         }
       </div>
+      <p-dialog
+        header="Configuración de devoluciones"
+        [(visible)]="refundPolicyDialogVisible"
+        [modal]="true"
+        [draggable]="false"
+        [resizable]="false"
+        appendTo="body"
+        [style]="{ width: 'min(94vw, 42rem)' }"
+        [breakpoints]="{ '640px': '96vw' }">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <div class="relative" [id]="FormFieldId.refund_retention_days_before_retreat">
+            <label class="font-bold" [for]="FormFieldId.refund_retention_days_before_retreat + '_control'">Anticipación para retención (días)</label>
+            <p-inputnumber [formControlName]="FormControlName.refund_retention_days_before_retreat" [inputId]="FormFieldId.refund_retention_days_before_retreat + '_control'" [min]="0" [max]="365" [useGrouping]="false" styleClass="w-full" />
+            <small class="text-slate-500">Al archivar dentro de este plazo, se aplica el porcentaje no reembolsable.</small>
+            <form-error-msg [control]="form.get(FormControlName.refund_retention_days_before_retreat)" />
+          </div>
+          <div class="relative" [id]="FormFieldId.non_refundable_percentage">
+            <label class="font-bold" [for]="FormFieldId.non_refundable_percentage + '_control'">Porcentaje no reembolsable</label>
+            <p-inputnumber [formControlName]="FormControlName.non_refundable_percentage" [inputId]="FormFieldId.non_refundable_percentage + '_control'" [min]="0" [max]="100" suffix="%" [maxFractionDigits]="2" styleClass="w-full" />
+            <form-error-msg [control]="form.get(FormControlName.non_refundable_percentage)" />
+          </div>
+        </div>
+        <ng-template pTemplate="footer">
+          <p-button type="button" label="Listo" icon="pi pi-check" (onClick)="refundPolicyDialogVisible = false" />
+        </ng-template>
+      </p-dialog>
     </form>
     <!-- Botones fijos en la parte inferior -->
     <div class="flex justify-end gap-3">

@@ -21,6 +21,21 @@ export interface RequestI {
   action: RequestAction;
   archived_retreat_id?: string;
   archived_at?: Date | string | null;
+  payments_summary?: RequestPaymentsSummaryI;
+}
+
+export interface RequestPaymentsSummaryI {
+  total_paid?: number;
+  refund_required?: boolean;
+  refund_status?: 'pending' | 'partial' | 'completed' | 'not_required';
+  refund_due_amount?: number;
+  refund_total_paid?: number;
+  refund_retained_amount?: number;
+  refund_retention_days_before_retreat?: number;
+  refund_non_refundable_percentage?: number;
+  refund_recorded_total?: number;
+  refund_updated_at?: Date | string | null;
+  refund_updated_by?: string;
 }
 
 export interface PreRetreatPaymentI {
@@ -45,6 +60,9 @@ export enum RequestAction {
   DESARCHIVED = 'desarchived',
   TRANSFERRED = 'transferred',
   INFORMATION_CONFIRMED = 'information_confirmed',
+  REFUND_PENDING = 'refund_pending',
+  REFUND_RETENTION_APPLIED = 'refund_retention_applied',
+  REFUND_RECORDED = 'refund_recorded',
 }
 
 export enum CoupleType {
@@ -130,6 +148,10 @@ export interface RequestHistoryI {
   receipt_url?: string;
   receipt_path?: string;
   receipt_name?: string;
+  refund_id?: string;
+  refund_amount?: number;
+  refund_retained_amount?: number;
+  refund_date?: Date | string | null;
   payment_id?: string;
   deletion_pending?: boolean;
   retreat_label?: string;

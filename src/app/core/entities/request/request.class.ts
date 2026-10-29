@@ -1,4 +1,4 @@
-import { RequestAction, RequestI, CoupleI, PreRetreatPaymentI, RequestStatus, RequestStatusInfo } from './request.model';
+import { RequestAction, RequestI, CoupleI, PreRetreatPaymentI, RequestPaymentsSummaryI, RequestStatus, RequestStatusInfo } from './request.model';
 import { Ss } from '@core/services/singleton.service';
 import { RequestService } from './request.service';
 import { RetreatClass } from '../retreat/retreat.class';
@@ -32,6 +32,7 @@ export class RequestClass {
   is_informado = false;
   isConfirmed = false;
   pre_retreat_payments: PreRetreatPaymentI[] = [];
+  payments_summary: RequestPaymentsSummaryI = {};
 
   // Propiedades computadas para optimizar el rendimiento
   private _displayDatingPeriod: string | null = null;
@@ -92,6 +93,9 @@ export class RequestClass {
       [RequestAction.DESARCHIVED]: 'Desarchivada',
       [RequestAction.TRANSFERRED]: 'Transferida',
       [RequestAction.INFORMATION_CONFIRMED]: 'Datos confirmados',
+      [RequestAction.REFUND_PENDING]: 'Devolución pendiente',
+      [RequestAction.REFUND_RETENTION_APPLIED]: 'Retención aplicada',
+      [RequestAction.REFUND_RECORDED]: 'Devolución registrada',
     };
 
     return labels[this.action] ?? 'Sin acción';
@@ -219,6 +223,7 @@ export class RequestClass {
       ...payment,
       payment_date: fun.convertFirebaseTimestamp(payment.payment_date) || payment.payment_date,
     }));
+    this.payments_summary = request.payments_summary ?? {};
   }
 
   private initializeCouple(couple?: CoupleI | null): CoupleI {
@@ -285,6 +290,7 @@ export class RequestClass {
         ...payment,
         payment_date: new Date(payment.payment_date),
       })),
+      payments_summary: this.payments_summary,
       archived_retreat_id: this.archived_retreat_id || undefined,
       archived_at: this.archived_at ? new Date(this.archived_at) : null,
     };

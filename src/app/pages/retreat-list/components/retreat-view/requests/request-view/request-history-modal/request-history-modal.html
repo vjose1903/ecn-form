@@ -29,7 +29,7 @@
               <i class="pi pi-clock" aria-hidden="true"></i>
               <span class="history-card__date-label">Registrado:</span> {{ formatHappenedAt(item.happened_at) }}
             </span>
-            @if (isPaymentEvent(item) || canRevertInformation(item)) {
+        @if ((isPaymentEvent(item) && !isRefundEvent(item)) || canRevertInformation(item)) {
             <p-button
               [icon]="isPaymentEvent(item) ? 'pi pi-trash' : 'pi pi-undo'"
               [pTooltip]="isPaymentEvent(item) ? 'Eliminar pago' : 'Revertir informado'"
@@ -73,6 +73,14 @@
           }
           @if (item.deletion_pending) { <small class="history-card__pending-delete">Eliminación pendiente; vuelve a intentarlo.</small> }
         </div>
+        } @else if (isRefundEvent(item)) {
+          <div class="history-payment-layout">
+            <div class="history-payment-value"><i class="pi {{ isRefundRetentionEvent(item) ? 'pi-lock' : 'pi-replay' }}" aria-hidden="true"></i><span><small>{{ isRefundRetentionEvent(item) ? 'Monto retenido' : isRefundPendingEvent(item) ? 'Monto a devolver' : 'Monto devuelto' }}</small><strong>{{ formatPaymentAmount(item) }}</strong></span></div>
+            <div class="history-payment-value"><i class="pi pi-calendar" aria-hidden="true"></i><span><small>{{ isRefundRetentionEvent(item) ? 'Fecha de aplicación' : isRefundPendingEvent(item) ? 'Fecha de detección' : 'Fecha de devolución' }}</small><strong>{{ getChangeValue(item, isRefundRetentionEvent(item) ? 'Fecha de aplicación' : isRefundPendingEvent(item) ? 'Fecha de detección' : 'Fecha de devolución') }}</strong></span></div>
+            @if (item.receipt_path) {
+              <button class="history-receipt-preview" type="button" (click)="showReceipt(item)"><i class="pi pi-image" aria-hidden="true"></i><span>Ver recibo</span></button>
+            }
+          </div>
         } @else {
         @if (item.message) {
         <p class="history-card__message">{{ item.message }}</p>

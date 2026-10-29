@@ -10,7 +10,11 @@
     <h4>Registro</h4>
     <article class="retreat-stats__item retreat-stats__item--total">
       <i class="pi pi-users" aria-hidden="true"></i>
-      <div><span>Parejas registradas</span><strong>{{ requests().length }}</strong></div>
+      <div><span>Parejas registradas</span>@if (loading()) { <span class="retreat-stats__skeleton retreat-stats__skeleton--count" aria-hidden="true"></span> } @else { <strong>{{ requests().length }}</strong> }</div>
+    </article>
+    <article class="retreat-stats__item retreat-stats__item--archived">
+      <i class="pi pi-inbox" aria-hidden="true"></i>
+      <div><span>Solicitudes archivadas</span>@if (loading()) { <span class="retreat-stats__skeleton retreat-stats__skeleton--count" aria-hidden="true"></span> } @else { <strong>{{ archivedCount() }}</strong> }</div>
     </article>
   </section>
 
@@ -20,11 +24,11 @@
     <div class="retreat-stats__grid">
       <article class="retreat-stats__item retreat-stats__item--informed">
         <i class="pi pi-check-circle" aria-hidden="true"></i>
-        <div><span>Informadas</span><strong>{{ stats().informed }}</strong></div>
+        <div><span>Informadas</span>@if (loading()) { <span class="retreat-stats__skeleton retreat-stats__skeleton--count" aria-hidden="true"></span> } @else { <strong>{{ stats().informed }}</strong> }</div>
       </article>
       <article class="retreat-stats__item retreat-stats__item--uninformed">
         <i class="pi pi-bell-slash" aria-hidden="true"></i>
-        <div><span>Sin informar</span><strong>{{ requests().length - stats().informed }}</strong></div>
+        <div><span>Sin informar</span>@if (loading()) { <span class="retreat-stats__skeleton retreat-stats__skeleton--count" aria-hidden="true"></span> } @else { <strong>{{ requests().length - stats().informed }}</strong> }</div>
       </article>
     </div>
   </section>
@@ -34,15 +38,27 @@
     <h4>Pagos</h4>
     <article class="retreat-stats__item retreat-stats__item--paid retreat-stats__item--featured">
       <i class="pi pi-wallet" aria-hidden="true"></i>
-      <div><span>Total recibido</span><strong>{{ formatAmount(stats().amountPaid) }}</strong>
-        <small>{{ stats().paid }} pareja{{ stats().paid === 1 ? '' : 's' }} con pagos</small>
+      <div><span>Total recibido</span>@if (loading()) { <span class="retreat-stats__skeleton retreat-stats__skeleton--amount" aria-hidden="true"></span><span class="retreat-stats__skeleton retreat-stats__skeleton--caption" aria-hidden="true"></span> } @else { <strong>{{ formatAmount(paymentSummary().receivedTotal) }}</strong>
+        <small>{{ paymentSummary().paidCouples }} pareja{{ paymentSummary().paidCouples === 1 ? '' : 's' }} con pagos</small> }
       </div>
       <button class="retreat-stats__details" type="button" aria-label="Ver detalle de pagos recibidos" (click)="openPayments()">
         <i class="pi pi-arrow-up-right" aria-hidden="true"></i>
       </button>
     </article>
+    @if (!loading() && paymentSummary().hasRetentionOrPendingRefund) {
+      <div class="retreat-stats__refund-summary" aria-label="Resumen de retenciones y devoluciones">
+        <div class="retreat-stats__refund-metrics">
+          <span class="retreat-stats__refund-metric--retained"><small>Retenido</small><strong>{{ formatAmount(paymentSummary().retainedTotal) }}</strong></span>
+          <span class="retreat-stats__refund-metric--returned"><small>Devuelto</small><strong>{{ formatAmount(paymentSummary().returnedTotal) }}</strong></span>
+          <span class="retreat-stats__refund-metric--pending"><small>Por devolver</small><strong>{{ formatAmount(paymentSummary().pendingRefundAmount) }}</strong></span>
+        </div>
+      </div>
+    }
     <div class="retreat-stats__grid retreat-stats__grid--payments">
-    @if (amountPerPerson() != null && amountPerPerson()! > 0) {
+    @if (loading()) {
+      <article class="retreat-stats__item retreat-stats__item--complete"><i class="pi pi-check-circle" aria-hidden="true"></i><div><span>Pagos completos</span><span class="retreat-stats__skeleton retreat-stats__skeleton--count" aria-hidden="true"></span></div></article>
+      <article class="retreat-stats__item retreat-stats__item--partial"><i class="pi pi-clock" aria-hidden="true"></i><div><span>Pagos parciales</span><span class="retreat-stats__skeleton retreat-stats__skeleton--count" aria-hidden="true"></span></div></article>
+    } @else if (amountPerPerson() != null && amountPerPerson()! > 0) {
       <article class="retreat-stats__item retreat-stats__item--complete">
         <i class="pi pi-check-circle" aria-hidden="true"></i>
         <div><span>Pagos completos</span><strong>{{ stats().complete }}</strong></div>
@@ -54,7 +70,7 @@
     }
     <article class="retreat-stats__item retreat-stats__item--unpaid">
       <i class="pi pi-credit-card" aria-hidden="true"></i>
-      <div><span>Sin pagos</span><strong>{{ stats().unpaid }}</strong></div>
+      <div><span>Sin pagos</span>@if (loading()) { <span class="retreat-stats__skeleton retreat-stats__skeleton--count" aria-hidden="true"></span> } @else { <strong>{{ stats().unpaid }}</strong> }</div>
     </article>
     </div>
   </section>

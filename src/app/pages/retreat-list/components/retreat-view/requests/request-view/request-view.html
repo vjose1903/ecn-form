@@ -19,6 +19,21 @@
       <div class="request-summary__item">
         <view-item title="Fecha de archivado" icon="pi pi-inbox" [content]="req.displayArchivedAt" />
       </div>
+      @if ((req.payments_summary.refund_due_amount || 0) - (req.payments_summary.refund_recorded_total || 0) > 0) {
+        <div class="request-summary__item">
+          <view-item title="Devolución pendiente" icon="pi pi-replay" [content]="formatRefundAmount((req.payments_summary.refund_due_amount || 0) - (req.payments_summary.refund_recorded_total || 0))" />
+        </div>
+      }
+      @if ((req.payments_summary.refund_retained_amount || 0) > 0) {
+        <div class="request-summary__item">
+          <view-item title="Monto no reembolsable" icon="pi pi-lock" [content]="formatRefundAmount(req.payments_summary.refund_retained_amount || 0)" />
+        </div>
+      }
+      @if ((req.payments_summary.refund_recorded_total || 0) > 0) {
+        <div class="request-summary__item">
+          <view-item title="Total devuelto" icon="pi pi-money-bill" [content]="formatRefundAmount(req.payments_summary.refund_recorded_total || 0)" />
+        </div>
+      }
     }
     }
     @if (req.canReadDetailSection('relationship')) {

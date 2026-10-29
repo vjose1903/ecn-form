@@ -24,6 +24,10 @@ const archivedRequestSharedStyles = `
   .archived-request-name { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .archived-request-retreat { margin: 0; color: #26354c; font-size: .7rem; line-height: 1.4; overflow-wrap: anywhere; }
   .archived-request-date { display: flex; align-items: center; gap: .7rem; color: #bc1020; font-size: .68rem; font-weight: 700; }
+  .archived-request-statuses { display: inline-flex; align-items: center; gap: .3rem; }
+  .archived-request-status { display: inline-grid; place-items: center; width: 1.45rem; height: 1.45rem; flex: 0 0 1.45rem; border: 1px solid; border-radius: .45rem; font-size: .64rem; }
+  .archived-request-status--refund { border-color: #fed7aa; background: #fff7ed; color: #c2410c; }
+  .archived-request-status--retained { border-color: #bbf7d0; background: #f0fdf4; color: #15803d; }
   .archived-request-selection { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; flex: 0 0 1.8rem; border-radius: 50%; background: #fff; color: #64748b; }
   .archived-request-selection--selected { color: #168044; }
   .archived-request--selected { outline: 2px solid #35c875; outline-offset: -2px; }
@@ -85,6 +89,15 @@ class ArchivedRequestItemBase implements OnDestroy {
 
   ngOnDestroy(): void {
     this.clearHoldTimer();
+  }
+
+  pendingRefundAmount(request: RequestClass): number {
+    const summary = request.payments_summary;
+    return Math.max(0, Number(summary.refund_due_amount ?? 0) - Number(summary.refund_recorded_total ?? 0));
+  }
+
+  retainedAmount(request: RequestClass): number {
+    return Math.max(0, Number(request.payments_summary.refund_retained_amount ?? 0));
   }
 
   private clearHoldTimer(): void {
@@ -213,9 +226,12 @@ export class ArchivedRequestListItem extends ArchivedRequestItemBase {}
           }
         </div>
 
-        <div class="archived-request-grid__footer">
-          <span class="archived-request-grid__footer-text">Abrir solicitud</span>
-          <i class="pi pi-arrow-up-right archived-request-grid__footer-icon"></i>
+        <div class="archived-request-grid__footer" [class.archived-request-grid__footer--with-status]="pendingRefundAmount(item.request) > 0 || retainedAmount(item.request) > 0">
+          <span class="archived-request-statuses">
+            @if (pendingRefundAmount(item.request) > 0) { <span class="archived-request-status archived-request-status--refund" title="Devolución pendiente" aria-label="Devolución pendiente"><i class="pi pi-wallet" aria-hidden="true"></i></span> }
+            @if (retainedAmount(item.request) > 0) { <span class="archived-request-status archived-request-status--retained" title="Pago retenido" aria-label="Pago retenido"><i class="pi pi-money-bill" aria-hidden="true"></i></span> }
+          </span>
+          <span class="archived-request-grid__footer-action"><span class="archived-request-grid__footer-text">Abrir solicitud</span><i class="pi pi-arrow-up-right archived-request-grid__footer-icon"></i></span>
         </div>
       </article>
     </button>
@@ -250,12 +266,13 @@ export class ArchivedRequestListItem extends ArchivedRequestItemBase {}
         border-radius: 50%; background: #fff0f2; color: #ed001b; font-size: 1.15rem;
       }
       .archived-request-grid__footer {
-        display: flex; align-items: center; justify-content: center; justify-self: end;
-        gap: .85rem; margin: .25rem 1rem 1rem; padding: .65rem 1rem;
-        min-height: 2.65rem; border-radius: .8rem; background: #870c1b; color: #fff;
-        font-size: .8rem;
+        display: flex; align-items: center; justify-content: space-between; justify-self: stretch;
+        gap: .85rem; margin: .25rem 1rem 1rem; padding: 0;
+        min-height: 2.65rem; color: #fff; font-size: .8rem;
       }
-      .archived-request-button:hover .archived-request-grid__footer { background: #700917; }
+      .archived-request-grid__footer--with-status { justify-content: space-between; }
+      .archived-request-grid__footer-action { display: inline-flex; align-items: center; gap: .85rem; min-height: 2.65rem; padding: .65rem 1rem; border-radius: .8rem; background: #870c1b; }
+      .archived-request-button:hover .archived-request-grid__footer-action { background: #700917; }
       @container archived-request (max-width: 300px) {
         .archived-request-grid__hero { padding: 1rem; }
         .archived-request-grid__title { font-size: .8rem; }

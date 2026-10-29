@@ -94,6 +94,18 @@
   font-size: .65rem;
 }
 
+.retreat-stats__skeleton {
+  display: block;
+  border-radius: .35rem;
+  background: linear-gradient(90deg, #dce4ee 25%, #eef2f7 50%, #dce4ee 75%);
+  background-size: 200% 100%;
+  animation: retreat-stats-skeleton 1.2s ease-in-out infinite;
+}
+.retreat-stats__skeleton--count { width: 2.2rem; height: 1rem; }
+.retreat-stats__skeleton--amount { width: 7.5rem; height: 1.2rem; }
+.retreat-stats__skeleton--caption { width: 6rem; height: .7rem; margin-top: .1rem; }
+@keyframes retreat-stats-skeleton { to { background-position: -200% 0; } }
+
 .retreat-stats__item--featured {
   position: relative;
   margin-bottom: .35rem;
@@ -112,6 +124,7 @@
 }
 
 .retreat-stats__item--total { background: #eff6ff; }
+.retreat-stats__item--archived { margin-top: .3rem; background: #fff7ed; }
 .retreat-stats__item--informed { background: #ccfbf1; }
 .retreat-stats__item--uninformed { background: #fff4cc; }
 .retreat-stats__item--paid { background: #fff7ed; }
@@ -119,11 +132,35 @@
 .retreat-stats__item--partial { background: #f1f5f9; }
 .retreat-stats__item--unpaid { background: #fef2f2; }
 .retreat-stats__item--informed > i { color: #0f766e; }
+.retreat-stats__item--archived > i { color: #c2410c; }
 .retreat-stats__item--uninformed > i { color: #9a6b00; }
 .retreat-stats__item--paid > i { color: #c2410c; }
 .retreat-stats__item--complete > i { color: #15803d; }
 .retreat-stats__item--partial > i { color: #64748b; }
 .retreat-stats__item--unpaid > i { color: #b91c1c; }
+
+.retreat-stats__refund-summary {
+  display: grid;
+  gap: .35rem;
+  margin: .35rem 0;
+  padding: .45rem .55rem;
+  border: 1px solid #e2e8f0;
+  border-radius: .7rem;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: .64rem;
+}
+.retreat-stats__refund-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .35rem;
+}
+.retreat-stats__refund-metrics span { display: grid; gap: .08rem; min-width: 0; }
+.retreat-stats__refund-metrics small { color: #64748b; font-size: .58rem; line-height: 1.1; }
+.retreat-stats__refund-metrics strong { color: #334155; }
+.retreat-stats__refund-metric--retained strong { color: #15803d; }
+.retreat-stats__refund-metric--returned strong { color: #0f766e; }
+.retreat-stats__refund-metric--pending strong { color: #b45309; }
 
 .retreat-stats__details {
   position: absolute;
