@@ -25,6 +25,7 @@ import { RequestHistoryModal } from './request-history-modal/request-history-mod
 import { TransferRequestModal } from './transfer-request-modal/transfer-request-modal';
 import { PreRetreatPaymentModal } from './pre-retreat-payment-modal/pre-retreat-payment-modal';
 import { ConfirmRequestInformationModal } from './confirm-request-information-modal/confirm-request-information-modal';
+import { RefundModal } from './refund-modal/refund-modal';
 
 @Component({
   selector: 'app-request-view',
@@ -41,6 +42,10 @@ export class RequestView implements OnInit, AfterViewInit {
 
   private destroyRef = inject(DestroyRef);
   recentAction = signal('Cargando…');
+
+  formatRefundAmount(value: number): string {
+    return new Intl.NumberFormat('es-DO', {style: 'currency', currency: 'DOP', maximumFractionDigits: 2}).format(value);
+  }
 
   loading = signal(false);
   isArchivedView = signal(false);
@@ -61,6 +66,14 @@ export class RequestView implements OnInit, AfterViewInit {
     this.actionsOnly = Boolean(this.config.data.actionsOnly);
     this.actions = this.buildActions();
     const request = this.request();
+    if (request && this.isArchivedView()) {
+      void this.requestService.getPaymentSummariesForRequests([request.id]).then(summaries => {
+        const summary = summaries[request.id];
+        if (!summary) return;
+        request.payments_summary = summary;
+        this.actions = this.buildActions();
+      }).catch(error => console.error('No se pudo cargar el resumen de devolución de la solicitud:', JSON.stringify(error instanceof Error ? {name: error.name, message: error.message} : error)));
+    }
     if (!this.actionsOnly && request) {
       this.requestService.watchLatestRequestHistory(request.id)
         .pipe(takeUntilDestroyed(this.destroyRef))
@@ -132,6 +145,7 @@ export class RequestView implements OnInit, AfterViewInit {
         {
           label: 'Acciones',
           items: [
+            { label: 'Registrar devolución', icon: 'pi pi-wallet', visible: this.pendingRefundAmount() > 0, command: () => this.openRefundModal() },
             { label: 'Transferir solicitud', icon: 'pi pi-send', command: () => this.openTransferModal() },
             { label: 'Desarchivar solicitud', icon: 'pi pi-replay', command: () => this.unarchiveRequest() },
           ],
@@ -179,6 +193,24 @@ export class RequestView implements OnInit, AfterViewInit {
       },
       exportActions,
     ];
+  }
+
+  private pendingRefundAmount(): number {
+    const summary = this.request()?.payments_summary;
+    return Math.max(0, Number(summary?.refund_due_amount ?? 0) - Number(summary?.refund_recorded_total ?? 0));
+  }
+
+  openRefundModal(): void {
+    const request = this.request();
+    if (!request || !this.retreat || this.pendingRefundAmount() <= 0) return;
+    const dialogRef = Ss.dialogService?.open(RefundModal, {
+      header: 'Registrar devolución', width: 'min(34rem, 94vw)', modal: true, appendTo: 'body',
+      draggable: false, resizable: false, closable: true, focusOnShow: false,
+      data: {request, retreat: this.retreat}, breakpoints: {'640px': '95vw'},
+    });
+    dialogRef?.onClose.subscribe((saved?: boolean) => {
+      if (saved) this.ref.close({refundRecorded: true, requestId: request.id});
+    });
   }
 
   private canShowPreRetreat(): boolean {

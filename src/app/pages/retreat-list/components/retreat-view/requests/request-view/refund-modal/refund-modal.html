@@ -1,0 +1,54 @@
+<div class="refund-modal">
+  <div class="refund-modal__balance">
+    <i class="pi pi-wallet" aria-hidden="true"></i>
+    <span><small>Saldo pendiente de devolver</small><strong>{{ pending | currency:'DOP':'symbol':'1.2-2':'es-DO' }}</strong></span>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="refund-modal__field">
+      <label for="refund-date">Fecha de devolución</label>
+      <p-datepicker
+        inputId="refund-date"
+        inputStyleClass="w-full"
+        formControlName="refund_date"
+        dateFormat="dd/mm/yy"
+        [maxDate]="today"
+        [showIcon]="true"
+        appendTo="body" />
+    </div>
+
+    <div class="refund-modal__field">
+      <label for="refund-amount">Monto devuelto</label>
+      <p-inputnumber
+        inputId="refund-amount"
+        inputStyleClass="w-full"
+        formControlName="amount"
+        mode="currency"
+        currency="DOP"
+        locale="es-DO"
+        [min]="0.01"
+        [max]="pending"
+        [minFractionDigits]="0"
+        [maxFractionDigits]="0" />
+    </div>
+
+    <div class="refund-modal__field">
+      <label for="refund-receipt">Imagen del recibo <small>(opcional)</small></label>
+      <div class="refund-modal__dropzone" [class.refund-modal__dropzone--preview]="receiptPreviewUrl()">
+        <input #receiptInput id="refund-receipt" type="file" accept="image/jpeg,image/png,image/webp,image/heic" (change)="selectReceipt($event)" [attr.aria-label]="receiptPreviewUrl() ? 'Cambiar imagen del recibo' : 'Seleccionar imagen del recibo'" />
+        @if (receiptPreviewUrl(); as previewUrl) {
+          <img [src]="previewUrl" [alt]="receipt()?.name || 'Vista previa del recibo de devolución'" />
+          <span>Cambiar imagen</span>
+        } @else {
+          <span><i class="pi pi-upload" aria-hidden="true"></i>Seleccionar o arrastrar imagen</span>
+        }
+      </div>
+      <small>Imagen de hasta 5 MB.</small>
+    </div>
+
+    <footer>
+      <p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" [disabled]="loading()" (onClick)="close()" />
+      <p-button type="submit" label="Registrar devolución" icon="pi pi-check" [loading]="loading()" [disabled]="form.invalid || loading()" />
+    </footer>
+  </form>
+</div>

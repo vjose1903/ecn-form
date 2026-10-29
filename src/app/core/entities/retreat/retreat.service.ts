@@ -12,7 +12,7 @@ import { UserService } from '../user/user.service';
 import { RequestClass } from '../request/request.class';
 import { RequestService } from '../request/request.service';
 import { RetreatHomeService } from '../retreat-home/retreat-home.service';
-import { collection, deleteDoc, doc, getCountFromServer, getDoc, getDocs, query, setDoc, updateDoc, where } from '@angular/fire/firestore';
+import { collection, deleteDoc, doc, getCountFromServer, getDoc, getDocs, query, runTransaction, setDoc, updateDoc, where } from '@angular/fire/firestore';
 
 @Injectable({
   providedIn: 'root',
@@ -123,13 +123,13 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
       const retreatList = await this.readCityRetreats(cityId, onlyActive ?? false);
       await this.attachRetreatHomeData(retreatList);
       await Promise.all(retreatList.map(async retreat => {
-        const requests = query(
-          collection(Ss.firestore, `city/${cityId}/requests`),
-          where('retreat_id', '==', retreat.id),
-          where('is_archived', '==', false)
-        );
+        const requests = collection(Ss.firestore, `city/${cityId}/requests`);
         try {
-          retreat.request_count = (await getCountFromServer(requests)).data().count;
+          const [allRequests, archivedRequests] = await Promise.all([
+            getCountFromServer(query(requests, where('retreat_id', '==', retreat.id))),
+            getCountFromServer(query(requests, where('retreat_id', '==', retreat.id), where('is_archived', '==', true))),
+          ]);
+          retreat.request_count = Math.max(0, allRequests.data().count - archivedRequests.data().count);
         } catch (error) {
           if (!['permission-denied', 'firestore/permission-denied'].includes((error as {code?: string})?.code ?? '')) throw error;
         }
@@ -253,11 +253,17 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
       const cityId = this.authService.activeCityId() || currentUser!.city;
       if (!cityId) throw new Error('El usuario no tiene una ciudad asignada');
       const retreatRef = doc(Ss.firestore, `city/${cityId}/${this._collectionName}/${retreatId}`);
-      if ((await getDoc(retreatRef)).exists()) {
-        throw new Error(`Ya existe un retiro con el ID ${retreatId}`);
-      }
+      const policyRef = doc(Ss.firestore, `city/${cityId}/settings/retreat_refund_policy`);
       const { id: _id, ...data } = newRetreat;
-      await setDoc(retreatRef, { ...data, city_id: cityId, user_id: currentUser!.id });
+      await runTransaction(Ss.firestore, async transaction => {
+        const [existingRetreat, existingPolicy] = await Promise.all([transaction.get(retreatRef), transaction.get(policyRef)]);
+        if (existingRetreat.exists()) throw new Error(`Ya existe un retiro con el ID ${retreatId}`);
+        transaction.set(retreatRef, { ...data, city_id: cityId, user_id: currentUser!.id });
+        if (!existingPolicy.exists()) transaction.set(policyRef, {
+          refund_retention_days_before_retreat: newRetreat.refund_retention_days_before_retreat ?? 0,
+          non_refundable_percentage: newRetreat.non_refundable_percentage ?? 0,
+        });
+      });
       const snapshot = await getDoc(retreatRef);
       const result = { ...snapshot.data(), id: snapshot.id } as RetreatI;
 
@@ -272,6 +278,17 @@ export class RetreatService extends FirebaseRequest<RetreatI> {
       Ss.toastService.error({ message: 'Error al crear el retiro', title: 'Error' });
       throw error;
     }
+  }
+
+  async getRefundPolicyDefaults(): Promise<{refund_retention_days_before_retreat: number; non_refundable_percentage: number}> {
+    const user = this.authService.current_user();
+    const cityId = this.authService.activeCityId() || user?.city;
+    if (!cityId) return {refund_retention_days_before_retreat: 0, non_refundable_percentage: 0};
+    const snapshot = await getDoc(doc(Ss.firestore, `city/${cityId}/settings/retreat_refund_policy`));
+    return {
+      refund_retention_days_before_retreat: Number(snapshot.get('refund_retention_days_before_retreat') ?? 0),
+      non_refundable_percentage: Number(snapshot.get('non_refundable_percentage') ?? 0),
+    };
   }
 
   private buildRetreatId(retreat: RetreatI): string {

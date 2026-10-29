@@ -9,9 +9,11 @@ city/{cityId}
   retreat_homes/{homeId}                 # asignación a la casa global
   request_identity_keys/{hash}            # reservas de contacto/identidad por retiro
   retreat/{retreatId}
+  settings/retreat_refund_policy           # valores iniciales para próximos retiros
   requests/{requestId}                    # datos resumidos; incluye retreat_id actual
     details/{sectionId}                   # grupos de datos protegidos por campo
     payments/{paymentId}
+    refunds/{refundId}
     history/{eventId}
   audit_logs/{auditId}
 
@@ -49,6 +51,7 @@ Los IDs incluyen datos operativos reconocibles, como el número de retiro, fecha
 - En formularios, si falta permiso para listar una entidad relacionada, se conserva visible la relación ya guardada y su selector queda bloqueado con un aviso; no se debe borrar ni sustituir el valor al guardar otros campos. Las acciones que requieren elegir otra entidad quedan bloqueadas hasta que el usuario pueda consultar sus opciones.
 - En casas de retiro, `retreat_homes.assign` habilita asignar al usuario autenticado y `retreat_homes.unassign` habilita desasignar; los miembros quedan limitados a su ciudad activa y las reglas de Firestore validan cada operación. El superadmin conserva la administración entre ciudades.
 - Las imágenes de las casas de retiro se administran con `retreat_homes.create` o `retreat_homes.update`; no existe un recurso independiente `files` para los roles. Los recibos de pagos se rigen por los permisos de `payments`.
+- La política de retención se guarda en `settings/retreat_refund_policy` y se copia a cada retiro nuevo; cada retiro mantiene su propia configuración. Al archivar, la función calcula en servidor el monto pagado, la retención por días y porcentaje sobre el monto configurado para la pareja (limitada al total pagado) y el saldo reembolsable. Los acumulados viven en `details/payments_summary`; cada devolución parcial o completa se guarda en `refunds/{refundId}` y crea un evento `refund_recorded` con actor, fecha, monto y recibo opcional. La lectura de estos datos requiere permiso de lectura de pagos.
 - Las reglas deniegan por defecto, restringen cada lectura a la ciudad y separan permisos de listado y lectura. Las escrituras de pagos solo pasan por callables para conservar juntos el pago, su resumen, el historial y el recibo.
 - Los cambios de cuenta y rol pasan por Cloud Functions. Los cambios de documentos de ciudad generan eventos de auditoría con actor, hora de servidor, ruta y diferencias anteriores/nuevas.
 - Los registros de auditoría no son editables por clientes. Los eventos de movimiento del trazo de una solicitud conservan `actor_uid` y `actor_name` del usuario autenticado; la creación pública de solicitudes no registra actor. Las identidades `service_account` deben incluir el actor original en el evento de negocio cuando la operación venga del backend.

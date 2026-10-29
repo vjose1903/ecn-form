@@ -15,6 +15,7 @@ import { TagModule } from 'primeng/tag';
 import { ExcelService } from '@pages/retreat-list/utils/excel.service';
 import { PdfService } from '@pages/retreat-list/utils/pdf.service';
 import { ReportType } from '@pages/retreat-list/utils/export.utils';
+import { RefundModal } from '@pages/retreat-list/components/retreat-view/requests/request-view/refund-modal/refund-modal';
 
 type PaymentType = 'Parcial' | 'Completivo' | 'Sin clasificar';
 
@@ -46,15 +47,55 @@ export class RetreatPaymentsModal implements OnInit, OnDestroy {
     { label: 'Exportar a Excel', icon: 'pi pi-file-excel', command: () => this.exportToExcel() },
     { label: 'Exportar a PDF', icon: 'pi pi-file-pdf', command: () => this.exportToPdf() },
   ];
+  private allRequests = signal<RequestClass[]>([]);
+  loadingData = signal(true);
+  readonly loadingRows: RetreatPaymentRow[] = Array.from({length: 4}, (_, index) => ({
+    requestId: `loading-${index}`,
+    brideName: '',
+    groomName: '',
+    searchName: '',
+    paymentDate: new Date(0),
+    amount: 0,
+    registrationTime: 0,
+    originalOrder: index,
+    type: 'Sin clasificar',
+    receipt: {} as PreRetreatPaymentI,
+  }));
   payments = signal<RetreatPaymentRow[]>([]);
   paymentSummary = computed(() => {
-    const accepted = ((this.config.data.requests ?? []) as RequestClass[]).filter(request => request.status === RequestStatus.ACCEPTED);
+    const requests = this.allRequests();
+    const accepted = requests.filter(request => request.status === RequestStatus.ACCEPTED);
+    const countableRequests = requests.filter(request => request.status === RequestStatus.ACCEPTED || request.status === RequestStatus.ARCHIVED);
     const amountPerCouple = Number(this.config.data.amountPerPerson ?? 0) * 2;
-    const paidAmounts = accepted.map(request => (request.pre_retreat_payments ?? []).reduce((sum, payment) => sum + payment.amount, 0));
+    const paidAmounts = countableRequests.map(request => (request.pre_retreat_payments ?? []).reduce((sum, payment) => sum + payment.amount, 0));
     const paid = paidAmounts.filter(amount => amount > 0).length;
     const expectedTotal = accepted.length * amountPerCouple;
-    const receivedTotal = this.total();
+    const paidTotal = this.payments().reduce((sum, payment) => sum + payment.amount, 0);
+    const returnedTotal = requests.reduce((sum, request) => sum + Math.max(0, Number(request.payments_summary.refund_recorded_total ?? 0)), 0);
+    const retainedTotal = requests.reduce((sum, request) => sum + Math.max(0, Number(request.payments_summary.refund_retained_amount ?? 0)), 0);
+    const adjustments = requests.filter(request => request.status === RequestStatus.ARCHIVED).map(request => {
+      const summary = request.payments_summary;
+      const retained = Math.max(0, Number(summary.refund_retained_amount ?? 0));
+      const returned = Math.max(0, Number(summary.refund_recorded_total ?? 0));
+      const due = Math.max(0, Number(summary.refund_due_amount ?? 0));
+      return {
+        requestId: request.id,
+        couple: `${this.firstThreeNames(request.she.full_name)} y ${this.firstThreeNames(request.he.full_name)}`,
+        retained,
+        returned,
+        pending: Math.max(0, due - returned),
+      };
+    }).filter(adjustment => adjustment.retained > 0 || adjustment.returned > 0 || adjustment.pending > 0);
+    const pendingRefundAmount = requests.reduce((sum, request) => {
+      const summary = request.payments_summary;
+      const due = Math.max(0, Number(summary.refund_due_amount ?? 0));
+      const returned = Math.max(0, Number(summary.refund_recorded_total ?? 0));
+      return sum + Math.max(0, due - returned);
+    }, 0);
+    const receivedTotal = Math.max(0, paidTotal - returnedTotal);
     const percentage = expectedTotal > 0 ? receivedTotal / expectedTotal * 100 : 0;
+    const refundProgressPercentage = paidTotal > 0 ? Math.min(100, pendingRefundAmount / paidTotal * 100) : 0;
+    const retainedProgressPercentage = paidTotal > 0 ? Math.min(100, retainedTotal / paidTotal * 100) : 0;
     return {
       expectedTotal,
       outstanding: Math.max(expectedTotal - receivedTotal, 0),
@@ -62,8 +103,16 @@ export class RetreatPaymentsModal implements OnInit, OnDestroy {
       isOverpaid: expectedTotal > 0 && receivedTotal > expectedTotal,
       percentage,
       progressPercentage: Math.min(percentage, 100),
+      pendingRefundAmount,
+      refundProgressPercentage,
+      retainedProgressPercentage,
+      paidTotal,
+      returnedTotal,
+      retainedTotal,
+      receivedTotal,
+      adjustments,
       paid,
-      unpaid: accepted.length - paid,
+      unpaid: countableRequests.length - paid,
       complete: amountPerCouple > 0 ? paidAmounts.filter(amount => amount >= amountPerCouple).length : 0,
       partial: amountPerCouple > 0 ? paidAmounts.filter(amount => amount > 0 && amount < amountPerCouple).length : 0,
     };
@@ -73,7 +122,6 @@ export class RetreatPaymentsModal implements OnInit, OnDestroy {
     const query = this.searchTerm().trim().toLocaleLowerCase();
     return query ? this.payments().filter(payment => payment.searchName.includes(query)) : this.payments();
   });
-  total = signal(0);
   receiptPreview = signal<PreRetreatPaymentI | null>(null);
   receiptPreviewUrl = signal<string | null>(null);
   loadingReceipt = signal(false);
@@ -86,9 +134,63 @@ export class RetreatPaymentsModal implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    const activeRequests = (this.config.data.requests ?? []) as RequestClass[];
+    this.allRequests.set(activeRequests);
+    const retreat = this.config.data.retreat as {id?: string} | undefined;
+    void this.loadArchivedRequests(retreat?.id, activeRequests);
+  }
+
+  private async loadArchivedRequests(retreatId: string | undefined, activeRequests: RequestClass[]): Promise<void> {
+    let requests = activeRequests;
+    if (retreatId) {
+      try {
+        const archivedRequests = await this.requestService.getArchivedRequests({retreatId});
+        requests = [...activeRequests, ...archivedRequests];
+        const summaries = await this.requestService.getPaymentSummariesForRequests(requests.map(request => request.id));
+        requests.forEach(request => {
+          if (summaries[request.id]) request.payments_summary = summaries[request.id] ?? {};
+        });
+        this.allRequests.set(requests);
+      } catch (error) {
+        console.error('No se pudieron cargar las solicitudes archivadas para el resumen de pagos:', JSON.stringify(error instanceof Error ? {name: error.name, message: error.message} : error));
+      }
+    }
+    this.setPaymentRows(requests);
+    this.loadingData.set(false);
+  }
+
+  openRefundModal(requestId: string): void {
+    const request = this.allRequests().find(item => item.id === requestId);
+    const retreat = this.config.data.retreat;
+    if (!request || !retreat) return;
+
+    const dialogRef = Ss.dialogService?.open(RefundModal, {
+      header: 'Registrar devolución', width: 'min(34rem, 94vw)', modal: true, appendTo: 'body',
+      draggable: false, resizable: false, closable: true, focusOnShow: false,
+      data: { request, retreat }, breakpoints: { '640px': '95vw' },
+    });
+    dialogRef?.onClose.subscribe((saved?: boolean) => {
+      if (saved) void this.refreshPaymentSummaries();
+    });
+  }
+
+  private async refreshPaymentSummaries(): Promise<void> {
+    const requests = this.allRequests();
+    try {
+      const summaries = await this.requestService.getPaymentSummariesForRequests(requests.map(request => request.id));
+      requests.forEach(request => {
+        if (summaries[request.id]) request.payments_summary = summaries[request.id] ?? {};
+      });
+      this.allRequests.set([...requests]);
+    } catch (error) {
+      console.error('No se pudieron actualizar las devoluciones del resumen de pagos:', JSON.stringify(error instanceof Error ? {name: error.name, message: error.message} : error));
+    }
+  }
+
+  private setPaymentRows(requests: RequestClass[]): void {
     const amountPerCouple = Number(this.config.data.amountPerPerson ?? 0) * 2;
     let originalOrder = 0;
-    const rows = ((this.config.data.requests ?? []) as RequestClass[]).flatMap(request =>
+    const rows = requests.flatMap(request =>
       (request.pre_retreat_payments ?? []).map((payment: PreRetreatPaymentI) => {
         const idTime = Number(payment.id.split('-')[0]);
         const paymentDate = new Date(payment.payment_date);
@@ -116,7 +218,6 @@ export class RetreatPaymentsModal implements OnInit, OnDestroy {
     }
 
     this.payments.set(rows);
-    this.total.set(rows.reduce((sum, payment) => sum + payment.amount, 0));
   }
 
   formatAmount(amount: number): string {

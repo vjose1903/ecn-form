@@ -79,6 +79,8 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
     if (item.message === 'Pareja marcada como informada') return 'Informada';
     if (item.message === 'Pareja marcada como no informada') return 'No informada';
     if (item.action === RequestAction.INFORMATION_CONFIRMED) return 'Datos confirmados';
+    if (item.action === RequestAction.REFUND_PENDING) return 'Devolución pendiente';
+    if (item.action === RequestAction.REFUND_RETENTION_APPLIED) return 'Retención aplicada';
 
     const labels: Record<RequestAction, string> = {
       [RequestAction.NEW]: 'Nueva',
@@ -87,6 +89,9 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
       [RequestAction.DESARCHIVED]: 'Desarchivada',
       [RequestAction.TRANSFERRED]: 'Transferida',
       [RequestAction.INFORMATION_CONFIRMED]: 'Datos confirmados',
+      [RequestAction.REFUND_PENDING]: 'Devolución pendiente',
+      [RequestAction.REFUND_RETENTION_APPLIED]: 'Retención aplicada',
+      [RequestAction.REFUND_RECORDED]: 'Devolución registrada',
     };
 
     return labels[item.action];
@@ -104,6 +109,9 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
       [RequestAction.DESARCHIVED]: 'success',
       [RequestAction.TRANSFERRED]: 'secondary',
       [RequestAction.INFORMATION_CONFIRMED]: 'success',
+      [RequestAction.REFUND_PENDING]: 'warn',
+      [RequestAction.REFUND_RETENTION_APPLIED]: 'warn',
+      [RequestAction.REFUND_RECORDED]: 'success',
     };
 
     return severities[item.action];
@@ -122,6 +130,9 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
       [RequestAction.DESARCHIVED]: 'history-card--desarchived',
       [RequestAction.TRANSFERRED]: 'history-card--transferred',
       [RequestAction.INFORMATION_CONFIRMED]: 'history-card--confirmed',
+      [RequestAction.REFUND_PENDING]: 'history-card--refund',
+      [RequestAction.REFUND_RETENTION_APPLIED]: 'history-card--refund',
+      [RequestAction.REFUND_RECORDED]: 'history-card--refund',
     };
 
     return classes[item.action];
@@ -133,6 +144,14 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
 
   isPaymentEvent(item: RequestHistoryI): boolean {
     return item.message === 'Pago de pre retiro registrado';
+  }
+
+  isRefundPendingEvent(item: RequestHistoryI): boolean { return item.action === RequestAction.REFUND_PENDING; }
+
+  isRefundRetentionEvent(item: RequestHistoryI): boolean { return item.action === RequestAction.REFUND_RETENTION_APPLIED; }
+
+  isRefundEvent(item: RequestHistoryI): boolean {
+    return item.action === RequestAction.REFUND_PENDING || item.action === RequestAction.REFUND_RETENTION_APPLIED || item.action === RequestAction.REFUND_RECORDED;
   }
 
   canRevertInformation(item: RequestHistoryI): boolean {
@@ -194,6 +213,8 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
   }
 
   getChangeValue(item: RequestHistoryI, label: string): string {
+    if ((label === 'Monto devuelto' || label === 'Monto a devolver' || label === 'Monto retenido') && typeof item.refund_amount === 'number') return String(item.refund_amount);
+    if ((label === 'Fecha de devolución' || label === 'Fecha de detección' || label === 'Fecha de aplicación') && item.refund_date) return this.formatPaymentDate(item.refund_date);
     const change = item.changes?.find((entry): entry is RequestHistoryChangeI => typeof entry !== 'string' && entry.label === label);
     if (label === 'Fecha del pago' && this.isPaymentEvent(item)) {
       const request = this.config.data.request as RequestClass;
@@ -204,7 +225,7 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
   }
 
   formatPaymentAmount(item: RequestHistoryI): string {
-    const value = this.getChangeValue(item, 'Monto');
+    const value = this.getChangeValue(item, this.isRefundRetentionEvent(item) ? 'Monto retenido' : this.isRefundPendingEvent(item) ? 'Monto a devolver' : this.isRefundEvent(item) ? 'Monto devuelto' : 'Monto');
     const amount = Number(value);
     return value !== 'No disponible' && Number.isFinite(amount)
       ? new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(amount)
@@ -212,11 +233,13 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
   }
 
   formatReceiptDialogTitle(item: RequestHistoryI): string {
-    const amount = Number(this.getChangeValue(item, 'Monto'));
+    const amountLabel = this.isRefundRetentionEvent(item) ? 'Monto retenido' : this.isRefundPendingEvent(item) ? 'Monto a devolver' : this.isRefundEvent(item) ? 'Monto devuelto' : 'Monto';
+    const dateLabel = this.isRefundRetentionEvent(item) ? 'Fecha de aplicación' : this.isRefundPendingEvent(item) ? 'Fecha de detección' : this.isRefundEvent(item) ? 'Fecha de devolución' : 'Fecha del pago';
+    const amount = Number(this.getChangeValue(item, amountLabel));
     const formattedAmount = Number.isFinite(amount)
       ? new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP' }).format(amount)
-      : this.getChangeValue(item, 'Monto');
-    return `${formattedAmount} · ${this.getChangeValue(item, 'Fecha del pago')}`;
+      : this.getChangeValue(item, amountLabel);
+    return `${this.isRefundRetentionEvent(item) ? 'Retención aplicada' : this.isRefundPendingEvent(item) ? 'Devolución pendiente' : this.isRefundEvent(item) ? 'Devolución' : 'Pago'} · ${formattedAmount} · ${this.getChangeValue(item, dateLabel)}`;
   }
 
   formatHappenedAt(value: RequestHistoryI['happened_at']): string {
@@ -258,7 +281,9 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
     try {
       let previewUrl = this.receiptPreviewUrls()[item.id];
       if (!previewUrl) {
-        previewUrl = await this.requestService.loadPreRetreatReceiptPreview({...item, id: item.payment_id || item.id}, this.receiptContext);
+        previewUrl = this.isRefundEvent(item)
+          ? await this.requestService.loadRefundReceiptPreview(item.refund_id || item.id, this.receiptContext)
+          : await this.requestService.loadPreRetreatReceiptPreview({...item, id: item.payment_id || item.id}, this.receiptContext);
         if (this.destroyed) {
           URL.revokeObjectURL(previewUrl);
           return;
@@ -285,7 +310,10 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
     try {
       const previews = await Promise.all(history.filter(item => item.receipt_path || item.receipt_url).map(async item => {
         try {
-          return [item.id, await this.requestService.loadPreRetreatReceiptPreview({...item, id: item.payment_id || item.id}, this.receiptContext)] as const;
+          const url = this.isRefundEvent(item)
+            ? await this.requestService.loadRefundReceiptPreview(item.refund_id || item.id, this.receiptContext)
+            : await this.requestService.loadPreRetreatReceiptPreview({...item, id: item.payment_id || item.id}, this.receiptContext);
+          return [item.id, url] as const;
         } catch (error) {
           console.error('No se pudo cargar la vista previa del recibo:', JSON.stringify(error instanceof Error ? { name: error.name, message: error.message } : error));
           return null;

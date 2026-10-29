@@ -113,6 +113,10 @@ export class ArchivedRequestsModal implements OnInit {
       const archivedRequests = await this.requestService.getArchivedRequests({
         retreatId: this.retreat.id,
       });
+      const summaries = await this.requestService.getPaymentSummariesForRequests(archivedRequests.map(request => request.id));
+      archivedRequests.forEach(request => {
+        if (summaries[request.id]) request.payments_summary = summaries[request.id] ?? {};
+      });
       this.archivedRequests.set(archivedRequests);
       this.updateDataviewData();
     } catch (error) {

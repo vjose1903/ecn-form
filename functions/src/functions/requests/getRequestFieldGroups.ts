@@ -41,6 +41,7 @@ export const getRequestFieldGroups = onCall(async request => {
 
   const canReadStatus = isSuperAdmin(request) || (requestPermissions.read === true && requestPermissions.fields?.status?.read === true);
   const canReadInformed = isSuperAdmin(request) || (requestPermissions.read === true && requestPermissions.fields?.informed?.read === true);
+  const canReadPayments = isSuperAdmin(request) || requestPermissions.payments?.read === true;
   const canUpdateRequests = isSuperAdmin(request) || requestPermissions.update === true;
   const canUpdateStatus = isSuperAdmin(request) || requestPermissions.fields?.status?.update === true;
   const canUpdateInformed = isSuperAdmin(request) || requestPermissions.fields?.informed?.update === true;
@@ -66,6 +67,7 @@ export const getRequestFieldGroups = onCall(async request => {
   const statusRefs = canReadStatus || canReadInformed
     ? requestIds.map(id => v2Db.doc(`city/${cityId}/requests/${id}/details/status`))
     : [];
+  const paymentsSummaryRefs = canReadPayments ? requestIds.map(id => v2Db.doc(`city/${cityId}/requests/${id}/details/payments_summary`)) : [];
   const informedRefs = canReadInformed
     ? requestIds.map(id => v2Db.doc(`city/${cityId}/requests/${id}/details/informed`))
     : [];
@@ -75,12 +77,13 @@ export const getRequestFieldGroups = onCall(async request => {
   const requestDetailRefs = includeRequestDetails
     ? readableRequestDetailSections.flatMap(section => requestIds.map(id => v2Db.doc(`city/${cityId}/requests/${id}/details/${section}`)))
     : [];
-  const snapshots = statusRefs.length + informedRefs.length + dashboardRefs.length + requestDetailRefs.length
-    ? await v2Db.getAll(...statusRefs, ...informedRefs, ...dashboardRefs, ...requestDetailRefs)
+  const snapshots = statusRefs.length + informedRefs.length + paymentsSummaryRefs.length + dashboardRefs.length + requestDetailRefs.length
+    ? await v2Db.getAll(...statusRefs, ...informedRefs, ...paymentsSummaryRefs, ...dashboardRefs, ...requestDetailRefs)
     : [];
   const statusSnapshots = snapshots.slice(0, statusRefs.length);
   const informedSnapshots = snapshots.slice(statusRefs.length, statusRefs.length + informedRefs.length);
-  const dashboardStart = statusRefs.length + informedRefs.length;
+  const paymentsSummarySnapshots = snapshots.slice(statusRefs.length + informedRefs.length, statusRefs.length + informedRefs.length + paymentsSummaryRefs.length);
+  const dashboardStart = statusRefs.length + informedRefs.length + paymentsSummaryRefs.length;
   const dashboardSnapshots = readableDashboardSections.map((_, sectionIndex) =>
     snapshots.slice(dashboardStart + sectionIndex * requestIds.length, dashboardStart + (sectionIndex + 1) * requestIds.length)
   );
@@ -126,6 +129,7 @@ export const getRequestFieldGroups = onCall(async request => {
         .filter(field => statusSnapshot.get(field) !== undefined)
         .map(field => [field, statusSnapshot.get(field)]));
     }
+    if (canReadPayments && paymentsSummarySnapshots[index]?.exists) result.payments_summary = paymentsSummarySnapshots[index].data();
     if (canReadInformed && statusSnapshot) {
       const informedSnapshot = informedSnapshots[index];
       result.is_informado = informedSnapshot?.exists

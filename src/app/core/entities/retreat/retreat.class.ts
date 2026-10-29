@@ -10,6 +10,7 @@ import { fun } from '@core/services/functions.service';
 import { RequestClass } from '../request/request.class';
 import { RequestService } from '../request/request.service';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
+import { RetreatFormHeader } from 'app/pages/retreat-list/retreat-form/retreat-form-header';
 
 export class RetreatClass {
   id: string = '';
@@ -28,6 +29,8 @@ export class RetreatClass {
   accept_requests: boolean = true;
   request_count: number = 0;
   amount_per_person: number | null = null;
+  refund_retention_days_before_retreat = 0;
+  non_refundable_percentage = 0;
 
   // Propiedades computadas para optimizar el rendimiento
   private _displayNumber: string | null = null;
@@ -60,6 +63,8 @@ export class RetreatClass {
     this.accept_requests = retreat.accept_requests ?? true;
     this.request_count = retreat.request_count || 0;
     this.amount_per_person = retreat.amount_per_person ?? null;
+    this.refund_retention_days_before_retreat = retreat.refund_retention_days_before_retreat ?? 0;
+    this.non_refundable_percentage = retreat.non_refundable_percentage ?? 0;
 
     this.initializeRetreatHome(retreat.retreat_home);
   }
@@ -316,6 +321,8 @@ export class RetreatClass {
       is_active: this.is_active,
       accept_requests: this.accept_requests,
       amount_per_person: this.amount_per_person,
+      refund_retention_days_before_retreat: this.refund_retention_days_before_retreat,
+      non_refundable_percentage: this.non_refundable_percentage,
     };
   }
 
@@ -331,6 +338,7 @@ export class RetreatClass {
         return;
       }
 
+      const data = { retreat: this.id ? this : undefined, openRefundPolicy: () => {} };
       const ref = dialogService.open(RetreatForm, {
         header: this.id ? 'Editar Retiro' : 'Nuevo Retiro',
         width: '60vw',
@@ -339,7 +347,8 @@ export class RetreatClass {
         resizable: false,
         closable: true,
         focusOnShow: false,
-        data: { retreat: this.id ? this : undefined },
+        data,
+        templates: { header: RetreatFormHeader },
         breakpoints: { '960px': '75vw', '640px': '90vw' },
       });
 

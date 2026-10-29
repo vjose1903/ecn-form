@@ -11,6 +11,8 @@ export enum FormControlName {
   accept_requests = 'accept_requests',
   community_name = 'community_name',
   amount_per_person = 'amount_per_person',
+  refund_retention_days_before_retreat = 'refund_retention_days_before_retreat',
+  non_refundable_percentage = 'non_refundable_percentage',
 }
 
 export enum FormFieldId {
@@ -24,5 +26,7 @@ export enum FormFieldId {
   accept_requests = 'accept_requests_field',
   community_name = 'community_name_field',
   amount_per_person = 'amount_per_person_field',
+  refund_retention_days_before_retreat = 'refund_retention_days_before_retreat_field',
+  non_refundable_percentage = 'non_refundable_percentage_field',
 }
 

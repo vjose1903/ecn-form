@@ -28,13 +28,18 @@ export const changeRequestLocation = onCall(async request => {
     throw new HttpsError("not-found", "No se encontró el retiro de destino.");
   }
   await v2Db.runTransaction(async transaction => {
-    const [root, statusRef, contactRef, identityRef] = await Promise.all([
+    const summaryRef = rootRef.collection("details").doc("payments_summary");
+    const [root, statusRef, contactRef, identityRef, retreatSnapshot, paymentSummary, paymentRecords] = await Promise.all([
       transaction.get(rootRef),
       transaction.get(rootRef.collection("details").doc("status")),
       transaction.get(rootRef.collection("details").doc("contact")),
       transaction.get(rootRef.collection("details").doc("identity")),
+      action === "archive" ? transaction.get(targetRef) : Promise.resolve(null),
+      action === "archive" ? transaction.get(summaryRef) : Promise.resolve(null),
+      action === "archive" ? transaction.get(rootRef.collection("payments")) : Promise.resolve(null),
     ]);
     if (!root.exists) throw new HttpsError("not-found", "No se encontró la solicitud.");
+    if (action === "archive" && !retreatSnapshot?.exists) throw new HttpsError("not-found", "No se encontró el retiro para calcular la devolución.");
     if (root.get("retreat_id") !== sourceRetreatId) throw new HttpsError("failed-precondition", "La solicitud ya fue trasladada a otro retiro.");
     const currentlyArchived = root.get("is_archived") === true;
     if (action === "archive" && currentlyArchived) throw new HttpsError("failed-precondition", "La solicitud ya está archivada.");
@@ -63,6 +68,59 @@ export const changeRequestLocation = onCall(async request => {
     for (const ref of targetLocks) {
       transaction.set(ref, {request_id: requestId, retreat_id: targetRetreatId, created_at: FieldValue.serverTimestamp()});
     }
+    let refundRetentionEvent: Record<string, unknown> | undefined;
+    let refundPendingEvent: Record<string, unknown> | undefined;
+    if (action === "archive" && retreatSnapshot?.exists) {
+      const previousSummary = paymentSummary?.data() ?? {};
+      if (typeof previousSummary.refund_due_amount !== "number") {
+      const retreat = retreatSnapshot.data() ?? {};
+      const days = Math.max(0, Math.min(365, Number(retreat.refund_retention_days_before_retreat ?? 0)));
+      const percentage = Math.max(0, Math.min(100, Number(retreat.non_refundable_percentage ?? 0)));
+      const startValue = retreat.start_date as {toDate?: () => Date} | Date | string | undefined;
+      const startDate = startValue && typeof startValue === "object" && "toDate" in startValue && typeof startValue.toDate === "function"
+        ? startValue.toDate()
+        : new Date(startValue as string | Date);
+      const cutoff = new Date(startDate);
+      cutoff.setDate(cutoff.getDate() - days);
+      const withinRetentionWindow = Number.isFinite(startDate.getTime()) && Date.now() >= cutoff.getTime();
+      const recordedTotal = paymentRecords?.docs.reduce((sum, payment) => sum + Math.max(0, Number(payment.get("amount") ?? 0)), 0) ?? 0;
+      const totalPaid = Math.max(0, recordedTotal || Number(paymentSummary?.get("total_paid") ?? 0));
+      const amountPerCouple = Math.max(0, Number(retreat.amount_per_person ?? 0)) * 2;
+      const configuredRetention = Math.round(amountPerCouple * percentage) / 100;
+      const retainedAmount = withinRetentionWindow ? Math.min(totalPaid, configuredRetention) : 0;
+      const refundDue = Math.max(0, Math.round((totalPaid - retainedAmount) * 100) / 100);
+      const recordedRefund = Math.max(0, Number(previousSummary.refund_recorded_total ?? 0));
+      const refundData = {
+        refund_required: refundDue > 0,
+        refund_status: refundDue > recordedRefund ? (recordedRefund > 0 ? "partial" : "pending") : refundDue > 0 ? "completed" : "not_required",
+        refund_due_amount: refundDue,
+        refund_total_paid: totalPaid,
+        refund_retained_amount: retainedAmount,
+        refund_retention_days_before_retreat: days,
+        refund_non_refundable_percentage: withinRetentionWindow ? percentage : 0,
+        refund_recorded_total: recordedRefund,
+        refund_updated_at: FieldValue.serverTimestamp(),
+      };
+      transaction.set(summaryRef, refundData, {merge: true});
+      if (retainedAmount > 0) {
+        refundRetentionEvent = {
+          action: "refund_retention_applied",
+          message: "Retención aplicada",
+          refund_amount: retainedAmount,
+          refund_retained_amount: retainedAmount,
+          refund_date: FieldValue.serverTimestamp(),
+        };
+      }
+      if (refundDue > 0) {
+        refundPendingEvent = {
+          action: "refund_pending",
+          message: "Devolución pendiente",
+          refund_amount: refundDue,
+          refund_date: FieldValue.serverTimestamp(),
+        };
+      }
+      }
+    }
     const eventAction = action === "archive" ? "archived" : action === "unarchive" ? "desarchived" : "transferred";
     transaction.update(rootRef, {retreat_id: targetRetreatId, is_archived: nextArchived, updated_by: actorUid});
     const statusPatch = {
@@ -88,6 +146,18 @@ export const changeRequestLocation = onCall(async request => {
       actor_uid: actorUid,
       actor_name: actorName,
     });
+    for (const [suffix, refundEvent] of [["retention", refundRetentionEvent], ["pending", refundPendingEvent]] as const) {
+      if (!refundEvent) continue;
+      transaction.create(rootRef.collection("history").doc(`${eventId}_refund_${suffix}`), {
+        request_id: requestId,
+        retreat_id: targetRetreatId,
+        collection_state: "requests-archived",
+        ...refundEvent,
+        happened_at: FieldValue.serverTimestamp(),
+        actor_uid: actorUid,
+        actor_name: actorName,
+      });
+    }
   });
   return {requestId, retreatId: targetRetreatId, isArchived: action === "archive" ? true : action === "unarchive" ? false : data.isArchived === true};
 });

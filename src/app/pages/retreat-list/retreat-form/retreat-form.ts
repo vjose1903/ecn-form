@@ -25,10 +25,11 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { SkeletonModule } from 'primeng/skeleton';
 import { UserService } from '@core/entities/user/user.service';
 import { Subject, takeUntil } from 'rxjs';
+import { DialogModule } from 'primeng/dialog';
 
 @Component({
   selector: 'app-retreat-form',
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, FormsModule, DatePickerModule, InputNumberModule, TextareaModule, FormErrorMsgComponent, SelectModule, TitleCasePipe, SelectButtonModule, SkeletonModule],
+  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, FormsModule, DatePickerModule, InputNumberModule, TextareaModule, FormErrorMsgComponent, SelectModule, TitleCasePipe, SelectButtonModule, SkeletonModule, DialogModule],
   templateUrl: './retreat-form.html',
   styleUrl: './retreat-form.scss',
 })
@@ -54,6 +55,7 @@ export class RetreatForm implements OnInit, OnDestroy {
   mixedModalityDates = signal<{ date: string; label: string }[]>([]);
   mixedModalityData = signal<{ [key: string]: RetreatModalityType }>({});
   retreatHomesLoading = signal(true);
+  refundPolicyDialogVisible = false;
   private destroy$ = new Subject<void>();
 
   // Opciones para el dropdown de modalidad
@@ -113,12 +115,17 @@ export class RetreatForm implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
+    if (this.config.data) this.config.data.openRefundPolicy = () => (this.refundPolicyDialogVisible = true);
     if (this.config?.data?.retreat) {
       this.retreat = this.config.data.retreat;
     }
     this.loadRetreatHomes();
 
-    this.createForm(this.retreat);
+    const defaults = this.isEdit ? undefined : await this.retreatService.getRefundPolicyDefaults().catch(error => {
+      console.error('No se pudo cargar la configuración de devoluciones:', JSON.stringify(error instanceof Error ? {name: error.name, message: error.message} : error));
+      return undefined;
+    });
+    this.createForm(this.retreat, defaults);
     this.subscribeToForm();
     this.setupRetreatHomeStreams();
   }
@@ -127,7 +134,7 @@ export class RetreatForm implements OnInit, OnDestroy {
     return !this.form || this.retreatHomesLoading();
   }
 
-  createForm(retreat: RetreatClass | undefined) {
+  createForm(retreat: RetreatClass | undefined, defaults?: {refund_retention_days_before_retreat: number; non_refundable_percentage: number}) {
     const form = this.fb.group({
       [FormControlName.id]: [retreat?.id ?? null, []],
       [FormControlName.user_id]: [retreat?.user_id ?? Ss.authService.current_user()?.id ?? null, []],
@@ -141,6 +148,8 @@ export class RetreatForm implements OnInit, OnDestroy {
       [FormControlName.is_active]: [retreat?.is_active ?? true],
       [FormControlName.accept_requests]: [retreat?.accept_requests ?? true],
       [FormControlName.amount_per_person]: [retreat?.amount_per_person ?? null, [Validators.min(0.01)]],
+      [FormControlName.refund_retention_days_before_retreat]: [retreat?.refund_retention_days_before_retreat ?? defaults?.refund_retention_days_before_retreat ?? 0, [Validators.required, Validators.min(0), Validators.max(365)]],
+      [FormControlName.non_refundable_percentage]: [retreat?.non_refundable_percentage ?? defaults?.non_refundable_percentage ?? 0, [Validators.required, Validators.min(0), Validators.max(100)]],
     });
 
     this.formGroup.set(form);

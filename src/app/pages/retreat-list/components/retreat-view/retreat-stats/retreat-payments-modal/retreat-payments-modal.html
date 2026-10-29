@@ -2,12 +2,11 @@
   <div class="retreat-payment-report__summary">
     <div class="retreat-payment-report__summary-total">
       <span class="retreat-payment-report__summary-icon"><i class="pi pi-wallet" aria-hidden="true"></i></span>
-      <div><small>Total recibido</small><strong>{{ formatAmount(total()) }}</strong></div>
+      <div><small>Total recibido</small>@if (loadingData()) { <span class="retreat-payment-report__skeleton retreat-payment-report__skeleton--total" aria-hidden="true"></span> } @else { <strong>{{ formatAmount(paymentSummary().receivedTotal) }}</strong> }</div>
     </div>
     <span class="retreat-payment-report__count">
       <i class="pi pi-receipt" aria-hidden="true"></i>
-      <span>{{ payments().length }}</span>
-      <span class="retreat-payment-report__count-label">pagos registrados</span>
+      @if (loadingData()) { <span class="retreat-payment-report__skeleton retreat-payment-report__skeleton--count" aria-hidden="true"></span> } @else { <span>{{ payments().length }}</span><span class="retreat-payment-report__count-label">pagos registrados</span> }
     </span>
   </div>
 
@@ -15,26 +14,61 @@
     <div class="retreat-payment-report__metrics">
       <div class="retreat-payment-report__metric retreat-payment-report__expected-total">
         <small><i class="pi pi-chart-bar" aria-hidden="true"></i> Total esperado</small>
-        <strong>{{ formatAmount(paymentSummary().expectedTotal) }}</strong>
+        @if (loadingData()) { <span class="retreat-payment-report__skeleton retreat-payment-report__skeleton--metric" aria-hidden="true"></span> } @else { <strong>{{ formatAmount(paymentSummary().expectedTotal) }}</strong> }
       </div>
       <div class="retreat-payment-report__metric retreat-payment-report__balance" [class.retreat-payment-report__balance--surplus]="paymentSummary().isOverpaid">
         <small><i [class]="paymentSummary().isOverpaid ? 'pi pi-arrow-up-right' : 'pi pi-hourglass'" aria-hidden="true"></i> {{ paymentSummary().isOverpaid ? 'Excedente' : 'Pendiente' }}</small>
-        <strong>{{ formatAmount(paymentSummary().isOverpaid ? paymentSummary().surplus : paymentSummary().outstanding) }}</strong>
+        @if (loadingData()) { <span class="retreat-payment-report__skeleton retreat-payment-report__skeleton--metric" aria-hidden="true"></span> } @else { <strong>{{ formatAmount(paymentSummary().isOverpaid ? paymentSummary().surplus : paymentSummary().outstanding) }}</strong> }
       </div>
       <div class="retreat-payment-report__metric retreat-payment-report__percentage">
         <small>Recaudado</small>
-        <strong>{{ paymentSummary().percentage | number:'1.0-0' }}%</strong>
+        @if (loadingData()) { <span class="retreat-payment-report__skeleton retreat-payment-report__skeleton--metric" aria-hidden="true"></span> } @else { <strong>{{ paymentSummary().percentage | number:'1.0-0' }}%</strong> }
       </div>
     </div>
-    <div class="retreat-payment-report__progress" role="progressbar" [attr.aria-valuenow]="paymentSummary().progressPercentage" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="'Recaudado: ' + (paymentSummary().percentage | number:'1.0-0') + '%'">
-      <span [style.width.%]="paymentSummary().progressPercentage"></span>
+    <div class="retreat-payment-report__progress" [class.retreat-payment-report__progress--loading]="loadingData()" role="progressbar" [attr.aria-valuenow]="paymentSummary().progressPercentage" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="'Recaudado: ' + (paymentSummary().percentage | number:'1.0-0') + '%. Por devolver: ' + formatAmount(paymentSummary().pendingRefundAmount)">
+      <span class="retreat-payment-report__progress-fill" [style.width.%]="paymentSummary().progressPercentage">
+        <span class="retreat-payment-report__progress-segment retreat-payment-report__progress-segment--retained" [style.width.%]="paymentSummary().retainedProgressPercentage"></span>
+        <span class="retreat-payment-report__progress-segment retreat-payment-report__progress-segment--refund" [style.width.%]="paymentSummary().refundProgressPercentage"></span>
+      </span>
     </div>
+    @if (!loadingData() && paymentSummary().adjustments.length > 0) {
+    <div class="retreat-payment-report__progress-breakdown" aria-label="Distribución de pagos">
+      <span><i class="retreat-payment-report__progress-dot retreat-payment-report__progress-dot--paid" aria-hidden="true"></i> Pagos <strong>{{ formatAmount(paymentSummary().paidTotal) }}</strong></span>
+      <span><i class="retreat-payment-report__progress-dot retreat-payment-report__progress-dot--retained" aria-hidden="true"></i> Retenido <strong>{{ formatAmount(paymentSummary().retainedTotal) }}</strong></span>
+      <span><i class="retreat-payment-report__progress-dot retreat-payment-report__progress-dot--refund" aria-hidden="true"></i> Devuelto <strong>{{ formatAmount(paymentSummary().returnedTotal) }}</strong></span>
+      <span><i class="retreat-payment-report__progress-dot retreat-payment-report__progress-dot--pending" aria-hidden="true"></i> Por devolver <strong>{{ formatAmount(paymentSummary().pendingRefundAmount) }} ({{ paymentSummary().refundProgressPercentage | number:'1.0-1' }}%)</strong></span>
+    </div>
+      <details class="retreat-payment-report__adjustments">
+        <summary class="retreat-payment-report__adjustments-title">Detalle de retenciones y devoluciones</summary>
+        <div class="retreat-payment-report__adjustments-list">
+          @for (adjustment of paymentSummary().adjustments; track adjustment.requestId) {
+            <div class="retreat-payment-report__adjustment">
+              <span>{{ adjustment.couple }}</span>
+              <span class="retreat-payment-report__adjustment-values">
+                @if (adjustment.retained > 0) { <em class="retreat-payment-report__adjustment-value--retained">Retenido {{ formatAmount(adjustment.retained) }}</em> }
+                @if (adjustment.returned > 0) { <em class="retreat-payment-report__adjustment-value--returned">Devuelto {{ formatAmount(adjustment.returned) }}</em> }
+                @if (adjustment.pending > 0) { <em class="retreat-payment-report__adjustment-value--pending">Por devolver {{ formatAmount(adjustment.pending) }}</em> }
+                @if (adjustment.pending > 0) {
+                  <button class="retreat-payment-report__refund-action" type="button" title="Registrar devolución" [attr.aria-label]="'Registrar devolución de ' + adjustment.couple" (click)="openRefundModal(adjustment.requestId)">
+                    <i class="pi pi-wallet" aria-hidden="true"></i>
+                  </button>
+                }
+              </span>
+            </div>
+          }
+        </div>
+      </details>
+    }
     <div class="retreat-payment-report__couple-counts" aria-label="Resumen de parejas aceptadas">
       <small>Parejas aceptadas</small>
-      <span class="retreat-payment-report__couple-count retreat-payment-report__couple-count--paid"><i class="pi pi-wallet" aria-hidden="true"></i> Con pagos <strong>{{ paymentSummary().paid }}</strong></span>
-      <span class="retreat-payment-report__couple-count retreat-payment-report__couple-count--unpaid"><i class="pi pi-credit-card" aria-hidden="true"></i> Sin pagos <strong>{{ paymentSummary().unpaid }}</strong></span>
-      <span class="retreat-payment-report__couple-count retreat-payment-report__couple-count--complete"><i class="pi pi-check-circle" aria-hidden="true"></i> Completas <strong>{{ paymentSummary().complete }}</strong></span>
-      <span class="retreat-payment-report__couple-count retreat-payment-report__couple-count--partial"><i class="pi pi-clock" aria-hidden="true"></i> Parciales <strong>{{ paymentSummary().partial }}</strong></span>
+      @if (loadingData()) {
+        <span class="retreat-payment-report__skeleton retreat-payment-report__skeleton--pill" aria-hidden="true"></span><span class="retreat-payment-report__skeleton retreat-payment-report__skeleton--pill" aria-hidden="true"></span><span class="retreat-payment-report__skeleton retreat-payment-report__skeleton--pill" aria-hidden="true"></span><span class="retreat-payment-report__skeleton retreat-payment-report__skeleton--pill" aria-hidden="true"></span>
+      } @else {
+        <span class="retreat-payment-report__couple-count retreat-payment-report__couple-count--paid"><i class="pi pi-wallet" aria-hidden="true"></i> Con pagos <strong>{{ paymentSummary().paid }}</strong></span>
+        <span class="retreat-payment-report__couple-count retreat-payment-report__couple-count--unpaid"><i class="pi pi-credit-card" aria-hidden="true"></i> Sin pagos <strong>{{ paymentSummary().unpaid }}</strong></span>
+        <span class="retreat-payment-report__couple-count retreat-payment-report__couple-count--complete"><i class="pi pi-check-circle" aria-hidden="true"></i> Completas <strong>{{ paymentSummary().complete }}</strong></span>
+        <span class="retreat-payment-report__couple-count retreat-payment-report__couple-count--partial"><i class="pi pi-clock" aria-hidden="true"></i> Parciales <strong>{{ paymentSummary().partial }}</strong></span>
+      }
     </div>
   </div>
 
@@ -50,7 +84,7 @@
     <p-menu #exportMenu [model]="exportActions" [popup]="true" [appendTo]="'body'" />
   </div>
 
-  <p-table [value]="filteredPayments()" [scrollable]="true" scrollHeight="flex" [tableStyle]="{ 'min-width': '52rem' }" styleClass="retreat-payment-report__table">
+  <p-table [value]="loadingData() ? loadingRows : filteredPayments()" [scrollable]="true" scrollHeight="flex" [tableStyle]="{ 'min-width': '52rem' }" styleClass="retreat-payment-report__table">
     <ng-template #header>
       <tr>
         <th scope="col">Descripción</th>
@@ -61,6 +95,15 @@
       </tr>
     </ng-template>
     <ng-template #body let-payment>
+      @if (loadingData()) {
+      <tr>
+        <td><span class="retreat-payment-report__skeleton retreat-payment-report__skeleton--row-description"></span><span class="retreat-payment-report__skeleton retreat-payment-report__skeleton--row-description"></span></td>
+        <td><span class="retreat-payment-report__skeleton retreat-payment-report__skeleton--row-tag"></span></td>
+        <td><span class="retreat-payment-report__skeleton retreat-payment-report__skeleton--row-date"></span></td>
+        <td><span class="retreat-payment-report__skeleton retreat-payment-report__skeleton--row-amount"></span></td>
+        <td><span class="retreat-payment-report__skeleton retreat-payment-report__skeleton--row-action"></span></td>
+      </tr>
+      } @else {
       <tr>
         <td>
           <span class="retreat-payment-report__description">- {{ payment.brideName }}</span>
@@ -75,6 +118,7 @@
           </button>
         </td>
       </tr>
+      }
     </ng-template>
     <ng-template #emptymessage>
       <tr><td colspan="5" class="retreat-payment-report__empty">{{ searchTerm() ? 'No se encontraron pagos para esa pareja.' : 'Todavía no hay pagos registrados.' }}</td></tr>
@@ -82,7 +126,7 @@
   </p-table>
   <footer class="retreat-payment-report__total-footer">
     <strong>Total recibido</strong>
-    <strong>{{ formatAmount(total()) }}</strong>
+    @if (loadingData()) { <span class="retreat-payment-report__skeleton retreat-payment-report__skeleton--footer"></span> } @else { <strong>{{ formatAmount(paymentSummary().receivedTotal) }}</strong> }
   </footer>
 </section>
 

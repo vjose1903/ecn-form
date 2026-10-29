@@ -25,6 +25,7 @@ interface RequestFieldGroups {
   readableSections: string[];
   editableSections: string[];
   details?: Record<string, Record<string, unknown>>;
+  payments_summary?: RequestI['payments_summary'];
 }
 
 @Injectable({
@@ -82,16 +83,17 @@ export class RequestService extends FirebaseRequest<RequestI> {
       where('is_archived', '==', false),
       orderBy('created_at', 'desc'),
     ));
-    const requestIds = snapshot.docs.map(requestDoc => requestDoc.id);
+    const requestDocs = snapshot.docs;
+    const requestIds = requestDocs.map(requestDoc => requestDoc.id);
     const [fieldGroups, sectionDetails, paymentRecords] = await Promise.all([
       this.getRequestFieldGroups(retreat.city_id, requestIds),
-      Promise.all(snapshot.docs.map(requestDoc => this.getRequestDetails(retreat.city_id, requestDoc.id))),
-      Promise.all(snapshot.docs.map(async requestDoc => {
+      Promise.all(requestDocs.map(requestDoc => this.getRequestDetails(retreat.city_id, requestDoc.id))),
+      Promise.all(requestDocs.map(async requestDoc => {
         const payments = await getDocs(collection(this.firestore, `city/${retreat.city_id}/requests/${requestDoc.id}/payments`));
         return payments.docs.map(payment => ({...payment.data(), id: payment.id} as PreRetreatPaymentI));
       })),
     ]);
-    return Promise.all(snapshot.docs.map((requestDoc, index) =>
+    return Promise.all(requestDocs.map((requestDoc, index) =>
       this.hydrateV2Request(retreat.city_id, requestDoc, fieldGroups[requestDoc.id], true, REQUEST_DETAIL_SECTIONS, paymentRecords[index], sectionDetails[index])
     ));
   }
@@ -131,6 +133,62 @@ export class RequestService extends FirebaseRequest<RequestI> {
       for (const [retreatId, count] of results) counts[retreatId] = count;
     }
     return counts;
+  }
+
+  async getPendingRefundSummary(retreatId: string): Promise<{count: number; amount: number; retainedAmount: number; returnedAmount: number}> {
+    const cityId = this.authService.activeCityId() || this.authService.current_user()?.city;
+    if (!cityId || !retreatId) return {count: 0, amount: 0, retainedAmount: 0, returnedAmount: 0};
+    const requestsRef = collection(this.firestore, `city/${cityId}/requests`);
+    const [snapshot, retreatSnapshot] = await Promise.all([
+      getDocs(query(requestsRef, where('retreat_id', '==', retreatId), where('is_archived', '==', true))),
+      getDoc(doc(this.firestore, `city/${cityId}/retreat/${retreatId}`)),
+    ]);
+    const groups = await this.getRequestFieldGroups(cityId, snapshot.docs.map(item => item.id));
+    const retreat = retreatSnapshot.data() ?? {};
+    const amountPerCouple = Math.max(0, Number(retreat['amount_per_person'] ?? 0)) * 2;
+    const retentionDays = Math.max(0, Math.min(365, Number(retreat['refund_retention_days_before_retreat'] ?? 0)));
+    const retentionPercentage = Math.max(0, Math.min(100, Number(retreat['non_refundable_percentage'] ?? 0)));
+    const startValue = retreat['start_date'] as {toDate?: () => Date} | Date | string | undefined;
+    const startDate = startValue && typeof startValue === 'object' && 'toDate' in startValue && typeof startValue.toDate === 'function'
+      ? startValue.toDate()
+      : new Date(startValue as string | Date);
+    const cutoff = new Date(startDate);
+    cutoff.setDate(cutoff.getDate() - retentionDays);
+    const withinRetentionWindow = Number.isFinite(startDate.getTime()) && Date.now() >= cutoff.getTime();
+    let count = 0;
+    let amount = 0;
+    let retainedAmount = 0;
+    let returnedAmount = 0;
+    for (const group of Object.values(groups)) {
+      const summary = group.payments_summary;
+      if (!summary) continue;
+      const totalPaid = Math.max(0, Number(summary.refund_total_paid ?? summary.total_paid ?? 0));
+      const recordedRefund = Math.max(0, Number(summary.refund_recorded_total ?? 0));
+      const retained = typeof summary.refund_retained_amount === 'number'
+        ? Math.max(0, summary.refund_retained_amount)
+        : withinRetentionWindow ? Math.min(totalPaid, Math.round(amountPerCouple * retentionPercentage) / 100) : 0;
+      const due = typeof summary.refund_due_amount === 'number' ? Math.max(0, summary.refund_due_amount) : Math.max(0, totalPaid - retained);
+      const balance = Math.max(0, due - recordedRefund);
+      if (balance > 0) { count += 1; amount += balance; }
+      retainedAmount += retained;
+      returnedAmount += recordedRefund;
+    }
+    return {count, amount, retainedAmount, returnedAmount};
+  }
+
+  async getPaymentSummariesForRequests(requestIds: string[]): Promise<Record<string, RequestI['payments_summary']>> {
+    const cityId = this.authService.activeCityId() || this.authService.current_user()?.city;
+    if (!cityId || !requestIds.length) return {};
+    const entries = await Promise.all(requestIds.map(async requestId => {
+      try {
+        const snapshot = await getDoc(doc(this.firestore, `city/${cityId}/requests/${requestId}/details/payments_summary`));
+        return [requestId, snapshot.exists() ? snapshot.data() as RequestI['payments_summary'] : undefined] as const;
+      } catch (error) {
+        if ((error as {code?: string})?.code === 'permission-denied') return [requestId, undefined] as const;
+        throw error;
+      }
+    }));
+    return Object.fromEntries(entries.filter((entry): entry is readonly [string, RequestI['payments_summary']] => entry[1] !== undefined));
   }
 
   private async getRequestFieldGroups(cityId: string, requestIds: string[], includeDashboardDetails = false, includeRequestDetails = false): Promise<Record<string, RequestFieldGroups>> {
@@ -198,6 +256,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
         reconstructed['archived_retreat_id'] = retreatId;
       }
       reconstructed['pre_retreat_payments'] = preloadedPayments ?? paymentsSnapshot?.docs.map(payment => ({ ...payment.data(), id: payment.id })) ?? [];
+      reconstructed['payments_summary'] = fieldGroups?.payments_summary ?? {};
       return new RequestClass(reconstructed as RequestI);
   }
 
@@ -284,6 +343,45 @@ export class RequestService extends FirebaseRequest<RequestI> {
     return updated;
   }
 
+  async recordRefund(args: {request: RequestClass; retreat: RetreatClass; amount: number; refundDate: Date; receipt?: File}): Promise<void> {
+    const {request, retreat, amount, refundDate, receipt} = args;
+    if (!request.id || !retreat.city_id || !Number.isFinite(amount) || amount <= 0 || !(refundDate instanceof Date) || Number.isNaN(refundDate.getTime())) throw new Error('Revisa el monto y la fecha de devolución');
+    const refundId = `devolucion_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+    let receiptPath = '';
+    if (receipt) {
+      if (!/^image\/(jpeg|png|webp|heic)$/.test(receipt.type) || receipt.size > 5 * 1024 * 1024) throw new Error('El recibo debe ser una imagen de hasta 5 MB');
+      const createUpload = httpsCallable(this.functions, 'createRefundUploadUrl');
+      const uploaded = await createUpload({cityId: retreat.city_id, requestId: request.id, refundId, contentType: receipt.type, fileName: receipt.name, fileSize: receipt.size});
+      const data = uploaded.data as {uploadUrl: string; receiptPath: string; refundId: string};
+      try {
+        const response = await fetch(data.uploadUrl, {method: 'PUT', headers: {'Content-Type': receipt.type}, body: receipt});
+        if (!response.ok) throw new Error('No se pudo cargar el recibo de devolución');
+        receiptPath = data.receiptPath;
+      } catch (error) {
+        const discard = httpsCallable(this.functions, 'discardRefundUpload');
+        await discard({cityId: retreat.city_id, requestId: request.id, refundId, receiptPath: data.receiptPath}).catch(cleanupError => {
+          console.error('No se pudo limpiar el recibo de una devolución no registrada:', JSON.stringify(cleanupError instanceof Error ? {name: cleanupError.name, message: cleanupError.message} : cleanupError));
+        });
+        throw error;
+      }
+    }
+    const record = httpsCallable(this.functions, 'recordRefund');
+    try {
+      await record({cityId: retreat.city_id, requestId: request.id, refundId, amount, refundDate: refundDate.toISOString(), ...(receiptPath ? {receiptPath, receiptName: receipt?.name} : {})});
+    } catch (error) {
+      if (receiptPath) {
+        const discard = httpsCallable(this.functions, 'discardRefundUpload');
+        await discard({cityId: retreat.city_id, requestId: request.id, refundId, receiptPath}).catch(cleanupError => {
+          console.error('No se pudo limpiar el recibo de una devolución no registrada:', JSON.stringify(cleanupError instanceof Error ? {name: cleanupError.name, message: cleanupError.message} : cleanupError));
+        });
+      }
+      throw error;
+    }
+    const summary = request.payments_summary;
+    request.payments_summary = {...summary, refund_recorded_total: Number(summary.refund_recorded_total ?? 0) + amount};
+    this.updateRequestInCache({...request.asJson(), payments_summary: request.payments_summary}, 'update');
+  }
+
   async removeHistoryEvent(args: {
     request: RequestClass;
     retreat?: RetreatClass | null;
@@ -318,6 +416,14 @@ export class RequestService extends FirebaseRequest<RequestI> {
     const result = await getUrl({...context, paymentId: receipt.id});
     const response = await fetch(result.data.url);
     if (!response.ok) throw new Error('No se pudo descargar el recibo del pago');
+    return URL.createObjectURL(await response.blob());
+  }
+
+  async loadRefundReceiptPreview(refundId: string, context: {cityId: string; requestId: string}): Promise<string> {
+    const getUrl = httpsCallable<{cityId: string; requestId: string; refundId: string}, {url: string}>(this.functions, 'getRefundReceiptUrl');
+    const result = await getUrl({...context, refundId});
+    const response = await fetch(result.data.url);
+    if (!response.ok) throw new Error('No se pudo descargar el recibo de devolución');
     return URL.createObjectURL(await response.blob());
   }
 
@@ -607,6 +713,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
             ...data,
             id: document.id,
             happened_at: data['happened_at'] ? fun.convertFirebaseTimestamp(data['happened_at']) : null,
+            refund_date: data['refund_date'] ? fun.convertFirebaseTimestamp(data['refund_date']) : null,
           } as RequestHistoryI;
         });
         history.sort((left, right) => this.historyTime(right.happened_at) - this.historyTime(left.happened_at));
@@ -634,6 +741,7 @@ export class RequestService extends FirebaseRequest<RequestI> {
             id: historyDoc.id,
             ...data,
             happened_at: data.happened_at ? fun.convertFirebaseTimestamp(data.happened_at) : null,
+            refund_date: data.refund_date ? fun.convertFirebaseTimestamp(data.refund_date) : null,
           } as RequestHistoryI;
         });
       const currentUid = currentUser.uid;

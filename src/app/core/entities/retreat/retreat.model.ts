@@ -24,6 +24,8 @@ export interface RetreatI {
   accept_requests?: boolean;
   request_count?: number;
   amount_per_person?: number | null;
+  refund_retention_days_before_retreat?: number;
+  non_refundable_percentage?: number;
   mixedModalityData?: {
     [date: string]: RetreatModalityType;
   };
