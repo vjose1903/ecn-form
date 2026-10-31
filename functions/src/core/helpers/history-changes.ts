@@ -31,3 +31,11 @@ export const historyChanges = (before: unknown, after: unknown, label: string): 
   }
   return [{label, previous_value: formatValue(before), next_value: formatValue(after)}];
 };
+
+// Firestore merge preserves omitted map fields but replaces arrays and scalar values.
+export const mergeHistoryPatch = (before: unknown, patch: unknown): unknown => {
+  if (!isRecord(patch) || !Object.keys(patch).length) return patch;
+  const result: Record<string, unknown> = isRecord(before) ? {...before} : {};
+  for (const [key, value] of Object.entries(patch)) result[key] = mergeHistoryPatch(result[key], value);
+  return result;
+};

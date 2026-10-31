@@ -9,6 +9,7 @@ const authorization_1 = require("../../core/security/authorization");
 const firestore_1 = require("firebase-admin/firestore");
 const request_identity_1 = require("../../core/helpers/request-identity");
 const actor_name_1 = require("../../core/helpers/actor-name");
+const phone_1 = require("../../core/helpers/phone");
 const dateInSantoDomingo = (value) => {
     if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value))
         return value;
@@ -51,6 +52,10 @@ exports.updateRequestDetails = (0, https_1.onCall)(async (request) => {
     }
     const actorUid = await (0, authorization_1.requireCityPermission)(request, cityId, "requests", "update");
     const source = patch;
+    const expected = data.expectedValues;
+    if (confirmInformation && (!expected || typeof expected !== "object" || Array.isArray(expected))) {
+        throw new https_1.HttpsError("failed-precondition", "Actualiza la aplicación y vuelve a abrir el formulario para confirmar.");
+    }
     const sections = {};
     const fieldsByGroup = confirmInformation
         ? { couple_basic: ["full_name"], contact: ["cell_phone"], family: ["family_information", "emergency_full_name", "emergency_relationship", "emergency_phone"] }
@@ -64,7 +69,7 @@ exports.updateRequestDetails = (0, https_1.onCall)(async (request) => {
         for (const person of ["she", "he"]) {
             const name = sections.couple_basic?.[person]?.full_name;
             const phone = sections.contact?.[person]?.cell_phone;
-            if (typeof name !== "string" || !name.trim() || name.trim().length > 180 || typeof phone !== "string" || !phone.trim() || phone.trim().length > 40) {
+            if (typeof name !== "string" || !name.trim() || name.trim().length > 180 || typeof phone !== "string" || !(0, phone_1.isValidPhone)(phone) || phone.trim().length > 40) {
                 throw new https_1.HttpsError("invalid-argument", "Debes confirmar el nombre y teléfono de ambas personas.");
             }
             sections.couple_basic[person].full_name = name.trim();
@@ -79,8 +84,8 @@ exports.updateRequestDetails = (0, https_1.onCall)(async (request) => {
                 };
                 const validatePhone = (value) => {
                     const phone = validateText(value, 40);
-                    if (phone && phone.replace(/\D/g, "").length !== 10)
-                        throw new https_1.HttpsError("invalid-argument", "El teléfono debe tener diez dígitos.");
+                    if (phone && !(0, phone_1.isValidPhone)(phone))
+                        throw new https_1.HttpsError("invalid-argument", "Escribe un teléfono válido de diez dígitos.");
                     return phone;
                 };
                 for (const [key, max] of [["emergency_full_name", 180], ["emergency_relationship", 100]]) {
@@ -126,8 +131,8 @@ exports.updateRequestDetails = (0, https_1.onCall)(async (request) => {
     const rootRef = firebase_admin_1.v2Db.doc(`city/${cityId}/requests/${requestId}`);
     const uid = request.auth?.uid ?? actorUid;
     const actorName = await (0, actor_name_1.getActorName)(uid, request.auth?.token.name);
-    const changed = {};
-    await firebase_admin_1.v2Db.runTransaction(async (transaction) => {
+    const updated = await firebase_admin_1.v2Db.runTransaction(async (transaction) => {
+        const changed = {};
         const root = await transaction.get(rootRef);
         if (!root.exists)
             throw new https_1.HttpsError("not-found", "No se encontró la solicitud.");
@@ -155,6 +160,22 @@ exports.updateRequestDetails = (0, https_1.onCall)(async (request) => {
                 ? transaction.get(rootRef.collection("details").doc("status"))
                 : Promise.resolve(null),
         ]);
+        if (confirmInformation) {
+            for (let index = 0; index < entries.length; index++) {
+                const [, next] = entries[index];
+                const previous = snapshots[index].data() ?? {};
+                for (const [person, fields] of Object.entries(next)) {
+                    const original = expected[person];
+                    const current = previous[person] ?? {};
+                    for (const field of Object.keys(fields)) {
+                        const fallback = field === "family_information" ? [] : "";
+                        if (!original || typeof original !== "object" || Array.isArray(original) || !(field in original) || !(0, history_changes_1.historyValuesEqual)(current[field] ?? fallback, original[field])) {
+                            throw new https_1.HttpsError("aborted", "La información fue modificada por otro usuario. Actualiza el listado y vuelve a abrir la solicitud antes de confirmar.");
+                        }
+                    }
+                }
+            }
+        }
         if (sections.contact || sections.identity) {
             const contactIndex = entries.findIndex(([group]) => group === "contact");
             const identityIndex = entries.findIndex(([group]) => group === "identity");
@@ -210,8 +231,9 @@ exports.updateRequestDetails = (0, https_1.onCall)(async (request) => {
                 ? { is_informado: legacyStatusSnapshot.get("is_informado") }
                 : {});
             for (const [field, value] of Object.entries(next)) {
-                if (!(0, history_changes_1.historyValuesEqual)(previous[field], value)) {
-                    changed[`${group}.${field}`] = { before: previous[field] ?? null, after: value ?? null };
+                const mergedValue = (0, history_changes_1.mergeHistoryPatch)(previous[field], value);
+                if (!(0, history_changes_1.historyValuesEqual)(previous[field], mergedValue)) {
+                    changed[`${group}.${field}`] = { before: previous[field] ?? null, after: mergedValue ?? null };
                 }
             }
             transaction.set(rootRef.collection("details").doc(group), {
@@ -250,7 +272,8 @@ exports.updateRequestDetails = (0, https_1.onCall)(async (request) => {
                 changes: Object.entries(changed).flatMap(([label, values]) => (0, history_changes_1.historyChanges)(values.before, values.after, label)),
             });
         }
+        return Object.keys(changed);
     });
-    return { updated: Object.keys(changed), actorUid: uid };
+    return { updated, actorUid: uid };
 });
 //# sourceMappingURL=updateRequestDetails.js.map

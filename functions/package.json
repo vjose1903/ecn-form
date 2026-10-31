@@ -6,7 +6,7 @@
     "format": "prettier --write \"src/**/*.{ts,js}\"",
     "format:check": "prettier --check \"src/**/*.{ts,js}\"",
     "build": "tsc",
-    "test:unit": "npm run build && node --test test/audit-actor.test.cjs test/permissions.test.cjs",
+    "test:unit": "npm run build && node --test test/audit-actor.test.cjs test/permissions.test.cjs test/request-history.test.cjs",
     "build:watch": "tsc --watch",
     "emulator": "firebase emulators:start --only functions,firestore",
     "dev": "concurrently \"npm run build:watch\" \"npm run emulator\"",

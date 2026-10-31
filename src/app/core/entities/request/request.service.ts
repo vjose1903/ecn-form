@@ -271,7 +271,12 @@ export class RequestService extends FirebaseRequest<RequestI> {
   }): Promise<RequestI> {
     if (!request.id || !retreat.city_id) throw new Error('No se encontró la información necesaria para confirmar la solicitud');
     const confirm = httpsCallable(this.functions, 'updateRequestDetails');
-    await confirm({cityId: retreat.city_id, requestId: request.id, confirmInformation: true, patch: values});
+    const expectedValues = Object.fromEntries((['she', 'he'] as const).map(person => [person,
+      Object.fromEntries(Object.keys(values[person]).map(field => [field,
+        request[person][field as keyof RequestI['she']] ?? (field === 'family_information' ? [] : ''),
+      ])),
+    ]));
+    await confirm({cityId: retreat.city_id, requestId: request.id, confirmInformation: true, patch: values, expectedValues});
     const result: RequestI = {
       ...request.asJson(),
       she: {...request.she, ...values.she},
@@ -553,15 +558,16 @@ export class RequestService extends FirebaseRequest<RequestI> {
           family: ['emergency_full_name', 'emergency_relationship', 'emergency_phone', 'have_children', 'family_information'],
         };
         for (const person of ['she', 'he'] as const) {
-          const changedFields = [...new Set(Object.values(personGroups).flat())].filter(key => this.areValuesDifferent(previous[person]?.[key as keyof typeof previous.she], request[person]?.[key as keyof typeof request.she]));
+          const changedFields = [...new Set(Object.values(personGroups).flat())].filter(key => key in (request[person] ?? {}) && this.areValuesDifferent(previous[person]?.[key as keyof typeof previous.she], request[person]?.[key as keyof typeof request.she]));
           if (changedFields.length) (payload as Record<string, unknown>)[person] = Object.fromEntries(changedFields.map(key => [key, request[person]?.[key as keyof typeof request.she]]));
+          else delete payload[person];
         }
         const requestFields: Array<keyof RequestI> = [
           'how_find_us', 'how_find_us_other', 'have_wedding_date', 'wedding_date', 'dating_period_year', 'dating_period_month',
           'who_invited_you', 'who_invited_you_phone', 'status', 'is_active', 'is_informado',
         ];
         for (const key of requestFields) {
-          if (this.areValuesDifferent(previous[key], request[key])) (payload as Record<string, unknown>)[key] = request[key];
+          if (key in request && this.areValuesDifferent(previous[key], request[key])) (payload as Record<string, unknown>)[key] = request[key];
           else delete (payload as Record<string, unknown>)[key];
         }
       }
@@ -571,7 +577,13 @@ export class RequestService extends FirebaseRequest<RequestI> {
       if (!hasChanges) return {...(options.previousRequest ?? request), id: request.id} as RequestI;
       const update = httpsCallable(this.functions, 'updateRequestDetails');
       await update({cityId: retreat.city_id, requestId: request.id, patch: payload});
-      const result = {...(options.previousRequest ?? {}), ...payload, id: request.id, ...(options.trackAsEdited ? {action: RequestAction.UPDATED} : {})} as RequestI;
+      const previous = options.previousRequest ?? this._requests.value.find(item => item.id === request.id);
+      const result = {
+        ...previous, ...payload, id: request.id,
+        she: {...previous?.she, ...payload.she},
+        he: {...previous?.he, ...payload.he},
+        ...(options.trackAsEdited ? {action: RequestAction.UPDATED} : {}),
+      } as RequestI;
       this.updateRequestInCache(result, 'update');
 
       return result;

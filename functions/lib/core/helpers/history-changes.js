@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.historyChanges = exports.historyValuesEqual = void 0;
+exports.mergeHistoryPatch = exports.historyChanges = exports.historyValuesEqual = void 0;
 const isRecord = (value) => value !== null && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date) && !("toDate" in value);
 const historyValuesEqual = (before, after) => {
     if (isRecord(before) || isRecord(after)) {
@@ -37,4 +37,14 @@ const historyChanges = (before, after, label) => {
     return [{ label, previous_value: formatValue(before), next_value: formatValue(after) }];
 };
 exports.historyChanges = historyChanges;
+// Firestore merge preserves omitted map fields but replaces arrays and scalar values.
+const mergeHistoryPatch = (before, patch) => {
+    if (!isRecord(patch) || !Object.keys(patch).length)
+        return patch;
+    const result = isRecord(before) ? { ...before } : {};
+    for (const [key, value] of Object.entries(patch))
+        result[key] = (0, exports.mergeHistoryPatch)(result[key], value);
+    return result;
+};
+exports.mergeHistoryPatch = mergeHistoryPatch;
 //# sourceMappingURL=history-changes.js.map

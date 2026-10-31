@@ -1,4 +1,4 @@
-import {historyChanges, historyValuesEqual} from "../../core/helpers/history-changes";
+import {historyChanges, historyValuesEqual, mergeHistoryPatch} from "../../core/helpers/history-changes";
 import {createHash} from "node:crypto";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {v2Db} from "../../core/firebase-admin";
@@ -6,6 +6,7 @@ import {hasCityFieldPermission, requireCityPermission} from "../../core/security
 import {FieldValue} from "firebase-admin/firestore";
 import {requestIdentityKeys, requestIdentityLock} from "../../core/helpers/request-identity";
 import {getActorName} from "../../core/helpers/actor-name";
+import {isValidPhone} from "../../core/helpers/phone";
 
 const dateInSantoDomingo = (value: unknown): string => {
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
@@ -47,6 +48,10 @@ export const updateRequestDetails = onCall(async request => {
   }
   const actorUid = await requireCityPermission(request, cityId, "requests", "update");
   const source = patch as Record<string, unknown>;
+  const expected = data.expectedValues;
+  if (confirmInformation && (!expected || typeof expected !== "object" || Array.isArray(expected))) {
+    throw new HttpsError("failed-precondition", "Actualiza la aplicación y vuelve a abrir el formulario para confirmar.");
+  }
   const sections: Record<string, Record<string, unknown>> = {};
   const fieldsByGroup = confirmInformation
     ? {couple_basic: ["full_name"], contact: ["cell_phone"], family: ["family_information", "emergency_full_name", "emergency_relationship", "emergency_phone"]}
@@ -59,7 +64,7 @@ export const updateRequestDetails = onCall(async request => {
     for (const person of ["she", "he"]) {
       const name = (sections.couple_basic?.[person] as Record<string, unknown> | undefined)?.full_name;
       const phone = (sections.contact?.[person] as Record<string, unknown> | undefined)?.cell_phone;
-      if (typeof name !== "string" || !name.trim() || name.trim().length > 180 || typeof phone !== "string" || !phone.trim() || phone.trim().length > 40) {
+      if (typeof name !== "string" || !name.trim() || name.trim().length > 180 || typeof phone !== "string" || !isValidPhone(phone) || phone.trim().length > 40) {
         throw new HttpsError("invalid-argument", "Debes confirmar el nombre y teléfono de ambas personas.");
       }
       (sections.couple_basic[person] as Record<string, unknown>).full_name = name.trim();
@@ -74,7 +79,7 @@ export const updateRequestDetails = onCall(async request => {
         };
         const validatePhone = (value: unknown): string => {
           const phone = validateText(value, 40);
-          if (phone && phone.replace(/\D/g, "").length !== 10) throw new HttpsError("invalid-argument", "El teléfono debe tener diez dígitos.");
+          if (phone && !isValidPhone(phone)) throw new HttpsError("invalid-argument", "Escribe un teléfono válido de diez dígitos.");
           return phone;
         };
         for (const [key, max] of [["emergency_full_name", 180], ["emergency_relationship", 100]] as const) {
@@ -114,8 +119,8 @@ export const updateRequestDetails = onCall(async request => {
   const rootRef = v2Db.doc(`city/${cityId}/requests/${requestId}`);
   const uid = request.auth?.uid ?? actorUid;
   const actorName = await getActorName(uid, request.auth?.token.name);
-  const changed: Record<string, {before: unknown; after: unknown}> = {};
-  await v2Db.runTransaction(async transaction => {
+  const updated = await v2Db.runTransaction(async transaction => {
+    const changed: Record<string, {before: unknown; after: unknown}> = {};
     const root = await transaction.get(rootRef);
     if (!root.exists) throw new HttpsError("not-found", "No se encontró la solicitud.");
     if (confirmInformation) {
@@ -139,6 +144,22 @@ export const updateRequestDetails = onCall(async request => {
         ? transaction.get(rootRef.collection("details").doc("status"))
         : Promise.resolve(null),
     ]);
+    if (confirmInformation) {
+      for (let index = 0; index < entries.length; index++) {
+        const [, next] = entries[index];
+        const previous = snapshots[index].data() ?? {};
+        for (const [person, fields] of Object.entries(next)) {
+          const original = (expected as Record<string, Record<string, unknown>>)[person];
+          const current = previous[person] ?? {};
+          for (const field of Object.keys(fields as Record<string, unknown>)) {
+            const fallback = field === "family_information" ? [] : "";
+            if (!original || typeof original !== "object" || Array.isArray(original) || !(field in original) || !historyValuesEqual(current[field] ?? fallback, original[field])) {
+              throw new HttpsError("aborted", "La información fue modificada por otro usuario. Actualiza el listado y vuelve a abrir la solicitud antes de confirmar.");
+            }
+          }
+        }
+      }
+    }
     if (sections.contact || sections.identity) {
       const contactIndex = entries.findIndex(([group]) => group === "contact");
       const identityIndex = entries.findIndex(([group]) => group === "identity");
@@ -191,8 +212,9 @@ export const updateRequestDetails = onCall(async request => {
         ? {is_informado: legacyStatusSnapshot.get("is_informado")}
         : {});
       for (const [field, value] of Object.entries(next)) {
-        if (!historyValuesEqual(previous[field], value)) {
-          changed[`${group}.${field}`] = {before: previous[field] ?? null, after: value ?? null};
+        const mergedValue = mergeHistoryPatch(previous[field], value);
+        if (!historyValuesEqual(previous[field], mergedValue)) {
+          changed[`${group}.${field}`] = {before: previous[field] ?? null, after: mergedValue ?? null};
         }
       }
       transaction.set(rootRef.collection("details").doc(group), {
@@ -231,6 +253,7 @@ export const updateRequestDetails = onCall(async request => {
         changes: Object.entries(changed).flatMap(([label, values]) => historyChanges(values.before, values.after, label)),
       });
     }
+    return Object.keys(changed);
   });
-  return {updated: Object.keys(changed), actorUid: uid};
+  return {updated, actorUid: uid};
 });

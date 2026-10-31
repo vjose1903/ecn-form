@@ -91,6 +91,8 @@ export class FormPage implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void { this.restoreClose?.(); }
 
+  cancelEdit(): void { this.ref?.close(); }
+
   @Input() user_id: string = '';
 
   submission_success = signal(false);
@@ -1568,6 +1570,7 @@ export class FormPage implements OnInit, AfterViewInit, OnDestroy {
   private async processFormSubmission(formData: RequestI): Promise<RequestI | null> {
     const retreat = this.retreats()?.find(r => r.id === formData.retreat);
     if (!retreat) {
+      this.loading.set(false);
       Ss.toastService.error({ message: 'Retiro no encontrado', title: 'Error' });
       return null;
     }
@@ -1594,12 +1597,12 @@ export class FormPage implements OnInit, AfterViewInit, OnDestroy {
       return request;
     } catch (error) {
       console.error(error);
-      if (!this.isInModal()) {
-        this.loading.set(false);
-      } else {
+      if (this.isInModal()) {
         Ss.toastService.error({ message: 'Error al actualizar la solicitud', title: 'Error' });
       }
       return null;
+    } finally {
+      this.loading.set(false);
     }
   }
 }

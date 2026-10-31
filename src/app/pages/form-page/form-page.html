@@ -881,7 +881,10 @@
         </p-accordion>
       </div>
 
-      <div class="flex justify-end my-10">
+      <div class="flex justify-end gap-3 my-10">
+        @if (isUpdate && isInModal()) {
+          <p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" [disabled]="loading()" (onClick)="cancelEdit()" />
+        }
         <p-button [label]="loading() ? 'Enviando...'  :  'Enviar'" [icon]="loading() ? 'pi pi-spin pi-spinner' : ''" [disabled]="loading()" (onClick)="onSubmit()" />
       </div>
     </div>
