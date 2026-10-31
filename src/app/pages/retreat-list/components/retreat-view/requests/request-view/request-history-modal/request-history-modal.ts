@@ -273,6 +273,57 @@ export class RequestHistoryModal implements OnInit, OnDestroy {
     return item.action === RequestAction.TRANSFERRED;
   }
 
+  familyMembers(label: string, value: string): Array<{name: string; relationship: string; phone: string}> | null {
+    if (!label.endsWith('family_information')) return null;
+    try {
+      const members: unknown = JSON.parse(value);
+      if (!Array.isArray(members) || !members.every(member => member && typeof member === 'object' && !Array.isArray(member))) return null;
+      return members.map(member => ({
+        name: typeof member.familiar_full_name === 'string' ? member.familiar_full_name : 'Nombre no registrado',
+        relationship: typeof member.familiar_relationship === 'string' ? member.familiar_relationship : '',
+        phone: typeof member.familiar_phone === 'string' ? member.familiar_phone : '',
+      }));
+    } catch {
+      return null;
+    }
+  }
+
+  changedFamilyMembers(label: string, value: string, otherValue: string): ReturnType<RequestHistoryModal['familyMembers']> {
+    const members = this.familyMembers(label, value);
+    const remaining = this.familyMembers(label, otherValue);
+    if (!members || !remaining) return members;
+    return members.filter(member => {
+      const index = remaining.findIndex(other => other.name === member.name && other.relationship === member.relationship && other.phone === member.phone);
+      if (index < 0) return true;
+      remaining.splice(index, 1);
+      return false;
+    });
+  }
+
+  spacingChange(change: RequestHistoryChangeI): string | null {
+    if (change.previous_value === change.next_value || change.previous_value.trim() !== change.next_value.trim()) return null;
+    const before = change.previous_value;
+    const after = change.next_value;
+    if (before.trimEnd() === after) return 'Se eliminaron espacios al final del texto.';
+    if (before.trimStart() === after) return 'Se eliminaron espacios al inicio del texto.';
+    return 'Se ajustaron los espacios al inicio o al final del texto.';
+  }
+
+  changeLabel(label: string): string {
+    const fields: Record<string, string> = {
+      full_name: 'Nombre completo', nickname: 'Apodo', age: 'Edad', birth_date: 'Fecha de nacimiento',
+      birth_date_display: 'Fecha de nacimiento', identity_type: 'Tipo de identificación', identity_number: 'Número de identificación',
+      email: 'Correo electrónico', cell_phone: 'Celular', home_phone: 'Teléfono de casa', work_phone: 'Teléfono de trabajo',
+      address: 'Dirección', city_of_residence: 'Ciudad', religion: 'Religión', religion_other: 'Otra religión', church_name: 'Parroquia',
+      are_you_married: 'Ha estado casado/a', have_children: 'Tiene hijos', family_information: 'Información familiar',
+      emergency_full_name: 'Contacto de emergencia', emergency_phone: 'Teléfono de emergencia', emergency_relationship: 'Parentesco de emergencia',
+    };
+    const parts = label.split('.');
+    const person = parts.includes('she') ? 'Novia' : parts.includes('he') ? 'Novio' : '';
+    const field = fields[parts[parts.length - 1]];
+    return field ? (person ? `${person}: ${field}` : field) : label;
+  }
+
   isDetailedChange(change: string | RequestHistoryChangeI): change is RequestHistoryChangeI {
     return typeof change !== 'string';
   }

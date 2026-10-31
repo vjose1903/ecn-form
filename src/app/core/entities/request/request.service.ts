@@ -266,8 +266,8 @@ export class RequestService extends FirebaseRequest<RequestI> {
   }
 
   async confirmRequestInformation(request: RequestClass, retreat: RetreatClass, values: {
-    she: {full_name: string; cell_phone: string};
-    he: {full_name: string; cell_phone: string};
+    she: Pick<RequestI['she'], 'full_name' | 'cell_phone'> & Partial<Pick<RequestI['she'], 'family_information' | 'emergency_full_name' | 'emergency_relationship' | 'emergency_phone'>>;
+    he: Pick<RequestI['he'], 'full_name' | 'cell_phone'> & Partial<Pick<RequestI['he'], 'family_information' | 'emergency_full_name' | 'emergency_relationship' | 'emergency_phone'>>;
   }): Promise<RequestI> {
     if (!request.id || !retreat.city_id) throw new Error('No se encontró la información necesaria para confirmar la solicitud');
     const confirm = httpsCallable(this.functions, 'updateRequestDetails');
@@ -744,14 +744,17 @@ export class RequestService extends FirebaseRequest<RequestI> {
             refund_date: data.refund_date ? fun.convertFirebaseTimestamp(data.refund_date) : null,
           } as RequestHistoryI;
         });
-      const currentUid = currentUser.uid;
-      if (history.some(event => event.actor_uid === currentUid && event.actor_name === currentUid)) {
-        const profile = await getDoc(doc(this.firestore, `user/${currentUid}`));
-        const actorName = String(profile.data()?.['display_name'] ?? this.authService.firebaseUser()?.displayName ?? '').trim();
-        if (actorName && actorName !== currentUid) {
+      if (history.some(event => event.actor_uid && (!event.actor_name || event.actor_name === event.actor_uid))) {
+        try {
+          const resolveNames = httpsCallable<{cityId: string; requestId: string}, {names: Record<string, string>}>(this.functions, 'getRequestHistoryActorNames');
+          const {data} = await resolveNames({cityId, requestId});
           for (const event of history) {
-            if (event.actor_uid === currentUid && event.actor_name === currentUid) event.actor_name = actorName;
+            if (event.actor_uid && (!event.actor_name || event.actor_name === event.actor_uid)) {
+              event.actor_name = data.names[event.actor_uid] || 'Usuario sin nombre';
+            }
           }
+        } catch (error) {
+          console.error('No se pudieron resolver los nombres del historial:', JSON.stringify(error instanceof Error ? {message: error.message} : error));
         }
       }
       return history.sort((a, b) => new Date(b.happened_at || 0).getTime() - new Date(a.happened_at || 0).getTime());

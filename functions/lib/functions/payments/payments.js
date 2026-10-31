@@ -1,12 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getPaymentReceiptUrl = exports.recoverPendingPaymentDeletions = exports.discardPaymentUpload = exports.recordPayment = exports.createPaymentUploadUrl = exports.finalizePendingPaymentDeletion = void 0;
+exports.getRefundReceiptUrl = exports.discardRefundUpload = exports.recordRefund = exports.createRefundUploadUrl = exports.getPaymentReceiptUrl = exports.recoverPendingPaymentDeletions = exports.discardPaymentUpload = exports.recordPayment = exports.createPaymentUploadUrl = exports.finalizePendingPaymentDeletion = void 0;
 const node_crypto_1 = require("node:crypto");
 const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const firebase_admin_1 = require("../../core/firebase-admin");
 const authorization_1 = require("../../core/security/authorization");
 const firestore_1 = require("firebase-admin/firestore");
+const actor_name_1 = require("../../core/helpers/actor-name");
 const text = (value, max = 200) => typeof value === "string" ? value.trim().slice(0, max) : "";
 const dateSlug = (date) => date.toISOString().slice(0, 10).replace(/-/g, "");
 const requestRef = (cityId, requestId) => firebase_admin_1.v2Db.doc(`city/${cityId}/requests/${requestId}`);
@@ -87,6 +88,7 @@ exports.createPaymentUploadUrl = (0, https_1.onCall)(async (request) => {
 });
 exports.recordPayment = (0, https_1.onCall)(async (request) => {
     const uid = (0, authorization_1.requireAuthenticated)(request);
+    const actorName = await (0, actor_name_1.getActorName)(uid, request.auth?.token.name);
     const data = request.data;
     const cityId = text(data.cityId, 100);
     const requestId = text(data.requestId, 160);
@@ -158,6 +160,7 @@ exports.recordPayment = (0, https_1.onCall)(async (request) => {
                 changes: [{ label: "Monto", previous_value: "", next_value: String(amount) }],
                 happened_at: firestore_1.FieldValue.serverTimestamp(),
                 actor_uid: uid,
+                actor_name: actorName,
             });
         });
     }
@@ -224,6 +227,125 @@ exports.getPaymentReceiptUrl = (0, https_1.onCall)(async (request) => {
     if (typeof receiptPath !== "string" || !receiptPath.startsWith(`receipts/${cityId}/`)) {
         throw new https_1.HttpsError("failed-precondition", "El pago no tiene un recibo disponible.");
     }
+    const [url] = await paymentBucket().file(receiptPath).getSignedUrl({ version: "v4", action: "read", expires: Date.now() + 5 * 60 * 1000 });
+    return { url };
+});
+exports.createRefundUploadUrl = (0, https_1.onCall)(async (request) => {
+    const data = request.data;
+    const cityId = text(data.cityId, 100);
+    const requestId = text(data.requestId, 160);
+    const refundId = text(data.refundId, 180);
+    const contentType = text(data.contentType, 80);
+    const safeName = text(data.fileName, 180).replace(/[^a-zA-Z0-9._-]/g, "_");
+    const fileSize = Number(data.fileSize);
+    if (!cityId || !requestId || !/^devolucion_[a-zA-Z0-9_-]{1,80}$/.test(refundId) || !/^image\/(jpeg|png|webp|heic)$/.test(contentType) || !safeName || !Number.isFinite(fileSize) || fileSize <= 0 || fileSize > 5 * 1024 * 1024) {
+        throw new https_1.HttpsError("invalid-argument", "El recibo de devolución debe ser una imagen de hasta 5 MB.");
+    }
+    await (0, authorization_1.requireCityPermission)(request, cityId, "payments", "create");
+    const parent = await requestRef(cityId, requestId).get();
+    if (!parent.exists)
+        throw new https_1.HttpsError("not-found", "No se encontró la solicitud.");
+    if (parent.get("is_archived") !== true)
+        throw new https_1.HttpsError("failed-precondition", "Solo se pueden cargar recibos de solicitudes archivadas.");
+    const extension = safeName.includes(".") ? safeName.split(".").at(-1).toLowerCase() : "jpg";
+    const receiptPath = `refund-receipts/${cityId}/${parent.get("retreat_id")}/${requestId}/${refundId}/receipt.${extension}`;
+    const [uploadUrl] = await paymentBucket().file(receiptPath).getSignedUrl({ version: "v4", action: "write", expires: Date.now() + 2 * 60 * 1000, contentType });
+    return { uploadUrl, receiptPath, refundId };
+});
+exports.recordRefund = (0, https_1.onCall)(async (request) => {
+    const uid = (0, authorization_1.requireAuthenticated)(request);
+    const actorName = await (0, actor_name_1.getActorName)(uid, request.auth?.token.name);
+    const data = request.data;
+    const cityId = text(data.cityId, 100);
+    const requestId = text(data.requestId, 160);
+    const refundId = text(data.refundId, 180);
+    const receiptPath = text(data.receiptPath, 500);
+    const receiptName = text(data.receiptName, 180);
+    const amount = Number(data.amount);
+    const refundDate = new Date(text(data.refundDate, 40));
+    await (0, authorization_1.requireCityPermission)(request, cityId, "payments", "create");
+    if (!cityId || !requestId || !/^devolucion_[a-zA-Z0-9_-]{1,80}$/.test(refundId) || !Number.isFinite(amount) || amount <= 0 || !Number.isFinite(refundDate.getTime()) || refundDate.getTime() > Date.now()) {
+        throw new https_1.HttpsError("invalid-argument", "El monto o la fecha de devolución no son válidos.");
+    }
+    const rootRef = requestRef(cityId, requestId);
+    const root = await rootRef.get();
+    if (!root.exists || root.get("is_archived") !== true)
+        throw new https_1.HttpsError("failed-precondition", "Solo se pueden devolver pagos de solicitudes archivadas.");
+    const summaryRef = rootRef.collection("details").doc("payments_summary");
+    const refundRef = rootRef.collection("refunds").doc(refundId);
+    const eventId = `hist_${dateSlug(new Date())}_refund_${(0, node_crypto_1.randomBytes)(4).toString("hex")}`;
+    const eventRef = rootRef.collection("history").doc(eventId);
+    let receipt;
+    if (receiptPath) {
+        const prefix = `refund-receipts/${cityId}/${root.get("retreat_id")}/${requestId}/${refundId}/`;
+        if (!receiptPath.startsWith(prefix) || receiptPath.slice(prefix.length).includes("/"))
+            throw new https_1.HttpsError("invalid-argument", "La ruta del recibo no corresponde con esta devolución.");
+        const file = paymentBucket().file(receiptPath);
+        const [exists] = await file.exists();
+        if (!exists)
+            throw new https_1.HttpsError("failed-precondition", "No se encontró el recibo cargado.");
+        const [metadata] = await file.getMetadata();
+        if (Number(metadata.size) <= 0 || Number(metadata.size) > 5 * 1024 * 1024 || !/^image\/(jpeg|png|webp|heic)$/.test(metadata.contentType ?? "")) {
+            throw new https_1.HttpsError("failed-precondition", "El recibo no cumple el formato permitido.");
+        }
+        receipt = { path: receiptPath, name: receiptName };
+    }
+    try {
+        await firebase_admin_1.v2Db.runTransaction(async (transaction) => {
+            const [currentParent, summary, existing] = await Promise.all([transaction.get(rootRef), transaction.get(summaryRef), transaction.get(refundRef)]);
+            if (!currentParent.exists || currentParent.get("is_archived") !== true)
+                throw new https_1.HttpsError("failed-precondition", "La solicitud dejó de estar archivada.");
+            if (existing.exists)
+                throw new https_1.HttpsError("already-exists", "La devolución ya fue registrada.");
+            const summaryData = summary.data() ?? {};
+            const due = Math.max(0, Number(summaryData.refund_due_amount ?? 0));
+            const recorded = Math.max(0, Number(summaryData.refund_recorded_total ?? 0));
+            if (amount > due - recorded + 0.001)
+                throw new https_1.HttpsError("failed-precondition", "El monto supera el saldo pendiente de devolución.");
+            const nextRecorded = Math.round((recorded + amount) * 100) / 100;
+            const status = nextRecorded + 0.001 >= due ? "completed" : "partial";
+            transaction.create(refundRef, { amount, refund_date: firestore_1.Timestamp.fromDate(refundDate), actor_uid: uid, actor_name: actorName, created_at: firestore_1.FieldValue.serverTimestamp(), ...(receipt ? { receipt_path: receipt.path, receipt_name: receipt.name } : {}) });
+            transaction.set(summaryRef, { refund_recorded_total: nextRecorded, refund_status: status, refund_updated_at: firestore_1.FieldValue.serverTimestamp(), refund_updated_by: uid }, { merge: true });
+            transaction.create(eventRef, { request_id: requestId, retreat_id: root.get("retreat_id"), action: "refund_recorded", collection_state: "requests-archived", message: "Devolución registrada", refund_id: refundId, refund_amount: amount, refund_date: firestore_1.Timestamp.fromDate(refundDate), ...(receipt ? { receipt_path: receipt.path, receipt_name: receipt.name } : {}), happened_at: firestore_1.FieldValue.serverTimestamp(), actor_uid: uid, actor_name: actorName });
+        });
+    }
+    catch (error) {
+        if (receipt)
+            await paymentBucket().file(receipt.path).delete({ ignoreNotFound: true }).catch(cleanupError => {
+                console.error("No se pudo limpiar el recibo de una devolución no registrada:", JSON.stringify(cleanupError instanceof Error ? { name: cleanupError.name, message: cleanupError.message } : cleanupError));
+            });
+        throw error;
+    }
+    return { refundId, amount };
+});
+exports.discardRefundUpload = (0, https_1.onCall)(async (request) => {
+    const data = request.data;
+    const cityId = text(data.cityId, 100);
+    const requestId = text(data.requestId, 160);
+    const refundId = text(data.refundId, 180);
+    const receiptPath = text(data.receiptPath, 500);
+    await (0, authorization_1.requireCityPermission)(request, cityId, "payments", "create");
+    const parent = await requestRef(cityId, requestId).get();
+    if (!parent.exists)
+        throw new https_1.HttpsError("not-found", "No se encontró la solicitud.");
+    const prefix = `refund-receipts/${cityId}/${parent.get("retreat_id")}/${requestId}/${refundId}/`;
+    if (!/^devolucion_[a-zA-Z0-9_-]{1,80}$/.test(refundId) || !receiptPath.startsWith(prefix) || receiptPath.slice(prefix.length).includes("/"))
+        throw new https_1.HttpsError("invalid-argument", "La ruta del recibo no es válida.");
+    if ((await requestRef(cityId, requestId).collection("refunds").doc(refundId).get()).exists)
+        return { deleted: false };
+    await paymentBucket().file(receiptPath).delete({ ignoreNotFound: true });
+    return { deleted: true };
+});
+exports.getRefundReceiptUrl = (0, https_1.onCall)(async (request) => {
+    const data = request.data;
+    const cityId = text(data.cityId, 100);
+    const requestId = text(data.requestId, 160);
+    const refundId = text(data.refundId, 180);
+    await (0, authorization_1.requireCityPermission)(request, cityId, "payments", "read");
+    const refund = await requestRef(cityId, requestId).collection("refunds").doc(refundId).get();
+    const receiptPath = refund.get("receipt_path");
+    if (!refund.exists || typeof receiptPath !== "string" || !receiptPath.startsWith(`refund-receipts/${cityId}/`))
+        throw new https_1.HttpsError("not-found", "No se encontró el recibo de devolución.");
     const [url] = await paymentBucket().file(receiptPath).getSignedUrl({ version: "v4", action: "read", expires: Date.now() + 5 * 60 * 1000 });
     return { url };
 });

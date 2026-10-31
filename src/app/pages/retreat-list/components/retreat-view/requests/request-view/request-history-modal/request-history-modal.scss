@@ -605,3 +605,36 @@
     grid-template-columns: 1fr;
   }
 }
+
+.history-family-list {
+  display: grid;
+  gap: .55rem;
+  align-content: start;
+}
+
+.history-family-member {
+  display: grid;
+  gap: .15rem;
+  color: #475569;
+  font-size: .78rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+
+  strong { color: #172033; font-weight: 600; }
+  & + & { padding-top: .55rem; border-top: 1px solid #e2e8f0; }
+}
+
+.history-family-member__phone {
+  display: flex;
+  align-items: baseline;
+  gap: .35rem;
+  i { font-size: .7rem; }
+}
+
+.history-change-row__note {
+  display: block;
+  margin-top: .4rem;
+  color: #52647c;
+  font-size: .75rem;
+  line-height: 1.4;
+}

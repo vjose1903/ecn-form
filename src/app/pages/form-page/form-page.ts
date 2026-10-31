@@ -1,4 +1,6 @@
-import { Component, computed, inject, Input, OnInit, signal } from '@angular/core';
+import {protectDialogChanges} from '@core/typescript/protect-dialog-changes';
+import {relationshipOptions} from '@core/typescript/relationship-options';
+import { Component, computed, inject, Input, AfterViewInit, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule, NgTemplateOutlet } from '@angular/common';
 import { AccordionModule } from 'primeng/accordion';
 import { InputTextModule } from 'primeng/inputtext';
@@ -75,7 +77,20 @@ import { formDataMuck } from './form-page.muck';
   templateUrl: './form-page.html',
   styleUrl: './form-page.scss',
 })
-export class FormPage implements OnInit {
+export class FormPage implements OnInit, AfterViewInit, OnDestroy {
+  private initialEditValue: string | null = null;
+  private restoreClose?: () => void;
+
+  ngAfterViewInit(): void {
+    if (this.ref && this.config?.data?.formType === 'update') {
+      this.restoreClose = protectDialogChanges(this.ref,
+        () => this.initialEditValue !== null && JSON.stringify(this.formGroup.getRawValue()) !== this.initialEditValue,
+        () => this.loading());
+    }
+  }
+
+  ngOnDestroy(): void { this.restoreClose?.(); }
+
   @Input() user_id: string = '';
 
   submission_success = signal(false);
@@ -219,7 +234,7 @@ export class FormPage implements OnInit {
 
   yesNoOptions = yesNoOptions;
 
-  companionOptions = [{ label: 'Padre' }, { label: 'Madre' }, { label: 'Hermano' }, { label: 'Hermana' }, { label: 'Tio' }, { label: 'Tia' }, { label: 'Abuelo' }, { label: 'Abuela' }, { label: 'Amigo' }, { label: 'Suegra' }, { label: 'Suegro' }];
+  companionOptions = relationshipOptions;
 
   readonly citySuggestions = [
     'Santo Domingo de Guzmán',
@@ -639,7 +654,10 @@ export class FormPage implements OnInit {
     };
 
     const initializeForm = async () => {
-      if (this.formType === 'update') await this.patchForm();
+      if (this.formType === 'update') {
+        await this.patchForm();
+        this.initialEditValue = JSON.stringify(this.formGroup.getRawValue());
+      }
 
       this.initialized.set(true);
     };

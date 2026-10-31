@@ -118,17 +118,44 @@
           <div class="history-card__changes-list">
             @for (change of item.changes; track change) { @if (isDetailedChange(change)) {
             <div class="history-change-row">
-              <p class="history-change-row__label">{{ change.label }}</p>
+              <p class="history-change-row__label">{{ changeLabel(change.label) }}</p>
               <div class="history-change-row__values">
                 <div class="history-change-row__value-block">
                   <span class="history-change-row__caption">Antes</span>
-                  <span class="history-change-row__value">{{ change.previous_value }}</span>
+                  @if (changedFamilyMembers(change.label, change.previous_value, change.next_value); as members) {
+                    <div class="history-family-list">
+                      @for (member of members; track $index) {
+                        <div class="history-family-member">
+                          <strong>{{ member.name }}</strong>
+                          @if (member.relationship) { <span>{{ member.relationship }}</span> }
+                          @if (member.phone) { <span class="history-family-member__phone"><i class="pi pi-phone" aria-hidden="true"></i>{{ member.phone }}</span> }
+                        </div>
+                      } @empty { <span class="history-change-row__value">Sin familiares en este lado del cambio</span> }
+                    </div>
+                  } @else {
+                    <span class="history-change-row__value">{{ change.previous_value === '[object Object]' ? 'Valor anterior no registrado correctamente' : change.previous_value }}</span>
+                  }
                 </div>
                 <div class="history-change-row__value-block history-change-row__value-block--next">
                   <span class="history-change-row__caption">Ahora</span>
-                  <span class="history-change-row__value">{{ change.next_value }}</span>
+                  @if (changedFamilyMembers(change.label, change.next_value, change.previous_value); as members) {
+                    <div class="history-family-list">
+                      @for (member of members; track $index) {
+                        <div class="history-family-member">
+                          <strong>{{ member.name }}</strong>
+                          @if (member.relationship) { <span>{{ member.relationship }}</span> }
+                          @if (member.phone) { <span class="history-family-member__phone"><i class="pi pi-phone" aria-hidden="true"></i>{{ member.phone }}</span> }
+                        </div>
+                      } @empty { <span class="history-change-row__value">Sin familiares en este lado del cambio</span> }
+                    </div>
+                  } @else {
+                    <span class="history-change-row__value">{{ change.next_value === '[object Object]' ? 'Valor posterior no registrado correctamente' : change.next_value }}</span>
+                  }
                 </div>
               </div>
+              @if (spacingChange(change); as explanation) {
+                <small class="history-change-row__note">{{ explanation }}</small>
+              }
             </div>
             } @else {
             <span class="history-change-pill">{{ change }}</span>
@@ -139,7 +166,7 @@
         }
 
         @if (item.action !== RequestAction.NEW && (item.actor_name || item.actor_uid)) {
-        <p class="history-card__actor"><i class="pi pi-user" aria-hidden="true"></i> Realizado por: {{ item.actor_name || item.actor_uid }}</p>
+        <p class="history-card__actor"><i class="pi pi-user" aria-hidden="true"></i> Realizado por: {{ item.actor_name && item.actor_name !== item.actor_uid ? item.actor_name : 'Usuario sin nombre' }}</p>
         }
 
       </div>

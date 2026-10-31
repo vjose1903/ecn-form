@@ -225,12 +225,16 @@ export class RequestView implements OnInit, AfterViewInit {
 
   private canShowConfirmInformation(): boolean {
     const request = this.request();
-    if (this.isArchivedView() || !request || !this.retreat?.start_date
+    if (this.isArchivedView() || !request || !this.retreat?.start_date || !this.retreat.end_date
       || !request.canReadDetailSection('couple_basic') || !request.canEditDetailSection('couple_basic')
       || !request.canReadDetailSection('contact') || !request.canEditDetailSection('contact')) return false;
     const startDate = this.dateInSantoDomingo(this.retreat.start_date);
     const today = this.dateInSantoDomingo(new Date());
-    return Boolean(startDate && today && today <= startDate);
+    const endDate = this.dateInSantoDomingo(this.retreat.end_date);
+    if (!startDate || !endDate || !today || endDate < startDate) return false;
+    const deadline = new Date(`${endDate}T00:00:00Z`);
+    deadline.setUTCDate(deadline.getUTCDate() + 7);
+    return today >= startDate && today <= deadline.toISOString().slice(0, 10);
   }
 
   private dateInSantoDomingo(value: Date | string): string {
@@ -257,6 +261,8 @@ export class RequestView implements OnInit, AfterViewInit {
       draggable: false,
       resizable: false,
       closable: true,
+      closeOnEscape: true,
+      dismissableMask: true,
       focusOnShow: false,
       data: {request, retreat: this.retreat},
       breakpoints: {'768px': '95vw'},
@@ -516,6 +522,8 @@ export class RequestView implements OnInit, AfterViewInit {
       draggable: false,
       resizable: false,
       closable: true,
+      closeOnEscape: true,
+      dismissableMask: true,
       contentStyle: { padding: '0' },
       focusOnShow: false,
       data: {

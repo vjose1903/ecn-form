@@ -1,7 +1,7 @@
 <form class="confirm-information" [formGroup]="form" (ngSubmit)="save()">
   <div class="confirm-information__intro">
     <span class="confirm-information__intro-icon" aria-hidden="true"><i class="pi pi-user-edit"></i></span>
-    <p>Verifica que los nombres y teléfonos de contacto de ambas personas estén correctos.</p>
+    <p>Verifica los datos de contacto de ambas personas y, si tu rol lo permite, su información familiar y de emergencia.</p>
   </div>
 
   <div class="confirm-information__people">
@@ -36,6 +36,64 @@
             <small>Escribe el teléfono de contacto.</small>
           }
         </div>
+        @if (canConfirmFamily) {
+          <div class="confirm-information__section-heading"><h3>Información familiar</h3></div>
+          <div formArrayName="family_information" class="confirm-information__family-list">
+            @for (member of familyMembers(person.key).controls; track member; let index = $index) {
+              <div [formGroupName]="index" class="confirm-information__family-member">
+                <div class="confirm-information__section-heading">
+                  <strong>Familiar {{ index + 1 }}</strong>
+                  <p-button type="button" icon="pi pi-times" severity="secondary" [text]="true" size="small" [ariaLabel]="'Quitar familiar ' + (index + 1) + ' de ' + person.label" [disabled]="loading()" (onClick)="familyMembers(person.key).removeAt(index)" />
+                </div>
+                @for (field of [{key: 'familiar_full_name', label: 'Nombre completo', max: 180}, {key: 'familiar_relationship', label: 'Parentesco', max: 100}]; track field.key) {
+                  <div class="confirm-information__field">
+                    <label [for]="person.key + '-family-' + index + '-' + field.key">{{ field.label }}</label>
+                    <span class="confirm-information__input-wrap">
+                      <i [class]="field.key.endsWith('full_name') ? 'pi pi-user' : 'pi pi-users'" aria-hidden="true"></i>
+                      @if (field.key.endsWith('relationship')) {
+                        <p-select [inputId]="person.key + '-family-' + index + '-' + field.key" [formControlName]="field.key" [options]="relationshipOptions" optionLabel="label" optionValue="label" placeholder="Seleccione" appendTo="body" />
+                      } @else {
+                        <input pInputText [id]="person.key + '-family-' + index + '-' + field.key" [formControlName]="field.key" [maxlength]="field.max" />
+                      }
+                    </span>
+                    @if (member.get(field.key)?.touched && member.get(field.key)?.invalid) { <small>Revisa este campo.</small> }
+                  </div>
+                }
+                <div class="confirm-information__field">
+                  <label [for]="person.key + '-family-phone-' + index">Teléfono</label>
+                  <span class="confirm-information__input-wrap">
+                    <i class="pi pi-phone" aria-hidden="true"></i>
+                    <p-inputmask [inputId]="person.key + '-family-phone-' + index" formControlName="familiar_phone" type="tel" mask="(999) 999-9999" placeholder="(###) ###-####" autocomplete="tel" class="w-full" styleClass="confirm-information__masked-input" />
+                  </span>
+                  @if (member.controls.familiar_phone.touched && member.controls.familiar_phone.invalid) { <small>Escribe un teléfono válido.</small> }
+                </div>
+              </div>
+            } @empty { <p class="confirm-information__empty">Sin familiares registrados.</p> }
+          </div>
+          <div class="confirm-information__section-heading"><h3>Contacto de emergencia</h3></div>
+          @for (field of [{key: 'emergency_full_name', label: 'Nombre completo', max: 180}, {key: 'emergency_relationship', label: 'Parentesco', max: 100}]; track field.key) {
+            <div class="confirm-information__field">
+              <label [for]="person.key + '-' + field.key">{{ field.label }}</label>
+              <span class="confirm-information__input-wrap">
+                      <i [class]="field.key.endsWith('full_name') ? 'pi pi-user' : 'pi pi-users'" aria-hidden="true"></i>
+                      @if (field.key.endsWith('relationship')) {
+                        <p-select [inputId]="person.key + '-' + field.key" [formControlName]="field.key" [options]="relationshipOptions" optionLabel="label" optionValue="label" placeholder="Seleccione" appendTo="body" />
+                      } @else {
+                        <input pInputText [id]="person.key + '-' + field.key" [formControlName]="field.key" [maxlength]="field.max" />
+                      }
+                    </span>
+              @if (form.get(person.key + '.' + field.key)?.touched && form.get(person.key + '.' + field.key)?.invalid) { <small>Revisa este campo.</small> }
+            </div>
+          }
+          <div class="confirm-information__field">
+            <label [for]="person.key + '-emergency-phone'">Teléfono de emergencia</label>
+            <span class="confirm-information__input-wrap">
+                    <i class="pi pi-phone" aria-hidden="true"></i>
+                    <p-inputmask [inputId]="person.key + '-emergency-phone'" formControlName="emergency_phone" type="tel" mask="(999) 999-9999" placeholder="(###) ###-####" autocomplete="tel" class="w-full" styleClass="confirm-information__masked-input" />
+                  </span>
+            @if (form.get(person.key + '.emergency_phone')?.touched && form.get(person.key + '.emergency_phone')?.invalid) { <small>Escribe un teléfono válido.</small> }
+          </div>
+        }
       </section>
     }
   </div>
@@ -50,7 +108,7 @@
   </div>
   <footer class="confirm-information__footer">
     <div class="confirm-information__actions">
-      <p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" [disabled]="loading()" (onClick)="ref.close()" />
+      <p-button type="button" label="Cancelar" severity="secondary" [outlined]="true" [disabled]="loading()" (onClick)="requestClose()" />
       <p-button type="submit" [label]="isConfirmed ? 'Guardar cambios confirmados' : 'Confirmar información'" icon="pi pi-check" [loading]="loading()" [disabled]="loading()" />
     </div>
   </footer>

@@ -1,0 +1,1 @@
+export const relationshipOptions = [{ label: 'Padre' }, { label: 'Madre' }, { label: 'Hermano' }, { label: 'Hermana' }, { label: 'Tio' }, { label: 'Tia' }, { label: 'Abuelo' }, { label: 'Abuela' }, { label: 'Amigo' }, { label: 'Suegra' }, { label: 'Suegro' }];

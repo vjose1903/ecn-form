@@ -64,3 +64,5 @@ export {
   onRequestUpdatedNotificationV2,
   closeRetreatRequestsDailyV2,
 };
+
+export {getRequestHistoryActorNames} from "./functions/requests/getRequestHistoryActorNames";

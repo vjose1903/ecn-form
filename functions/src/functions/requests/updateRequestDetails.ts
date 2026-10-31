@@ -1,3 +1,4 @@
+import {historyChanges, historyValuesEqual} from "../../core/helpers/history-changes";
 import {createHash} from "node:crypto";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {v2Db} from "../../core/firebase-admin";
@@ -48,7 +49,7 @@ export const updateRequestDetails = onCall(async request => {
   const source = patch as Record<string, unknown>;
   const sections: Record<string, Record<string, unknown>> = {};
   const fieldsByGroup = confirmInformation
-    ? {couple_basic: ["full_name"], contact: ["cell_phone"]}
+    ? {couple_basic: ["full_name"], contact: ["cell_phone"], family: ["family_information", "emergency_full_name", "emergency_relationship", "emergency_phone"]}
     : allowedFields;
   for (const [group, fields] of Object.entries(fieldsByGroup)) {
     const normalized = normalizePersonGroup(source, fields);
@@ -63,6 +64,35 @@ export const updateRequestDetails = onCall(async request => {
       }
       (sections.couple_basic[person] as Record<string, unknown>).full_name = name.trim();
       (sections.contact[person] as Record<string, unknown>).cell_phone = phone.trim();
+      const family = sections.family?.[person] as Record<string, unknown> | undefined;
+      if (family) {
+        const validateText = (value: unknown, max: number, required = false): string => {
+          if (typeof value !== "string" || value.trim().length > max || (required && !value.trim())) {
+            throw new HttpsError("invalid-argument", "Revisa los nombres y parentescos de familiares y contactos de emergencia.");
+          }
+          return value.trim();
+        };
+        const validatePhone = (value: unknown): string => {
+          const phone = validateText(value, 40);
+          if (phone && phone.replace(/\D/g, "").length !== 10) throw new HttpsError("invalid-argument", "El teléfono debe tener diez dígitos.");
+          return phone;
+        };
+        for (const [key, max] of [["emergency_full_name", 180], ["emergency_relationship", 100]] as const) {
+          if (key in family) family[key] = validateText(family[key], max);
+        }
+        if ("emergency_phone" in family) family.emergency_phone = validatePhone(family.emergency_phone);
+        if ("family_information" in family) {
+          if (!Array.isArray(family.family_information) || family.family_information.length > 10) throw new HttpsError("invalid-argument", "La lista de familiares no es válida.");
+          family.family_information = family.family_information.map(member => {
+            if (!member || typeof member !== "object" || Array.isArray(member)) throw new HttpsError("invalid-argument", "El familiar no es válido.");
+            return {
+              familiar_full_name: validateText(member.familiar_full_name, 180, true),
+              familiar_relationship: validateText(member.familiar_relationship, 100, true),
+              familiar_phone: validatePhone(member.familiar_phone),
+            };
+          });
+        }
+      }
     }
   }
   if (!confirmInformation) {
@@ -94,7 +124,11 @@ export const updateRequestDetails = onCall(async request => {
       const retreatSnapshot = retreatId ? await transaction.get(v2Db.doc(`city/${cityId}/retreat/${retreatId}`)) : null;
       const startDate = dateInSantoDomingo(retreatSnapshot?.get("start_date"));
       const today = dateInSantoDomingo(new Date());
-      if (!startDate || !today || today > startDate) throw new HttpsError("failed-precondition", "El plazo para confirmar la información ya terminó.");
+      const endDate = dateInSantoDomingo(retreatSnapshot?.get("end_date"));
+      if (!startDate || !endDate || endDate < startDate || !today) throw new HttpsError("failed-precondition", "Las fechas del retiro no son válidas para confirmar la información.");
+      const deadline = new Date(`${endDate}T00:00:00Z`);
+      deadline.setUTCDate(deadline.getUTCDate() + 7);
+      if (today < startDate || today > deadline.toISOString().slice(0, 10)) throw new HttpsError("failed-precondition", "Solo puedes confirmar desde el inicio del retiro hasta siete días después de su finalización.");
     }
     const entries = Object.entries(sections);
     const informedIndex = entries.findIndex(([group]) => group === "informed");
@@ -157,7 +191,7 @@ export const updateRequestDetails = onCall(async request => {
         ? {is_informado: legacyStatusSnapshot.get("is_informado")}
         : {});
       for (const [field, value] of Object.entries(next)) {
-        if (JSON.stringify(previous[field] ?? null) !== JSON.stringify(value ?? null)) {
+        if (!historyValuesEqual(previous[field], value)) {
           changed[`${group}.${field}`] = {before: previous[field] ?? null, after: value ?? null};
         }
       }
@@ -177,6 +211,7 @@ export const updateRequestDetails = onCall(async request => {
         action: "information_confirmed",
         collection_state: root.get("is_archived") ? "requests-archived" : "request",
         message: wasConfirmed ? "Información confirmada nuevamente" : "Información de la pareja confirmada",
+        changes: Object.entries(changed).flatMap(([label, values]) => historyChanges(values.before, values.after, label)),
         happened_at: eventAt,
         actor_uid: uid,
         actor_name: actorName,
@@ -193,11 +228,7 @@ export const updateRequestDetails = onCall(async request => {
         happened_at: eventAt,
         actor_uid: uid,
         actor_name: actorName,
-        changes: Object.entries(changed).map(([label, values]) => ({
-          label,
-          previous_value: values.before == null ? "" : String(values.before),
-          next_value: values.after == null ? "" : String(values.after),
-        })),
+        changes: Object.entries(changed).flatMap(([label, values]) => historyChanges(values.before, values.after, label)),
       });
     }
   });

@@ -1,12 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateRequestDetails = void 0;
+const history_changes_1 = require("../../core/helpers/history-changes");
 const node_crypto_1 = require("node:crypto");
 const https_1 = require("firebase-functions/v2/https");
 const firebase_admin_1 = require("../../core/firebase-admin");
 const authorization_1 = require("../../core/security/authorization");
 const firestore_1 = require("firebase-admin/firestore");
 const request_identity_1 = require("../../core/helpers/request-identity");
+const actor_name_1 = require("../../core/helpers/actor-name");
 const dateInSantoDomingo = (value) => {
     if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value))
         return value;
@@ -51,7 +53,7 @@ exports.updateRequestDetails = (0, https_1.onCall)(async (request) => {
     const source = patch;
     const sections = {};
     const fieldsByGroup = confirmInformation
-        ? { couple_basic: ["full_name"], contact: ["cell_phone"] }
+        ? { couple_basic: ["full_name"], contact: ["cell_phone"], family: ["family_information", "emergency_full_name", "emergency_relationship", "emergency_phone"] }
         : allowedFields;
     for (const [group, fields] of Object.entries(fieldsByGroup)) {
         const normalized = normalizePersonGroup(source, fields);
@@ -67,6 +69,40 @@ exports.updateRequestDetails = (0, https_1.onCall)(async (request) => {
             }
             sections.couple_basic[person].full_name = name.trim();
             sections.contact[person].cell_phone = phone.trim();
+            const family = sections.family?.[person];
+            if (family) {
+                const validateText = (value, max, required = false) => {
+                    if (typeof value !== "string" || value.trim().length > max || (required && !value.trim())) {
+                        throw new https_1.HttpsError("invalid-argument", "Revisa los nombres y parentescos de familiares y contactos de emergencia.");
+                    }
+                    return value.trim();
+                };
+                const validatePhone = (value) => {
+                    const phone = validateText(value, 40);
+                    if (phone && phone.replace(/\D/g, "").length !== 10)
+                        throw new https_1.HttpsError("invalid-argument", "El teléfono debe tener diez dígitos.");
+                    return phone;
+                };
+                for (const [key, max] of [["emergency_full_name", 180], ["emergency_relationship", 100]]) {
+                    if (key in family)
+                        family[key] = validateText(family[key], max);
+                }
+                if ("emergency_phone" in family)
+                    family.emergency_phone = validatePhone(family.emergency_phone);
+                if ("family_information" in family) {
+                    if (!Array.isArray(family.family_information) || family.family_information.length > 10)
+                        throw new https_1.HttpsError("invalid-argument", "La lista de familiares no es válida.");
+                    family.family_information = family.family_information.map(member => {
+                        if (!member || typeof member !== "object" || Array.isArray(member))
+                            throw new https_1.HttpsError("invalid-argument", "El familiar no es válido.");
+                        return {
+                            familiar_full_name: validateText(member.familiar_full_name, 180, true),
+                            familiar_relationship: validateText(member.familiar_relationship, 100, true),
+                            familiar_phone: validatePhone(member.familiar_phone),
+                        };
+                    });
+                }
+            }
         }
     }
     if (!confirmInformation) {
@@ -89,6 +125,7 @@ exports.updateRequestDetails = (0, https_1.onCall)(async (request) => {
     }
     const rootRef = firebase_admin_1.v2Db.doc(`city/${cityId}/requests/${requestId}`);
     const uid = request.auth?.uid ?? actorUid;
+    const actorName = await (0, actor_name_1.getActorName)(uid, request.auth?.token.name);
     const changed = {};
     await firebase_admin_1.v2Db.runTransaction(async (transaction) => {
         const root = await transaction.get(rootRef);
@@ -101,8 +138,13 @@ exports.updateRequestDetails = (0, https_1.onCall)(async (request) => {
             const retreatSnapshot = retreatId ? await transaction.get(firebase_admin_1.v2Db.doc(`city/${cityId}/retreat/${retreatId}`)) : null;
             const startDate = dateInSantoDomingo(retreatSnapshot?.get("start_date"));
             const today = dateInSantoDomingo(new Date());
-            if (!startDate || !today || today > startDate)
-                throw new https_1.HttpsError("failed-precondition", "El plazo para confirmar la información ya terminó.");
+            const endDate = dateInSantoDomingo(retreatSnapshot?.get("end_date"));
+            if (!startDate || !endDate || endDate < startDate || !today)
+                throw new https_1.HttpsError("failed-precondition", "Las fechas del retiro no son válidas para confirmar la información.");
+            const deadline = new Date(`${endDate}T00:00:00Z`);
+            deadline.setUTCDate(deadline.getUTCDate() + 7);
+            if (today < startDate || today > deadline.toISOString().slice(0, 10))
+                throw new https_1.HttpsError("failed-precondition", "Solo puedes confirmar desde el inicio del retiro hasta siete días después de su finalización.");
         }
         const entries = Object.entries(sections);
         const informedIndex = entries.findIndex(([group]) => group === "informed");
@@ -168,7 +210,7 @@ exports.updateRequestDetails = (0, https_1.onCall)(async (request) => {
                 ? { is_informado: legacyStatusSnapshot.get("is_informado") }
                 : {});
             for (const [field, value] of Object.entries(next)) {
-                if (JSON.stringify(previous[field] ?? null) !== JSON.stringify(value ?? null)) {
+                if (!(0, history_changes_1.historyValuesEqual)(previous[field], value)) {
                     changed[`${group}.${field}`] = { before: previous[field] ?? null, after: value ?? null };
                 }
             }
@@ -178,8 +220,21 @@ exports.updateRequestDetails = (0, https_1.onCall)(async (request) => {
                 updated_at: eventAt,
             }, { merge: true });
         }
-        if (confirmInformation && root.get("isConfirmed") !== true) {
-            transaction.update(rootRef, { isConfirmed: true });
+        if (confirmInformation) {
+            const wasConfirmed = root.get("isConfirmed") === true;
+            transaction.update(rootRef, { isConfirmed: true, updated_by: uid, updated_at: eventAt });
+            const eventId = `hist_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}_information_confirmed_${(0, node_crypto_1.createHash)("sha256").update(`${requestId}:${Date.now()}`).digest("hex").slice(0, 8)}`;
+            transaction.create(rootRef.collection("history").doc(eventId), {
+                request_id: requestId,
+                retreat_id: root.get("retreat_id"),
+                action: "information_confirmed",
+                collection_state: root.get("is_archived") ? "requests-archived" : "request",
+                message: wasConfirmed ? "Información confirmada nuevamente" : "Información de la pareja confirmada",
+                changes: Object.entries(changed).flatMap(([label, values]) => (0, history_changes_1.historyChanges)(values.before, values.after, label)),
+                happened_at: eventAt,
+                actor_uid: uid,
+                actor_name: actorName,
+            });
         }
         if (Object.keys(changed).length && !confirmInformation) {
             const eventId = `hist_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}_updated_${(0, node_crypto_1.createHash)("sha256").update(`${requestId}:${Date.now()}`).digest("hex").slice(0, 8)}`;
@@ -191,11 +246,8 @@ exports.updateRequestDetails = (0, https_1.onCall)(async (request) => {
                 message: "Solicitud actualizada",
                 happened_at: eventAt,
                 actor_uid: uid,
-                changes: Object.entries(changed).map(([label, values]) => ({
-                    label,
-                    previous_value: values.before == null ? "" : String(values.before),
-                    next_value: values.after == null ? "" : String(values.after),
-                })),
+                actor_name: actorName,
+                changes: Object.entries(changed).flatMap(([label, values]) => (0, history_changes_1.historyChanges)(values.before, values.after, label)),
             });
         }
     });
