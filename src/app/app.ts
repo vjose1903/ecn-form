@@ -58,6 +58,7 @@ export class App implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private updateReady = false;
   private updatePromptDismissed = false;
+  private recoveringServiceWorker = false;
   private pendingDeployment: string | null = null;
   private updateCheckTimer: ReturnType<typeof setInterval> | null = null;
   private readonly updateSubscriptions = new Subscription();
@@ -92,17 +93,29 @@ export class App implements OnInit, OnDestroy {
     window.removeEventListener('pagehide', this.stopUpdateTimer);
   }
 
-  protected reloadForUpdate(): void {
+  protected async reloadForUpdate(): Promise<void> {
     if (this.updateInProgress()) {
       return;
     }
 
     this.updateInProgress.set(true);
     this.updateError.set('');
-    this.updateDialogVisible.set(false);
-    // VERSION_READY significa que Angular ya descargó y validó el deploy.
-    // Recargar el documento permite que shell y chunks se resuelvan juntos.
-    window.location.reload();
+    try {
+      if (this.swUpdate.isEnabled) {
+        const updateDownloaded = await this.swUpdate.checkForUpdate();
+        if (updateDownloaded) {
+          await this.swUpdate.activateUpdate();
+        }
+      }
+
+      this.updateDialogVisible.set(false);
+      // La nueva versión ya está activa; recargar sincroniza el shell y sus chunks.
+      window.location.reload();
+    } catch (error) {
+      console.warn('No se pudo activar la nueva versión', error);
+      this.updateError.set('No se pudo completar la actualización. Comprueba tu conexión y vuelve a intentarlo.');
+      this.updateInProgress.set(false);
+    }
   }
 
   protected dismissUpdateDialog(): void {
@@ -169,8 +182,7 @@ export class App implements OnInit, OnDestroy {
     })));
 
     this.updateSubscriptions.add(this.swUpdate.unrecoverable.subscribe(() => {
-      console.warn('La versión activa no se puede recuperar; se recargará la aplicación.');
-      window.location.reload();
+      void this.recoverUnrecoverableServiceWorker();
     }));
 
     this.updateSubscriptions.add(this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
@@ -191,9 +203,10 @@ export class App implements OnInit, OnDestroy {
     if (!this.swUpdate.isEnabled) return;
     try {
       try {
-        const publishedLabel = await this.checkPublishedVersion();
-        if (publishedLabel !== null && publishedLabel !== buildVersion.label) {
-          this.markPublishedUpdateReady(publishedLabel);
+        const publishedVersion = await this.checkPublishedVersion();
+        const currentVersion = `${buildVersion.label}:${buildVersion.commit}`;
+        if (publishedVersion !== null && publishedVersion !== currentVersion) {
+          this.markPublishedUpdateReady(publishedVersion);
         }
       } catch (error) {
         console.warn('No se pudo consultar el número de versión publicado', error);
@@ -204,18 +217,44 @@ export class App implements OnInit, OnDestroy {
     }
   }
 
+  private async recoverUnrecoverableServiceWorker(): Promise<void> {
+    if (this.recoveringServiceWorker) return;
+    this.recoveringServiceWorker = true;
+    console.warn('La versión activa no se puede recuperar; se limpiará la caché de la PWA.');
+
+    try {
+      const registration = await navigator.serviceWorker?.getRegistration();
+      await registration?.unregister();
+
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(
+          cacheNames
+            .filter(cacheName => cacheName.startsWith('ngsw:'))
+            .map(cacheName => caches.delete(cacheName)),
+        );
+      }
+    } catch (error) {
+      console.warn('No se pudo limpiar la caché de la PWA', error);
+    } finally {
+      window.location.reload();
+    }
+  }
+
   private async checkPublishedVersion(): Promise<string | null> {
     const url = new URL('version.json', document.baseURI);
     url.searchParams.set('t', String(Date.now()));
     const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const published = await response.json() as { label?: unknown };
-    return typeof published.label === 'string' ? published.label : null;
+    const published = await response.json() as { label?: unknown; commit?: unknown };
+    if (typeof published.label !== 'string') return null;
+    const commit = typeof published.commit === 'string' ? published.commit : 'unknown';
+    return `${published.label}:${commit}`;
   }
 
-  private markPublishedUpdateReady(publishedLabel: string): void {
-    if (this.pendingDeployment !== publishedLabel) {
-      this.pendingDeployment = publishedLabel;
+  private markPublishedUpdateReady(publishedVersion: string): void {
+    if (this.pendingDeployment !== publishedVersion) {
+      this.pendingDeployment = publishedVersion;
       this.updatePromptDismissed = false;
       this.updateError.set('');
     }
